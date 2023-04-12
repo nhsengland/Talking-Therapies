@@ -1,5 +1,5 @@
 USE [NHSE_IAPT_v2]
-------------------
+---------------------
 SET ANSI_WARNINGS OFF
 SET DATEFIRST 1
 SET NOCOUNT ON
