@@ -1,4 +1,5 @@
-# Preferred-Languages-Dashboard
+# NHS Talking Therapies for Anxiety and Depression
+## Preferred Languages Dashboard
 
 - This repo contains SQL scripts that feed the NHS Talking Therapies Preferred Languages dashboard
 
