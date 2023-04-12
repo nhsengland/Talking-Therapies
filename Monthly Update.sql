@@ -121,7 +121,7 @@ SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Finished' INTO #Finish
 SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Recovery' INTO #Recovery_p FROM #FinishedTreatment WHERE [PreferredLang] IS NOT NULL AND CompletedTreatment_flag = 'TRUE' AND  Recovery_Flag = 'True' GROUP BY [PreferredLang]
 SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness' INTO #NotCaseness_p FROM #FinishedTreatment WHERE [PreferredLang] IS NOT NULL AND NotCaseness_Flag = 'TRUE' GROUP BY [PreferredLang]
 
--- Insert data -------------------------------------------------------------------------------------------------------------------
+-- Insert data --------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_language_PrefLangList_v4]
 
