@@ -596,7 +596,7 @@ DECLARE @ReliableImprovement_PrefTreat_professional AS FLOAT = (SELECT COUNT(CAS
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v3]
+INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v2]
 
 SELECT DISTINCT @MonthYear AS 'Month'
 		,'National' AS 'Level'
@@ -635,7 +635,7 @@ SELECT DISTINCT @MonthYear AS 'Month'
 		,@ReliableRecovery_PrefTreat_professional AS 'ReliableRecovery_Count_PrefTreat_professional'
 
 ----------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v3]'
+PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v2]'
 
 ------------------------------|
 --SET @Offset = @Offset-1 END --| <-- End loop
