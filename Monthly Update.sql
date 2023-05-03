@@ -1,12 +1,13 @@
 USE [NHSE_IAPT_v2]
----------------------
+------------------
 SET ANSI_WARNINGS OFF
 SET DATEFIRST 1
 SET NOCOUNT ON
 ---------------------
 DECLARE @Offset INT = -1
--------------------------
-DECLARE @Max_Offset INT = -29
+---------------------
+
+--DECLARE @Max_Offset INT = -29
 ---------------------------------------|
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 ---------------------------------------|
@@ -121,7 +122,7 @@ SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Finished' INTO #Finish
 SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Recovery' INTO #Recovery_p FROM #FinishedTreatment WHERE [PreferredLang] IS NOT NULL AND CompletedTreatment_flag = 'TRUE' AND  Recovery_Flag = 'True' GROUP BY [PreferredLang]
 SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness' INTO #NotCaseness_p FROM #FinishedTreatment WHERE [PreferredLang] IS NOT NULL AND NotCaseness_Flag = 'TRUE' GROUP BY [PreferredLang]
 
--- Insert data --------------------------------------------------------------------------------------------------------------------
+-- Insert data -------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_language_PrefLangList_v4]
 
@@ -342,7 +343,7 @@ SELECT @MonthYear as 'Month'
 		
 FROM #InterpreterPresent
 
-UNION ---------------------------------------------------------------------------------------------------  
+UNION ------------------------------------ 
 
 SELECT @MonthYear as 'Month'
 		,'National' AS 'Level'
@@ -351,7 +352,7 @@ SELECT @MonthYear as 'Month'
 		
 FROM #InterpreterPresent
 
-UNION ---------------------------------------------------------------------------------------------------
+UNION ------------------------------------ 
 
 SELECT @MonthYear as 'Month'
 		,'National' AS 'Level'
@@ -360,7 +361,7 @@ SELECT @MonthYear as 'Month'
 		
 FROM #InterpreterPresent
 
-UNION --------------------------------------------------------------------------------------------------- 
+UNION ------------------------------------ 
 
 SELECT @MonthYear as 'Month'
 		,'National' AS 'Level'
@@ -369,7 +370,7 @@ SELECT @MonthYear as 'Month'
 		
 FROM #InterpreterPresent
 
-UNION ---------------------------------------------------------------------------------------------------  
+UNION ------------------------------------ 
 
 SELECT @MonthYear as 'Month'
 		,'National' AS 'Level'
@@ -495,7 +496,7 @@ SELECT	@MonthYear AS 'Month'
 		
 FROM #EndCodes_TreatNotPref WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') GROUP BY [EndCode]
 
-UNION ---------------------------------------------------------------------------------------------------
+UNION
 
 SELECT	@MonthYear AS 'Month'
 		,'National' AS 'Level'
@@ -533,24 +534,55 @@ PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Outcome measures ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
--- Create base table of care contacts ---------------------------------------------------------------------------------------------------------
+INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v3]
 
-IF OBJECT_ID ('tempdb..#OutcomeMeasures') IS NOT NULL DROP TABLE #OutcomeMeasures
+SELECT	@MonthYear AS 'Month'
+		,'National' AS 'Level'
 
-SELECT DISTINCT	
+		,CASE WHEN LanguageCodeTreat <> LanguageCodePreferred THEN 'Non-Preferred Language'
+			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN 'Interpreter not required'
+			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '3' THEN 'Interpreter - Another Person'
+			WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
+			WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
+		ELSE 'Other' END AS 'Language_Treated'
+ 
+		--------------------------
+		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Count_Recovery'
+		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Count_Improvement'
+		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Count_Reliable_Recovery'
+		--------------------------
 
-		r.PathwayID
-		,a.Unique_CareContactID
-		,LanguageCodeTreat
-		,LanguageCodePreferred
-		,a.InterpreterPresentInd
-		,Recovery_Flag
-		,NotCaseness_Flag
-		,ReliableImprovement_Flag
-		,NoChange_Flag
-		,CompletedTreatment_Flag
+		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END)
+		-COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'   AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END) = 0 THEN NULL
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 
+		
+		ELSE 
 
-INTO #OutcomeMeasures
+		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)
+		/(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS float)
+		-CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END)AS float))) END
+		AS 'Percentage_Recovery'
+		--------------------------
+
+		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) = 0 THEN NULL
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 
+		
+		ELSE 
+
+		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)
+		/(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS float))) END
+		AS 'Percentage_Improvement'
+		-----------------------------
+
+		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) = 0 THEN NULL
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 
+		
+		ELSE 
+
+		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)
+		/(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS float))) END
+		AS 'Percentage_Reliable_Recovery'
+		-----------------------------------
 
 FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
 		----------------------------------------
@@ -562,81 +594,22 @@ FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
 		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON a.LanguageCodeTreat = lct.LanguageCode
 		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
-		-------------------------------------------
-		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
-		-------------------------------------------
+WHERE	l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+		AND r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodendDate]
+		AND l.IsLatest = '1' AND UsePathway_Flag = 'True'
+		AND CompletedTreatment_Flag = 'TRUE'
 		AND LanguageCodePreferred <> 'en'
 
--- Create variables for calculating outcome measures --------------------------------------------------------------------------------------------------------------------------
-
--- Treatment language not = preferred language
-
-DECLARE @CompletedTreatment_NotPref AS FLOAT = (SELECT COUNT(CASE WHEN CompletedTreatment_Flag = 'True' AND LanguageCodeTreat <> LanguageCodePreferred THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @NotCaseness_NotPref AS FLOAT = (SELECT COUNT(CASE WHEN NotCaseness_Flag = 'True' AND LanguageCodeTreat <> LanguageCodePreferred THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @Recovery_NotPref AS FLOAT = (SELECT COUNT(CASE WHEN Recovery_Flag = 'True' AND LanguageCodeTreat <> LanguageCodePreferred THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @ReliableRecovery_NotPref AS FLOAT = (SELECT COUNT(CASE WHEN Recovery_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND LanguageCodeTreat <> LanguageCodePreferred THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @ReliableImprovement_NotPref AS FLOAT = (SELECT COUNT(CASE WHEN ReliableImprovement_Flag = 'True' AND LanguageCodeTreat <> LanguageCodePreferred THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-
--- Treatment language = preferred language (therapist)
-
-DECLARE @CompletedTreatment_PrefTreat_therapist AS FLOAT = (SELECT COUNT(CASE WHEN CompletedTreatment_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @NotCaseness_PrefTreat_therapist AS FLOAT = (SELECT COUNT(CASE WHEN NotCaseness_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @Recovery_PrefTreat_therapist AS FLOAT = (SELECT COUNT(CASE WHEN Recovery_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @ReliableRecovery_PrefTreat_therapist AS FLOAT = (SELECT COUNT(CASE WHEN Recovery_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @ReliableImprovement_PrefTreat_therapist AS FLOAT = (SELECT COUNT(CASE WHEN ReliableImprovement_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-
--- Treatment language = preferred language (professional)
-
-DECLARE @CompletedTreatment_PrefTreat_professional AS FLOAT = (SELECT COUNT(CASE WHEN CompletedTreatment_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @NotCaseness_PrefTreat_professional AS FLOAT = (SELECT COUNT(CASE WHEN NotCaseness_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @Recovery_PrefTreat_professional AS FLOAT = (SELECT COUNT(CASE WHEN Recovery_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @ReliableRecovery_PrefTreat_professional AS FLOAT = (SELECT COUNT(CASE WHEN Recovery_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-DECLARE @ReliableImprovement_PrefTreat_professional AS FLOAT = (SELECT COUNT(CASE WHEN ReliableImprovement_Flag = 'True' AND LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN pathwayID ELSE NULL END) FROM #OutcomeMeasures)
-
----------------------------------------------------------------------------------------------------------------------------------------------------
-
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v2]
-
-SELECT DISTINCT @MonthYear AS 'Month'
-		,'National' AS 'Level'
-
-		-- Treatment language not preferred ----------------------------------------------------------------------------
-
-		,(@Recovery_NotPref / (@CompletedTreatment_NotPref - @NotCaseness_NotPref)) AS 'Recovery_Rate_NotPref'
-		,@Recovery_NotPref AS 'Recovery_Count_NotPref'
-
-		,(@ReliableImprovement_NotPref / @CompletedTreatment_NotPref) AS 'Reliable_Improvement_Rate_NotPref'
-		,@ReliableImprovement_NotPref AS 'ReliableImprovement_Count_NotPref'
-
-		,(@ReliableRecovery_NotPref / (@CompletedTreatment_NotPref - @NotCaseness_NotPref)) AS 'Reliable_Recovery_Rate_NotPref'
-		,@ReliableRecovery_NotPref AS 'ReliableRecovery_Count_NotPref'
-
-		-- Treatment language = preferred (therapist) ------------------------------------------------------------------
-
-		,(@Recovery_PrefTreat_therapist / (@CompletedTreatment_PrefTreat_therapist - @NotCaseness_PrefTreat_therapist)) AS 'Recovery_Rate_PrefTreat_therapist'
-		,@Recovery_PrefTreat_therapist AS 'Recovery_Count_PrefTreat_therapist'
-
-		,(@ReliableImprovement_PrefTreat_therapist / @CompletedTreatment_PrefTreat_therapist) AS 'Reliable_Improvement_Rate_PrefTreat_therapist'
-		,@ReliableImprovement_PrefTreat_therapist AS 'ReliableImprovement_Count_PrefTreat_therapist'
-
-		,(@ReliableRecovery_PrefTreat_therapist / (@CompletedTreatment_PrefTreat_therapist - @NotCaseness_PrefTreat_therapist)) AS 'Reliable_Recovery_Rate_PrefTreat_therapist'
-		,@ReliableRecovery_PrefTreat_therapist AS 'ReliableRecovery_Count_PrefTreat_therapist'
-
-		-- Treatment language = preferred (professional) ---------------------------------------------------------------
-
-		,(@Recovery_PrefTreat_professional / (@CompletedTreatment_PrefTreat_professional - @NotCaseness_PrefTreat_professional)) AS 'Recovery_Rate_PrefTreat_professional'
-		,@Recovery_PrefTreat_professional AS 'Recovery_Count_PrefTreat_professional'
-
-		,(@ReliableImprovement_PrefTreat_professional / @CompletedTreatment_PrefTreat_professional) AS 'Reliable_Improvement_Rate_PrefTreat_professional'
-		,@ReliableImprovement_PrefTreat_professional AS 'ReliableImprovement_Count_PrefTreat_professional'
-
-		,(@ReliableRecovery_PrefTreat_professional / (@CompletedTreatment_PrefTreat_professional - @NotCaseness_PrefTreat_professional)) AS 'Reliable_Recovery_Rate_PrefTreat_professional'
-		,@ReliableRecovery_PrefTreat_professional AS 'ReliableRecovery_Count_PrefTreat_professional'
-
-----------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v2]'
+GROUP BY	DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR)
+			,CASE WHEN LanguageCodeTreat <> LanguageCodePreferred THEN 'Non-Preferred Language'
+				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN 'Interpreter not required'
+				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '3' THEN 'Interpreter - Another Person'
+				WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
+				WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
+				ELSE 'Other' END
 
 ------------------------------|
 --SET @Offset = @Offset-1 END --| <-- End loop
 ------------------------------|
+
+PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v3]'
