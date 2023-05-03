@@ -68,7 +68,7 @@ SELECT	@MonthYear AS 'Month'
 		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)
 		/(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS float))) END
 		AS 'Percentage_Reliable_Recovery'
-		-----------------------------------
+		----------------------------------
 
 FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
 		----------------------------------------
