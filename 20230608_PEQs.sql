@@ -59,15 +59,14 @@ GROUP BY DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 		,CASE WHEN Validated_EthnicCategory IN ('B','C','D','E','F','G','H','J','K','L','M','N','P','R','S') THEN 'Ethnic Minorities'
 			WHEN Validated_EthnicCategory = 'A' THEN 'White British'
 			ELSE 'Other' 
-			END
+		 END
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- PEQs Table ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 SELECT DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS varchar) AS 'Month'
-		
-		,'Coded Assessment' AS 'Category'
+
 		,CASE WHEN csa.[CodedAssToolType] = '747891000000106' THEN 'PEQ Satisfaction Q1'
 			
 			WHEN csa.[CodedAssToolType] = '747861000000100' THEN 'PEQ Assessment Q1'
@@ -81,7 +80,7 @@ SELECT DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[
 			WHEN csa.[CodedAssToolType] = '747941000000105' THEN 'PEQ Treatment Q5'
 			WHEN csa.[CodedAssToolType] = '747951000000108' THEN 'PEQ Treatment Q6'
 
-		 END AS 'Variable'
+		 END AS 'Coded Assessment'
 
 		,(CAST(COUNT(CASE WHEN Validated_EthnicCategory IN ('B','C','D','E','F','G','H','J','K','L','M','N','P','R','S') THEN r.[PathwayID] END) AS DECIMAL)/(COUNT(r.[PathwayID]))) AS 'Ethnic Minorities %'
 		,(CAST(COUNT(CASE WHEN Validated_EthnicCategory IN ('A') THEN r.[PathwayID] END) AS DECIMAL)/COUNT(r.[PathwayID])) AS 'White British %'
@@ -119,4 +118,4 @@ GROUP BY DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 
 		 END
 
-ORDER BY [Variable] 
+ORDER BY [Coded Assessment] 
