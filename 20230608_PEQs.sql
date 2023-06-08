@@ -26,19 +26,18 @@ SELECT DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[
 		END AS 'Variable'
 
 		-- PEQs
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747891000000106'  THEN csa.[PersScore] END) AS 'PEQ Satisfaction Q1'
 
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747901000000107'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q1'
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747911000000109'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q2'
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747921000000103'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q3'
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747931000000101'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q4'
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747941000000105'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q5'
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747951000000108'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q6'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747861000000100'  THEN csa.[PersScore] END) AS 'PEQ Assessment Q1'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747871000000107'  THEN csa.[PersScore] END) AS 'PEQ Assessment Q2'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747881000000109'  THEN csa.[PersScore] END) AS 'PEQ Assessment Q3'
 
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747861000000100'  THEN csa.[PersScore] END) AS 'PEQ Assessment Q1'
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747871000000107'  THEN csa.[PersScore] END) AS 'PEQ Assessment Q2'
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747881000000109'  THEN csa.[PersScore] END) AS 'PEQ Assessment Q3'
-
-		,COUNT(CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND csa.[CodedAssToolType] = '747891000000106'  THEN csa.[PersScore] END) AS 'PEQ Satisfaction Q1'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747901000000107'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q1'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747911000000109'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q2'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747921000000103'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q3'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747931000000101'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q4'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747941000000105'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q5'
+		,COUNT(CASE WHEN csa.[CodedAssToolType] = '747951000000108'  THEN csa.[PersScore] END) AS 'PEQ Treatment Q6'
 
 FROM	[dbo].[IDS101_Referral] r
 		-------------------------
@@ -52,6 +51,7 @@ FROM	[dbo].[IDS101_Referral] r
 		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
+		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 
 
@@ -63,7 +63,6 @@ GROUP BY DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- PEQs Table ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 SELECT DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS varchar) AS 'Month'
 
