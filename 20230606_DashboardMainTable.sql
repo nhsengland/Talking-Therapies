@@ -902,13 +902,12 @@ GROUP BY DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
-		,CASE WHEN GenderIdentity IN ('1','01') THEN 'Male (including trans man)'
-			WHEN GenderIdentity IN ('2','02') THEN 'Female (including trans woman)'
+		,CASE WHEN (GenderIdentity IN ('1') or (Gender IN ('1') and (GenderIdentity is null or GenderIdentity not in ('1', '2', '3', '4')))) then 'Male (including trans men)'
+			WHEN (GenderIdentity IN ('2') or (Gender IN ('2') and (GenderIdentity is null or GenderIdentity not in ('1', '2', '3', '4')))) then 'Female (including trans women)'
 			WHEN GenderIdentity IN ('3','03') THEN 'Non-binary'
 			WHEN GenderIdentity IN ('4','04') THEN 'Other (not listed)'
-			WHEN GenderIdentity IN ('x','X') THEN 'Not Known'
-			WHEN GenderIdentity IN ('z','Z') THEN 'Not Stated'
-			WHEN GenderIdentity NOT IN ('1','01','2','02','3','03','4','04','x','X','z','Z') OR GenderIdentity IS NULL THEN 'Unspecified'
+			WHEN (GenderIdentity NOT IN ('1','2','3','4','x') OR GenderIdentity IS NULL) AND Gender = '9' then 'Indeterminate'
+			ELSE 'Not Known/Not Stated'
 		END
 		
 ---------------------------------|
