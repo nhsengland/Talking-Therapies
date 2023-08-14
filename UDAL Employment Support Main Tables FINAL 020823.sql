@@ -56,7 +56,7 @@ SET @PeriodEnd = (SELECT eomonth(DATEADD(MONTH,-1,MAX([ReportingPeriodEndDate]))
 
 --The offset needs to be set for September 2020 (e.g. @PeriodStart -30 = -31 which is the offset of September 2020)
 DECLARE @Offset int
-SET @Offset=-31
+SET @Offset=-32
 
 SET DATEFIRST 1
 
