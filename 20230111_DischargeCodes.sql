@@ -5,7 +5,7 @@ SET ANSI_WARNINGS OFF
 PRINT CHAR(10)
 
 DECLARE @Offset INT = -1
-DECLARE @Max_Offset INT = -25
+--DECLARE @Max_Offset INT = -25
 
 ---------------------------------------|
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
