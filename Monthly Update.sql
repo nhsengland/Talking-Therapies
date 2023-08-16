@@ -1,19 +1,17 @@
-USE [NHSE_IAPT_v2]
-------------------
 SET ANSI_WARNINGS OFF
-SET DATEFIRST 1
 SET NOCOUNT ON
----------------------
+SET DATEFIRST 1
+
+--------------------------
 DECLARE @Offset INT = -1
----------------------
-
---DECLARE @Max_Offset INT = -29
+--------------------------
+DECLARE @Max_Offset INT = -1
 ---------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
+WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 ---------------------------------------|
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IDS000_Header])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [IDS000_Header])
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
@@ -33,15 +31,15 @@ SELECT DISTINCT
 
 INTO	#Referrals
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -61,15 +59,15 @@ SELECT DISTINCT
 
 INTO	#AccessedTreatment
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -92,15 +90,15 @@ SELECT DISTINCT
 
 INTO	#FinishedTreatment
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -124,7 +122,7 @@ SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness' INTO #Not
 
 -- Insert data -------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_language_PrefLangList_v4]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]
 
 SELECT TOP(20) 
 
@@ -148,7 +146,7 @@ GROUP BY rp.PreferredLang, Count_Referrals, Count_Accessed, Count_Finished, Coun
 ORDER BY Count_Referrals DESC
 
 ----------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_language_PrefLangList_v4]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]'
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Average Waits ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -167,14 +165,15 @@ SELECT DISTINCT
 
 INTO #CareContacts_NotEng
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -196,14 +195,14 @@ SELECT DISTINCT
 
 INTO #CareContacts_Eng
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -285,7 +284,7 @@ DECLARE @AVG_WaitToSecond_NotEng AS FLOAT = (SELECT(AVG(WaitToSecondTreatment)) 
 
 -- Insert data ---------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_preferred_language_avgWaits_v2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_AvgWaits]
 
 SELECT	@MonthYear AS 'Month'
 		,'National' AS 'Level'
@@ -295,7 +294,7 @@ SELECT	@MonthYear AS 'Month'
 		,(@AVG_WaitToSecond_Eng - @AVG_WaitToFirst_Eng) AS 'AVG_WaitToSecond_Eng'
 
 ------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_preferred_language_avgWaits_v2]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_AvgWaits]'
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Interpreter present ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -307,7 +306,7 @@ IF OBJECT_ID ('tempdb..#InterpreterPresent') IS NOT NULL DROP TABLE #Interpreter
 SELECT DISTINCT	
 
 		r.PathwayID
-		,a.Unique_CareContactID
+		,cc.Unique_CareContactID
 		,CareContDate
 		,lcp.LanguageName AS 'PreferredLang'
 		,lct.LanguageName AS 'TreatmentLang'
@@ -315,15 +314,15 @@ SELECT DISTINCT
 
 INTO #InterpreterPresent
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON a.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -334,7 +333,7 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 
 -- Insert data -------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_preferred_language_InterpreterPresent]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_InterpreterPresent]
 
 SELECT @MonthYear as 'Month'
 		,'National' AS 'Level'
@@ -380,7 +379,7 @@ SELECT @MonthYear as 'Month'
 FROM #InterpreterPresent
 
 ------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_preferred_language_InterpreterPresent]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_InterpreterPresent]'
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Discharge Codes ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -391,22 +390,22 @@ IF OBJECT_ID ('tempdb..#CareContacts_TreatNotPref') IS NOT NULL DROP TABLE #Care
 SELECT DISTINCT	
 
 		r.PathwayID
-		,a.Unique_CareContactID
+		,cc.Unique_CareContactID
 		,lcp.LanguageName AS 'PreferredLang'
 		,lct.LanguageName AS 'TreatmentLang'
 		,r.EndCode
 
 INTO #CareContacts_TreatNotPref
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON a.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -423,22 +422,22 @@ IF OBJECT_ID ('tempdb..#CareContacts_PrefTreat') IS NOT NULL DROP TABLE #CareCon
 SELECT DISTINCT	
 
 		r.PathwayID
-		,a.Unique_CareContactID
+		,cc.Unique_CareContactID
 		,lcp.LanguageName AS 'PreferredLang'
 		,lct.LanguageName AS 'TreatmentLang'
 		,r.EndCode
 
 INTO #CareContacts_PrefTreat
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON a.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -464,7 +463,7 @@ DECLARE @Total_EndCodes_PrefTreat AS FLOAT = (SELECT COUNT(EndCode) FROM #EndCod
 
 -- Insert data -----------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Languages_DischargeCodes]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_DischargeCodes]
 
 SELECT	@MonthYear AS 'Month'
 		,'National' AS 'Level'
@@ -529,12 +528,12 @@ SELECT	@MonthYear AS 'Month'
 FROM #EndCodes_PrefTreat WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') GROUP BY [EndCode]
 
 ---------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Languages_DischargeCodes]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_DischargeCodes]'
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Outcome measures ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v3]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Outcomes]
 
 SELECT	@MonthYear AS 'Month'
 		,'National' AS 'Level'
@@ -542,8 +541,8 @@ SELECT	@MonthYear AS 'Month'
 		,CASE WHEN LanguageCodeTreat <> LanguageCodePreferred THEN 'Non-Preferred Language'
 			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN 'Interpreter not required'
 			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '3' THEN 'Interpreter - Another Person'
-			WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
-			WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
+			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
+			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
 		ELSE 'Other' END AS 'Language_Treated'
  
 		--------------------------
@@ -584,15 +583,15 @@ SELECT	@MonthYear AS 'Month'
 		AS 'Percentage_Reliable_Recovery'
 		-----------------------------------
 
-FROM    [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM    [mesh_IAPT].[IDS101referral] r
+		------------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lct ON a.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[ISO_639_1_Language_Codes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodendDate]
@@ -604,12 +603,12 @@ GROUP BY	DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 			,CASE WHEN LanguageCodeTreat <> LanguageCodePreferred THEN 'Non-Preferred Language'
 				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN 'Interpreter not required'
 				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '3' THEN 'Interpreter - Another Person'
-				WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
-				WHEN  LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
+				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
+				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
 				ELSE 'Other' END
 
 ------------------------------|
---SET @Offset = @Offset-1 END --| <-- End loop
+SET @Offset = @Offset-1 END --| <-- End loop
 ------------------------------|
 
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Preferred_Language_Outcomes_v3]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_Outcomes]' + CHAR(10)
