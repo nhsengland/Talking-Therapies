@@ -8,11 +8,11 @@ DECLARE @Offset INT = -1
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 ---------------------------------------|
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IDS000_Header])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [IDS000_Header])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
-PRINT 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
+PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -----------------------------------------------------------------------------------------------------------------------------------
 -- Create base tables -------------------------------------------------------------------------------------------------------------
@@ -120,7 +120,7 @@ SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness' INTO #Not
 
 -- Insert data -------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]
+--INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]
 
 SELECT TOP(20) 
 
