@@ -120,7 +120,7 @@ SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness' INTO #Not
 
 -- Insert data -------------------------------------------------------------------------------------------------------------------
 
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]
 
 SELECT TOP(20) 
 
