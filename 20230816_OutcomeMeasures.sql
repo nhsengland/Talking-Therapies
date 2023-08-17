@@ -4,7 +4,7 @@ PRINT CHAR(10)
 
 DECLARE @Offset INT = -1
 -------------------------------
---DECLARE @Max_Offset INT = -29
+--DECLARE @Max_Offset INT = -1
 ---------------------------------------|
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 ---------------------------------------|
