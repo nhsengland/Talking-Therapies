@@ -1,13 +1,10 @@
 SET ANSI_WARNINGS OFF
 SET DATEFIRST 1
 SET NOCOUNT ON
---------------
+
+-------------------------
 DECLARE @Offset INT = -1
 -------------------------
---DECLARE @Max_Offset INT = -1
--------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
--------------------------------------|
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -18,8 +15,6 @@ DECLARE @PeriodStart2 DATE = (SELECT DATEADD(MONTH,(@Offset +1),MAX([ReportingPe
 DECLARE @PeriodEnd2 DATE = (SELECT eomonth(DATEADD(MONTH,(@Offset +1),MAX([ReportingPeriodStartDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50))
-
---------------------------------------------------------------------------------------------------------------------------------------
 
 -- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
 
@@ -167,11 +162,12 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
 		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		------------------------------
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
+		------------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		------------------------------
-		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
-		--LEFT JOIN [UKHF_].[SNOMED].[vw_Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD_1] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -351,4 +347,4 @@ WHEN Variable IN ('(Church of England) or (Anglican) (person)',
 GO
 
 ----------------------------------------------------------------------------------------------------------------------------------
-Print CHAR(10) + 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_SocPerCircumstance]'
+PRINT CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
