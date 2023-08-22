@@ -3,7 +3,7 @@ SET DATEFIRST 1
 SET NOCOUNT ON
 
 -------------------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = -3
 -------------------------
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -14,7 +14,7 @@ DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPAR
 DECLARE @PeriodStart2 DATE = (SELECT DATEADD(MONTH,(@Offset +1),MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd2 DATE = (SELECT eomonth(DATEADD(MONTH,(@Offset +1),MAX([ReportingPeriodStartDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50))
+PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
 
@@ -347,4 +347,4 @@ WHEN Variable IN ('(Church of England) or (Anglican) (person)',
 GO
 
 ----------------------------------------------------------------------------------------------------------------------------------
-PRINT CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
