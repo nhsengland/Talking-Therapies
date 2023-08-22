@@ -117,138 +117,138 @@ GROUP BY DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- INSERT ----------------------------------------------------------------------------------------------------------------------------------------------------- 
 
--- INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_CareContactMode_Apts_Monthly]
+ INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
 
--- SELECT * FROM (
+SELECT * FROM (
 
--- SELECT  Month
--- 		,'CCG' AS OrgType
--- 		,[CCG Code] AS OrgCode
--- 		,[CCG Name] AS OrgName
--- 		,[Region Code]
--- 		,[Region Name]
--- 		,[Care Contact Patient Therapy Mode]
--- 		,COUNT(DISTINCT PathwayID) AS FinishedTreatment
+SELECT  Month
+		,'CCG' AS OrgType
+		,[CCG Code] AS OrgCode
+		,[CCG Name] AS OrgName
+		,[Region Code]
+		,[Region Name]
+		,[Care Contact Patient Therapy Mode]
+		,COUNT(DISTINCT PathwayID) AS FinishedTreatment
 		
--- 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
---         -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
---         WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
+		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
+        -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
+        WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
         
--- 		ELSE 
+		ELSE 
 
---         (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
---         /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
---         -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
---         AS 'Percentage_Recovery'
+        (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
+        /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
+        -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
+        AS 'Percentage_Recovery'
 		
--- 		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
--- 		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
+		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
+		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
 
--- FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_CareContactMethod_Phase1]
+FROM [MHDInternal].[TEMP_TTAD_CareContactMethod_Phase1]
 
--- GROUP BY Month
--- 		,[CCG Code]
--- 		,[CCG Name]
--- 		,[Region Code]
--- 		,[Region Name]
--- 		,[Care Contact Patient Therapy Mode]
+GROUP BY Month
+		,[CCG Code]
+		,[CCG Name]
+		,[Region Code]
+		,[Region Name]
+		,[Care Contact Patient Therapy Mode]
 
--- UNION --------------------------------------------------------
+UNION --------------------------------------------------------
 
--- SELECT   Month
--- 		,'STP' AS OrgType
--- 		,[STP Code] AS OrgCode
--- 		,[STP Name] AS OrgName
--- 		,[Region Code]
--- 		,[Region Name]
--- 		,[Care Contact Patient Therapy Mode]
--- 		,COUNT(DISTINCT PathwayID) AS FinishedTreatment
+SELECT   Month
+		,'STP' AS OrgType
+		,[STP Code] AS OrgCode
+		,[STP Name] AS OrgName
+		,[Region Code]
+		,[Region Name]
+		,[Care Contact Patient Therapy Mode]
+		,COUNT(DISTINCT PathwayID) AS FinishedTreatment
 		
--- 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
---         -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
---         WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
+		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
+        -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
+        WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
         
--- 		ELSE 
+		ELSE 
 
---         (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
---         /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
---         -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
---         AS 'Percentage_Recovery'
+        (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
+        /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
+        -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
+        AS 'Percentage_Recovery'
 		
--- 		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
--- 		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
+		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
+		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
 
--- FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_CareContactMethod_Phase1]
+FROM [MHDInternal].[TEMP_TTAD_CareContactMethod_Phase1]
 
--- GROUP BY Month
--- 		,[STP Code]
--- 		,[STP Name]
--- 		,[Region Code]
--- 		,[Region Name]
--- 		,[Care Contact Patient Therapy Mode]
+GROUP BY Month
+		,[STP Code]
+		,[STP Name]
+		,[Region Code]
+		,[Region Name]
+		,[Care Contact Patient Therapy Mode]
 
--- UNION --------------------------------------------------------
+UNION --------------------------------------------------------
 
--- SELECT   Month
--- 		,'Region' AS OrgType
--- 		,[Region Code] AS OrgCode
--- 		,[Region Name] AS OrgName
--- 		,[Region Code]
--- 		,[Region Name]
--- 		,[Care Contact Patient Therapy Mode]
--- 		,COUNT(DISTINCT PathwayID) AS 'FinishedTreatment'
+SELECT   Month
+		,'Region' AS OrgType
+		,[Region Code] AS OrgCode
+		,[Region Name] AS OrgName
+		,[Region Code]
+		,[Region Name]
+		,[Care Contact Patient Therapy Mode]
+		,COUNT(DISTINCT PathwayID) AS 'FinishedTreatment'
 		
--- 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
---         -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
---         WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
+		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
+        -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
+        WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
         
--- 		ELSE 
+		ELSE 
 
---         (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
---         /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
---         -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
---         AS 'Percentage_Recovery'
+        (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
+        /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
+        -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
+        AS 'Percentage_Recovery'
 		
--- 		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
--- 		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
+		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
+		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
 
--- FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_CareContactMethod_Phase1]
+FROM [MHDInternal].[TEMP_TTAD_CareContactMethod_Phase1]
 
--- GROUP BY Month
--- 		,[Region Code]
--- 		,[Region Name]
--- 		,[Care Contact Patient Therapy Mode]
+GROUP BY Month
+		,[Region Code]
+		,[Region Name]
+		,[Care Contact Patient Therapy Mode]
 
--- UNION --------------------------------------------------------
+UNION --------------------------------------------------------
 
--- SELECT   Month
--- 		,'England' AS OrgType
--- 		,'England' AS OrgCode
--- 		,'England' AS OrgName
--- 		,'Eng' AS [Region Code]
--- 		,'England' AS [Region Name]
--- 		,[Care Contact Patient Therapy Mode]
--- 		,COUNT(DISTINCT PathwayID) AS 'FinishedTreatment'
+SELECT   Month
+		,'England' AS OrgType
+		,'England' AS OrgCode
+		,'England' AS OrgName
+		,'Eng' AS [Region Code]
+		,'England' AS [Region Name]
+		,[Care Contact Patient Therapy Mode]
+		,COUNT(DISTINCT PathwayID) AS 'FinishedTreatment'
 		
--- 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
---         -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
---         WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
+		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END)
+        -COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END) = 0 THEN NULL
+        WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) = 0 THEN NULL 
         
--- 		ELSE 
+		ELSE 
 
---         (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
---         /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
---         -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
---         AS 'Percentage_Recovery'
+        (CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND  Recovery_Flag = 'True' THEN  PathwayID ELSE NULL END) AS float)
+        /(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' THEN PathwayID ELSE NULL END) AS float)
+        -CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' THEN PathwayID ELSE NULL END)AS float))) END
+        AS 'Percentage_Recovery'
 		
--- 		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
--- 		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
+		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
+		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
 
--- FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_CareContactMethod_Phase1]
+FROM [MHDInternal].[TEMP_TTAD_CareContactMethod_Phase1]
 
--- GROUP BY Month
--- 		,[Care Contact Patient Therapy Mode]
--- )_
+GROUP BY Month
+		,[Care Contact Patient Therapy Mode]
+)_
 
 -- -----------------------------------------------------------------------------
--- PRINT CHAR(10) + 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_CareContactMode_Apts_Monthly]'
+ PRINT CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]'
