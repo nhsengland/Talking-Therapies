@@ -3,7 +3,7 @@ SET DATEFIRST 1
 SET NOCOUNT ON
 
 -------------------------
-DECLARE @Offset INT = -3
+DECLARE @Offset INT = -1
 -------------------------
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
