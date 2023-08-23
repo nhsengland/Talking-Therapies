@@ -1,24 +1,21 @@
-
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
--- Refresh updates for [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2] ------------------------
-
-USE [NHSE_IAPT_v2]
+-- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] ------------------------
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators]
 
-SELECT  @MonthYear AS 'Month'
+SELECT  (DATENAME(M, @PeriodStart) + ' ' + DATEPART(YYYY, @PeriodStart)) AS 'Month'
 		,'Refresh' AS 'DataSource'
 		,'England' AS 'GroupType'
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
@@ -37,7 +34,7 @@ SELECT  @MonthYear AS 'Month'
 		,COUNT(DISTINCT CASE WHEN r.[TherapySession_FirstDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD,[ReferralRequestReceivedDate],[TherapySession_FirstDate]) <=42 THEN r.PathwayID ELSE NULL END) AS 'FirstTreatment6Weeks'
 		,COUNT(DISTINCT CASE WHEN r.[TherapySession_FirstDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD,[ReferralRequestReceivedDate],[TherapySession_FirstDate]) <=84 THEN r.PathwayID ELSE NULL END) AS 'FirstTreatment12Weeks'
 		,COUNT(DISTINCT CASE WHEN r.[TherapySession_FirstDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD,[ReferralRequestReceivedDate],[TherapySession_FirstDate]) <=126 THEN r.PathwayID ELSE NULL END) AS 'FirstTreatment18Weeks'
-		,COUNT(DISTINCT CASE WHEN [TherapySession_FirstDate] IS NULL AND r.[ServDischDate] IS NULL THEN r.PathwayID ELSE NULL END) AS 'WaitingForTreatment'
+		,COUNT(DISTINCT CASE WHEN r.[TherapySession_FirstDate] IS NULL AND r.[ServDischDate] IS NULL THEN r.PathwayID ELSE NULL END) AS 'WaitingForTreatment'
 		,COUNT(DISTINCT CASE WHEN a.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN Unique_CareContactID  ELSE NULL END) AS 'Appointments'
 		,COUNT(DISTINCT CASE WHEN a.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND AttendOrDNACode IN ('3', '03', ' 3', '3 ', ' 03', '03 ') THEN Unique_CareContactID ELSE NULL END) AS 'ApptDNA'
 		,COUNT(DISTINCT CASE WHEN r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) AS 'ReferralsEnded'
@@ -53,15 +50,15 @@ SELECT  @MonthYear AS 'Month'
 		,COUNT(DISTINCT CASE WHEN r.[TherapySession_SecondDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD,[TherapySession_FirstDate],[TherapySession_SecondDate]) BETWEEN 29 AND 90 THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond28To90Days'
 		,COUNT(DISTINCT CASE WHEN r.[TherapySession_SecondDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD,[TherapySession_FirstDate],[TherapySession_SecondDate]) > 90 THEN r.PathwayID ELSE NULL END) AS 'FirstToSecondMoreThan90Days'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		--------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		--------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -75,7 +72,6 @@ GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Othe
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
 		,[IntEnabledTherProg]
-
 -----------------------------------------------------------------------------------------------------------------
 
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators]'
