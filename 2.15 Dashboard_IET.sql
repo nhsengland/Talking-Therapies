@@ -1,27 +1,25 @@
+SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
-SET ANSI_WARNINGS ON
 
--- Refresh updates for [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_IET] -----------------------------------------------------------
-
-USE [NHSE_IAPT_v2]
+-- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] -----------------------------
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
--- Create base table: [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_IET] --------------------------------------------------
+-- Create base table: [MHDInternal].[TEMP_TTAD_PDT_IET] --------------------------------------------------
 
 IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_IET]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_IET]
 
 SELECT	PathwayId
 		,IntEnabledTherProg, SUM(DurationIntEnabledTher) AS TotalTime
-		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  desc) AS ROWID 
+		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  desc) AS 'ROWID'
 		
-INTO [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_IET] FROM (
+INTO [MHDInternal].[TEMP_TTAD_PDT_IET] FROM (
 
 SELECT DISTINCT PathwayId
 				,StartDateIntEnabledTherLog
@@ -29,13 +27,13 @@ SELECT DISTINCT PathwayId
 				,IntEnabledTherProg
 				,DurationIntEnabledTher
 
-FROM [dbo].[IDS205_InternetEnabledTherapyCareProfessionalActivityLog])_
+FROM [mesh_IAPT].[IDS205internettherlog])_
 
 GROUP BY PathwayId, IntEnabledTherProg
 
 ----------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_IET]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET]
 
 SELECT	@MonthYear AS 'Month'
  		,'Refresh' AS DataSource
@@ -74,15 +72,15 @@ SELECT	@MonthYear AS 'Month'
 		,COUNT(DISTINCT CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Improvement'
 		,COUNT(DISTINCT CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'NotCaseness'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		--------------------------
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_IET] iet ON r.PathwayId = iet.PathwayId AND ROWID = 1
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_IET] iet ON r.PathwayId = iet.PathwayId AND ROWID = 1
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1 
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -98,5 +96,4 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 		,[IntEnabledTherProg]
 
 -------------------------------------------------------------------------------
-
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_IET]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]'
