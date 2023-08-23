@@ -1,16 +1,13 @@
 SET ANSI_WARNINGS OFF
-SET DATEFIRST 1
 SET NOCOUNT ON
 
--- Refresh updates for: [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Intensive_Support_Dashboard_BAME] ---------------------------------
-
-USE [NHSE_IAPT_v2]
+-- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_PAD_BAME] -----------------------------
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
@@ -38,15 +35,15 @@ SELECT  @MonthYear AS 'Month'
 
 INTO #Base 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		--------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND UsePathway_Flag = 'TRUE'  AND IsLatest = 1
@@ -65,11 +62,11 @@ GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Othe
 
 --- ROUNDING AND PROPORTIONS ----------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Intensive_Support_Dashboard_BAME]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_BAME]
 
 SELECT	[Month] AS 'Month', 
-		'Refresh' AS DataSource,
-		'England' AS GroupType,
+		'Refresh' AS 'DataSource',
+		'England' AS 'GroupType',
 		'National' AS 'Level',
 		'All' AS 'Region Code',
 		'All' AS 'Region Name',
@@ -81,8 +78,8 @@ SELECT	[Month] AS 'Month',
 		'All' AS 'STP Name',
 		[Category] AS 'Category',
 		[Variable] AS 'Variable'
-		,SUM(Referrals) AS Referrals
-		,SUM([EnteringTreatment]) AS EnteringTreatment
+		,SUM(Referrals) AS 'Referrals'
+		,SUM([EnteringTreatment]) AS 'EnteringTreatment'
 		,SUM([Finished Treatment]) AS 'Finished Treatment'
 		,SUM([Recovery]) AS 'Recovery'
 		,SUM([NotCaseness]) AS 'NotCaseness'
@@ -95,8 +92,8 @@ GROUP BY [Month], [Category], [Variable]
 UNION ---------------------------------------------------------------------
 
 SELECT	Month AS Month, 
-		'Refresh' AS DataSource,
-		'England' AS GroupType,
+		'Refresh' AS 'DataSource',
+		'England' AS 'GroupType',
 		'Region' AS 'Level',
 		[Region Code] AS 'Region Code' ,
 		[Region Name] AS 'Region Name' ,
@@ -122,8 +119,8 @@ GROUP BY [Month], [Region Code], [Region Name], [Category], [Variable]
 UNION ---------------------------------------------------------------------
 
 SELECT	[Month] AS 'Month', 
-		'Refresh' AS DataSource,
-		'England' AS GroupType,
+		'Refresh' AS 'DataSource',
+		'England' AS 'GroupType',
 		'STP' AS 'Level',
 		'All' AS 'Region Code',
 		'All' AS 'Region Name',
@@ -149,8 +146,8 @@ GROUP BY [Month], [STP Code], [STP Name], [Category], [Variable]
 UNION ---------------------------------------------------------------------
 
 SELECT	[Month] AS 'Month', 
-		'Refresh' AS DataSource,
-		'England' AS GroupType,
+		'Refresh' AS 'DataSource',
+		'England' AS 'GroupType',
 		'CCG' AS 'Level',
 		'All' AS 'Region Code',
 		'All' AS 'Region Name',
@@ -176,8 +173,8 @@ GROUP BY [Month], [CCG Code], [CCG Name], [Category], [Variable]
 UNION ---------------------------------------------------------------------
 
 SELECT	[Month] AS 'Month', 
-		'Refresh' AS DataSource,
-		'England' AS GroupType,
+		'Refresh' AS 'DataSource',
+		'England' AS 'GroupType',
 		'Provider' AS 'Level',
 		'All' AS 'Region Code',
 		'All' AS 'Region Name',
@@ -203,8 +200,8 @@ GROUP BY [Month], [Provider Code], [Provider Name], [Category], [Variable]
 UNION ---------------------------------------------------------------------
 
 SELECT	[Month] AS 'Month', 
-		'Refresh' AS DataSource,
-		'England' AS GroupType,
+		'Refresh' AS 'DataSource',
+		'England' AS 'GroupType',
 		'CCG / Provider' AS 'Level',
 		'All' AS 'Region Code',
 		'All' AS 'Region Name',
@@ -228,4 +225,4 @@ FROM #Base
 GROUP BY [Month], [CCG Code], [CCG Name], [Provider Code], [Provider Name], [Category], [Variable]
 
 ------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Intensive_Support_Dashboard_BAME]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_BAME]'
