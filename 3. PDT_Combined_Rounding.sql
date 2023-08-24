@@ -1,21 +1,18 @@
 SET ANSI_WARNINGS OFF
-SET DATEFIRST 1
 SET NOCOUNT ON
 
 -- Rounding scripts (Main table, Primary Loop & New Indicators) -----------------------------------------------------------------------
 
-USE [NHSE_IAPT_v2]
-
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 --------------------------------------------------------------------------------------------------------------------------------------
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Appointment_Types_Totals]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_AppTypes_Totals]
 
 SELECT * FROM
 
@@ -180,7 +177,7 @@ SELECT [Month],
 		SUM([OtherLIApts])+SUM([EmploySuppLIApts])+SUM([AppRelaxApts])+SUM([BehavActHIApts])+SUM([CoupleTherapyDepApts])+SUM([CollabCareApts])+SUM([CounselDepApts])+SUM([BPDApts])
 		+SUM([EyeMoveDesenReproApts])+SUM([MindfulApts])+SUM([OtherHIApts])+SUM([EmploySuppHIApts])+SUM([CBTApts])+SUM([IPTApts])+SUM([ESApts])+SUM([Signposting])) AS FLOAT) END, 3) AS SignpostingPROP
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Apps_Primary_Loop]
+FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
 WHERE [Category] = 'Total' AND [Month] = @MonthYear
 
@@ -347,7 +344,7 @@ SELECT [Month],
 		SUM([OtherLIApts])+SUM([EmploySuppLIApts])+SUM([AppRelaxApts])+SUM([BehavActHIApts])+SUM([CoupleTherapyDepApts])+SUM([CollabCareApts])+SUM([CounselDepApts])+SUM([BPDApts])
 		+SUM([EyeMoveDesenReproApts])+SUM([MindfulApts])+SUM([OtherHIApts])+SUM([EmploySuppHIApts])+SUM([CBTApts])+SUM([IPTApts])+SUM([ESApts])+SUM([Signposting])) AS FLOAT) END, 2) AS SignpostingPROP
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Apps_Primary_Loop]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
 WHERE	[Category] = 'Total' AND [Month] = @MonthYear
 
@@ -539,7 +536,7 @@ SELECT [Month],
 		SUM([OtherLIApts])+SUM([EmploySuppLIApts])+SUM([AppRelaxApts])+SUM([BehavActHIApts])+SUM([CoupleTherapyDepApts])+SUM([CollabCareApts])+SUM([CounselDepApts])+SUM([BPDApts])
 		+SUM([EyeMoveDesenReproApts])+SUM([MindfulApts])+SUM([OtherHIApts])+SUM([EmploySuppHIApts])+SUM([CBTApts])+SUM([IPTApts])+SUM([ESApts])+SUM([Signposting])) AS FLOAT) END, 2) AS SignpostingPROP
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Apps_Primary_Loop]
+FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
 WHERE [Category] = 'Total' AND [Month] = @MonthYear
 
@@ -732,7 +729,7 @@ SELECT	[Month],
 		SUM([OtherLIApts])+SUM([EmploySuppLIApts])+SUM([AppRelaxApts])+SUM([BehavActHIApts])+SUM([CoupleTherapyDepApts])+SUM([CollabCareApts])+SUM([CounselDepApts])+SUM([BPDApts])
 		+SUM([EyeMoveDesenReproApts])+SUM([MindfulApts])+SUM([OtherHIApts])+SUM([EmploySuppHIApts])+SUM([CBTApts])+SUM([IPTApts])+SUM([ESApts])+SUM([Signposting])) AS FLOAT) END, 2) AS SignpostingPROP
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Apps_Primary_Loop]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
 WHERE	[Category] = 'Total' AND [Month] = @MonthYear
 
@@ -925,7 +922,7 @@ SELECT [Month],
 		SUM([OtherLIApts])+SUM([EmploySuppLIApts])+SUM([AppRelaxApts])+SUM([BehavActHIApts])+SUM([CoupleTherapyDepApts])+SUM([CollabCareApts])+SUM([CounselDepApts])+SUM([BPDApts])
 		+SUM([EyeMoveDesenReproApts])+SUM([MindfulApts])+SUM([OtherHIApts])+SUM([EmploySuppHIApts])+SUM([CBTApts])+SUM([IPTApts])+SUM([ESApts])+SUM([Signposting])) AS FLOAT) END, 2) AS SignpostingPROP
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Apps_Primary_Loop]
+FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
 WHERE [Category] = 'Total' AND [Month] = @MonthYear
 
@@ -1118,7 +1115,7 @@ SELECT [Month],
 		SUM([OtherLIApts])+SUM([EmploySuppLIApts])+SUM([AppRelaxApts])+SUM([BehavActHIApts])+SUM([CoupleTherapyDepApts])+SUM([CollabCareApts])+SUM([CounselDepApts])+SUM([BPDApts])
 		+SUM([EyeMoveDesenReproApts])+SUM([MindfulApts])+SUM([OtherHIApts])+SUM([EmploySuppHIApts])+SUM([CBTApts])+SUM([IPTApts])+SUM([ESApts])+SUM([Signposting])) AS FLOAT) END, 2) AS SignpostingPROP
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Apps_Primary_Loop]
+FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
 WHERE [Category] = 'Total' AND [Month] = @MonthYear
 
@@ -1155,12 +1152,12 @@ GROUP BY [Month]
 )_
 
 ---------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Appointment_Types_Totals]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_AppTypes_Totals]'
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Region_Monthly_Test_2_Rounded] ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded] ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Region_Monthly_Test_2_Rounded]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded]
 
 SELECT	Month, 
 		'Refresh' AS DataSource,
@@ -1241,7 +1238,7 @@ SELECT	Month,
 		SUM([RepeatReferrals2]) AS 'RepeatReferrals2',
 		'National' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Total' AND Month = @MonthYear
 
@@ -1328,7 +1325,7 @@ SELECT	Month,
 		CASE WHEN SUM([RepeatReferrals2])< 5 THEN NULL ELSE CAST(ROUND((SUM([RepeatReferrals2])+2) /5,0)*5 AS INT)  END AS [RepeatReferrals2],
 		'Region' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Total' AND Month = @MonthYear
 
@@ -1415,7 +1412,7 @@ SELECT Month,
 		CASE WHEN SUM([RepeatReferrals2])< 5 THEN NULL ELSE CAST(ROUND((SUM([RepeatReferrals2])+2) /5,0)*5 AS INT)  END AS [RepeatReferrals2],
 		'STP' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Total' AND Month = @MonthYear
 
@@ -1502,7 +1499,7 @@ SELECT	Month,
 		CASE WHEN SUM([RepeatReferrals2])< 5 THEN NULL ELSE CAST(ROUND((SUM([RepeatReferrals2])+2) /5,0)*5 AS INT)  END AS [RepeatReferrals2],
 		'CCG' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Total' AND Month = @MonthYear
 
@@ -1589,7 +1586,7 @@ SELECT	Month,
 		CASE WHEN SUM([RepeatReferrals2])< 5 THEN NULL ELSE CAST(ROUND((SUM([RepeatReferrals2])+2) /5,0)*5 AS INT)  END AS [RepeatReferrals2],
 		'Provider' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Total' AND Month = @MonthYear
 
@@ -1676,14 +1673,14 @@ SELECT	Month,
 		CASE WHEN SUM([RepeatReferrals2])< 5 THEN NULL ELSE CAST(ROUND((SUM([RepeatReferrals2])+2) /5,0)*5 AS INT)  END AS [RepeatReferrals2],
 		'CCG/ Provider' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Total' AND Month = @MonthYear
 
 GROUP BY Month, [CCG Code], [CCG Name], [Provider Code], [Provider Name]
 
 -------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Region_Monthly_Test_2_Rounded]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded]'
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded] -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
