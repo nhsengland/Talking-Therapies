@@ -1683,9 +1683,9 @@ GROUP BY Month, [CCG Code], [CCG Name], [Provider Code], [Provider Name]
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded]'
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded] -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded] -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]
 
 SELECT a.[Month], 
 		'Refresh' AS DataSource,
@@ -1741,9 +1741,9 @@ SELECT a.[Month],
 		ROUND(CASE WHEN (SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) <5 OR SUM(OpenReferral) <5   then NULL ELSE (CAST((SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) AS DECIMAL)/CAST(SUM(OpenReferral)AS DECIMAL)) END, 3) AS OpenReferral90daysRate,
 		ROUND(CASE WHEN SUM(a.[FirstToSecondMoreThan90Days]) <5 OR SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days]) <5   then NULL ELSE (CAST(SUM(a.[FirstToSecondMoreThan90Days]) AS DECIMAL)/CAST(SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days])AS DECIMAL)) END, 3) AS FirsttoSecond90daysRate
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] a
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a
 		------------------------------------------------------------------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2] b 
+		LEFT JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] b 
 		ON a.[Month] = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
 
 WHERE a.Category = 'Total' AND a.[Month] = @MonthYear
@@ -1806,8 +1806,9 @@ SELECT a.[Month],
 		ROUND(CASE WHEN (SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) <5 OR SUM(OpenReferral) <5   then NULL ELSE (CAST((SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) AS DECIMAL)/CAST(SUM(OpenReferral)AS DECIMAL)) END, 2) AS OpenReferral90daysRate,
 		ROUND(CASE WHEN SUM(a.[FirstToSecondMoreThan90Days]) <5 OR SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days]) <5   then NULL ELSE (CAST(SUM(a.[FirstToSecondMoreThan90Days]) AS DECIMAL)/CAST(SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days])AS DECIMAL)) END, 2) AS FirsttoSecond90daysRate
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] a
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2] b 
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a
+		--------------------------------------------------
+		LEFT JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] b 
 		ON a.[Month] = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
 
 WHERE a.Category = 'Total' AND a.[Month] = @MonthYear
@@ -1870,8 +1871,9 @@ SELECT a.[Month],
 		ROUND(CASE WHEN (SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) <5 OR SUM(OpenReferral) <5   then NULL ELSE (CAST((SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) AS DECIMAL)/CAST(SUM(OpenReferral)AS DECIMAL)) END, 2) AS OpenReferral90daysRate,
 		ROUND(CASE WHEN SUM(a.[FirstToSecondMoreThan90Days]) <5 OR SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days]) <5   then NULL ELSE (CAST(SUM(a.[FirstToSecondMoreThan90Days]) AS DECIMAL)/CAST(SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days])AS DECIMAL)) END, 2) AS FirsttoSecond90daysRate
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] a
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2] b 
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a
+		--------------------------------------------------
+		LEFT JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] b 
 		ON a.[Month] = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
 
 WHERE a.Category = 'Total' AND a.[Month] = @MonthYear
@@ -1934,8 +1936,9 @@ SELECT a.[Month],
 		ROUND(CASE WHEN (SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) <5 OR SUM(OpenReferral) <5   then NULL ELSE (CAST((SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) AS DECIMAL)/CAST(SUM(OpenReferral)AS DECIMAL)) END, 2) AS OpenReferral90daysRate,
 		ROUND(CASE WHEN SUM(a.[FirstToSecondMoreThan90Days]) <5 OR SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days]) <5   then NULL ELSE (CAST(SUM(a.[FirstToSecondMoreThan90Days]) AS DECIMAL)/CAST(SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days])AS DECIMAL)) END, 2) AS FirsttoSecond90daysRate
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] a
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2] b 
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a
+		--------------------------------------------------
+		LEFT JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] b 
 		ON a.[Month] = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
 
 WHERE a.Category = 'Total' AND a.[Month] = @MonthYear
@@ -1998,8 +2001,9 @@ SELECT a.[Month],
 		ROUND(CASE WHEN (SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) <5 OR SUM(OpenReferral) <5   then NULL ELSE (CAST((SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) AS DECIMAL)/CAST(SUM(OpenReferral)AS DECIMAL)) END, 2) AS OpenReferral90daysRate,
 		ROUND(CASE WHEN SUM(a.[FirstToSecondMoreThan90Days]) <5 OR SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days]) <5   then NULL ELSE (CAST(SUM(a.[FirstToSecondMoreThan90Days]) AS DECIMAL)/CAST(SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days])AS DECIMAL)) END, 2) AS FirsttoSecond90daysRate
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] a
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2] b 
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a
+		--------------------------------------------------
+		LEFT JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] b 
 		ON a.[Month] = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
 
 WHERE a.Category = 'Total' AND a.[Month] = @MonthYear
@@ -2062,8 +2066,9 @@ SELECT a.[Month],
 		ROUND(CASE WHEN (SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) <5 OR SUM(OpenReferral) <5   then NULL ELSE (CAST((SUM([OpenReferral91-120DaysNoContact])+SUM([OpenReferralOver120daysNoContact])) AS DECIMAL)/CAST(SUM(OpenReferral)AS DECIMAL)) END, 2) AS OpenReferral90daysRate,
 		ROUND(CASE WHEN SUM(a.[FirstToSecondMoreThan90Days]) <5 OR SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days]) <5   then NULL ELSE (CAST(SUM(a.[FirstToSecondMoreThan90Days]) AS DECIMAL)/CAST(SUM(a.[FirstToSecond28Days]+[FirstToSecond28To56Days]+[FirstToSecond57To90Days]+a.[FirstToSecondMoreThan90Days])AS DECIMAL)) END, 2) AS FirsttoSecond90daysRate
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] a
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_IST_New_Indicators_v2] b 
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a
+		--------------------------------------------------
+		LEFT JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] b 
 		ON a.[Month] = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
 
 WHERE a.Category = 'Total' AND a.[Month] = @MonthYear
@@ -2072,14 +2077,14 @@ GROUP BY a.[Month], a.[CCG Code], a.[CCG Name], a.[Provider Code], a.[Provider N
 
 -- ALSO ENSURE RIGHTCARE CCGs ARE UPDATED EACH MONTH ---------------------------------------------------------
 
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded]
+-- UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded]
 
-SET RightcareSimilarCCG = b.[Similar CCG]
+-- SET RightcareSimilarCCG = b.[Similar CCG]
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded] a
-		LEFT JOIN NHSE_Sandbox_MentalHealth.[dbo].RightcareSimilar10 b ON a.[CCG Code] = b.[CCG Code] AND a.[CCG Name] = b.[CCG Name]
+-- FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded] a
+-- 		LEFT JOIN NHSE_Sandbox_MentalHealth.[dbo].RightcareSimilar10 b ON a.[CCG Code] = b.[CCG Code] AND a.[CCG Name] = b.[CCG Name]
 
-WHERE [Level] = 'CCG'
+-- WHERE [Level] = 'CCG'
 
 ------------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]'
