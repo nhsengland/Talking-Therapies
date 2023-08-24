@@ -1,26 +1,21 @@
 SET ANSI_WARNINGS OFF
-SET DATEFIRST 1
 SET NOCOUNT ON
 
-USE [NHSE_IAPT_v2]
-
--- Refresh updates for: [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Over_65_Metrics] ------------------------------------------------
-
 ---------------------------------------------------------------------------------------------------------------------------------
--- This script must be run AFTER the script that feeds [IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] ----------------------
+-- This script must be run AFTER the script that feeds [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] --------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
--------------------------------------------------------------------------------------------------------------------------------------
+-- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PAD_Over_65_Metrics] ------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Over_65_Metrics]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_Over_65_Metrics]
 
 SELECT	[Month], 
 		'Refresh' AS 'DataSource',
@@ -40,7 +35,7 @@ SELECT	[Month],
 		SUM([EnteringTreatment]) AS 'EnteringTreatment',
 		'National' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Age' AND Variable = '65+' AND [Month] = @MonthYear
 
@@ -66,7 +61,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'Region' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Age' AND Variable = '65+' AND [Month] = @MonthYear
 
@@ -92,7 +87,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'STP' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Age' AND Variable = '65+' AND [Month] = @MonthYear
 
@@ -118,7 +113,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'Provider' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Age' AND Variable = '65+' AND [Month] = @MonthYear
 
@@ -144,7 +139,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'CCG' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Age' AND Variable = '65+' AND [Month] = @MonthYear
 
@@ -170,7 +165,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'CCG/ Provider' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	Category = 'Age' AND Variable = '65+' AND [Month] = @MonthYear
 
