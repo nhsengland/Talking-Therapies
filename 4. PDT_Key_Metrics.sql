@@ -1,23 +1,19 @@
 SET ANSI_WARNINGS OFF
-SET DATEFIRST 1
 SET NOCOUNT ON
 
--- Refresh update for: [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Region_Monthly_Test_2_Rounded_Unpivot] -----------------------------
-
-USE [NHSE_IAPT_v2]
+-- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_Rounded_Unpivot] -----------------------------
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID])
-
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Region_Monthly_Test_2_Rounded_Unpivot]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_Rounded_Unpivot]
 
 SELECT	[Month]
 		,[DataSource]
@@ -36,7 +32,7 @@ SELECT	[Month]
 		,[Measure]
 		,[Value]
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Region_Monthly_Test_2_Rounded] s
+FROM	[MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded] s
 
 UNPIVOT ([Value] FOR [Measure] IN ([Finished Treatment - 2 or more Apps], [Referrals], [EnteringTreatment])) u
 
@@ -61,7 +57,7 @@ SELECT	[Month]
 		,[Measure]
 		,[Value]
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded] s
+FROM	[MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded] s
 
 UNPIVOT ([Value] FOR [Measure] IN ([FinishedCourseTreatment6WeeksRate], [FinishedCourseTreatment18WeeksRate], [RecoveryRate], [ReliableImprovementRate], [OpenReferral90daysRate], [FirsttoSecond90daysRate])) u
 
@@ -86,7 +82,7 @@ SELECT	[Month]
 		,[Measure]
 		,[Value]
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Intensive_Support_Dashboard_BAME] s
+FROM	[MHDInternal].[DASHBOARD_TTAD_PAD_BAME] s
 
 UNPIVOT ([Value] FOR [Measure] IN ([RecRate])) u
 
@@ -111,11 +107,11 @@ SELECT	[Month]
 		,[Measure]
 		,[Value]
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Over_65_Metrics] s
+FROM	[MHDInternal].[DASHBOARD_TTAD_PAD_Over_65_Metrics] s
 
 UNPIVOT ([Value] FOR [Measure] IN ([EnteringTreatment])) u
 
 WHERE	[Level] <> 'CCG/ Provider' AND [Month] = @MonthYear;
 
 -----------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Region_Monthly_Test_2_Rounded_Unpivot]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_Rounded_Unpivot]'
