@@ -1,8 +1,8 @@
 -- Refresh updates for:
 ----------------------------------------------------------------------
--- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FSplit]
--- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]
--- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]
+-- [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit]
+-- [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages] 
+-- [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals]
 
 ---- CREATE BASE CARE CONTACT COUNTS TABLE ----------------------------------------------------------------------------------------
 
