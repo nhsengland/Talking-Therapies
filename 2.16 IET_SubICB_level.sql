@@ -1,10 +1,10 @@
----- Refresh updates for:
-------------------------------------------------------------------------
----- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FSplit]
----- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]
----- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]
+-- Refresh updates for:
+----------------------------------------------------------------------
+-- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FSplit]
+-- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]
+-- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]
 
--- CREATE BASE CARE CONTACT COUNTS TABLE ----------------------------------------------------------------------------------------
+---- CREATE BASE CARE CONTACT COUNTS TABLE ----------------------------------------------------------------------------------------
 
 IF OBJECT_ID ('tempdb..#CareContact') IS NOT NULL DROP TABLE #CareContact
 
@@ -24,7 +24,7 @@ WHERE ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND App
 
 GROUP BY [PathwayID]
 
------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------
 
 DECLARE @@Offset INT = -1
 
@@ -409,7 +409,7 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 
 PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FSplit]'
 
--------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals]
 
@@ -434,8 +434,8 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		--------------------------
-		INNER JOIN NHSE_Sandbox_MentalHealth.dbo.PreProc_Referral ppr ON mpi.[Pseudo_NHS_Number_NCDR] = ppr.[Der_Pseudo_NHS_Number] AND ppr.ReferralRequestReceivedDate >= r.ServDischDate
+		---------------------------
+		INNER JOIN [MHDInternal].[PreProc_Referral] ppr ON mpi.[Pseudo_NHS_Number_NCDR] = ppr.[Der_Pseudo_NHS_Number] AND ppr.ReferralRequestReceivedDate >= r.ServDischDate
 		---------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
@@ -487,8 +487,6 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [mesh_IAPT].[IDS205internettherlog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
 		-----------------------------------------
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
-
-
 		---------------------------
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
@@ -606,6 +604,6 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
 )_
 
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]'
+-- PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]'
 
 --------------------------------------------------------------------------------------------------------------------------------------------
