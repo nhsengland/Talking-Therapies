@@ -81,7 +81,7 @@ FROM	[MHDInternal].[TTAD_ADSM_BASE_TABLE] pc
 -----------------------------------------------------------------------------------------------------------------------------------------------
 SET ANSI_WARNINGS OFF -------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FSplit]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit]
 
 SELECT * FROM
 
@@ -411,7 +411,7 @@ PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FSplit]'
 
 -------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals]
 
 SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar) AS Month
 		,'England' AS 'GroupType'
@@ -460,7 +460,7 @@ PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]'
 
 -- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages] ---------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages]
 
 SELECT * FROM
 
