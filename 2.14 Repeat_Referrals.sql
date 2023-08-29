@@ -1,5 +1,4 @@
 SET ANSI_WARNINGS OFF
-SET DATEFIRST 1
 SET NOCOUNT ON
 
 -- CREATES NEW SPELL TABLE AND BASE TABLE -------------------------------------------------------------------------------------------------
@@ -8,35 +7,33 @@ USE [NHSE_IAPT]
 
 -- SELECTS ALL PEOPLE AND PATHWAYS RECORD NUMBERS AND REFRECDATES FOR v1.5 and v2.0
 
-IF OBJECT_ID ('tempdb..#All') IS NOT NULL DROP TABLE #All
-
 SELECT * INTO #All 
 
 FROM (
 
-SELECT CAST(r.PseudoNumber AS varchar) AS PseudoNumber, CAST(IC_PATHWAY_ID AS varchar(100)) AS IC_PATHWAY_ID, CAST(r.IAPT_RECORD_NUMBER AS bigint) AS IC_RECORD_NUMBER, REFRECDATE, START_DATE, END_DATE, ph.Organisation_Code AS 'Provider Code', ch.Organisation_Code AS 'CCG Code' , CAST(REFERRAL_ID AS bigint) AS REFERRAL_ID
+SELECT CAST(r.[IAPT_PERSON_ID] AS varchar) AS PseudoNumber, CAST(IC_PATHWAY_ID AS varchar(100)) AS IC_PATHWAY_ID, CAST(r.IAPT_RECORD_NUMBER AS bigint) AS IC_RECORD_NUMBER, REFRECDATE, h.START_DATE, h.END_DATE, ph.Organisation_Code AS 'Provider Code', ch.Organisation_Code AS 'CCG Code' , CAST(REFERRAL_ID AS bigint) AS REFERRAL_ID
 
-FROM	[NHSE_Sandbox_Policy].[dbo].[Referral_v15] r
+FROM	[mesh_IAPT].[Referral_v15] r
 		---------------------------------------------
-		INNER JOIN [dbo].[Person_v15] p ON r.IAPT_RECORD_NUMBER = p.IAPT_RECORD_NUMBER
-		INNER JOIN [dbo].[Header_v15] h ON p.HEADER_ID = h.HEADER_ID
+		INNER JOIN [mesh_IAPT].[Person_v15] p ON r.IAPT_RECORD_NUMBER = p.IAPT_RECORD_NUMBER
+		INNER JOIN [mesh_IAPT].[Header_v15] h ON p.HEADER_ID = h.HEADER_ID
 		----------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.IC_CCG = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgCodeProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies] ch ON r.IC_CCG = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies] ph ON r.OrgCodeProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 UNION
 
 SELECT CAST([Pseudo_NHS_Number_NCDR] AS varchar), CAST(PathwayID AS varchar(100)), r.RecordNumber, ReferralRequestReceivedDate, h.[ReportingPeriodStartDate],h.[ReportingPeriodEndDate],ph.Organisation_Code AS 'Provider Code', ch.Organisation_Code AS 'CCG Code' , CAST(UniqueID_IDS101 AS bigINT)
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		-----------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		INNER JOIN [mesh_IAPT].[IDS000header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId AND r.Unique_MonthID = l.Unique_MonthID
 		-----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId AND r.Unique_MonthID = l.Unique_MonthID
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies]  ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE IsLatest = 1 
 	
@@ -62,23 +59,23 @@ INNER JOIN #Temp3 t on r.IC_PATHWAY_ID = t.IC_PATHWAY_ID AND r.IC_RECORD_NUMBER 
 
 IF OBJECT_ID ('tempdb..#Spell2') IS NOT NULL DROP TABLE #Spell2
 
-SELECT * INTO #Spell2  FROM
+SELECT * INTO #Spell2  
 
-	(
+FROM (
 
 SELECT s.*, CAST(IC_USE_PATHWAY_FLAG AS varchar) AS IC_USE_PATHWAY_FLAG, AGE_AT_REF_RECEIVED_DATE, CAST(IC_RECOVERY_FLAG As varchar) AS IC_RECOVERY_FLAG, CAST(IC_RELIABLE_DETER_FLAG AS varchar) AS IC_RELIABLE_DETER_FLAG, CAST(IC_RELIABLE_IMPROV_FLAG AS varchar) AS IC_RELIABLE_IMPROV_FLAG, CAST(IC_NOT_CASENESS_FLAG AS varchar) AS IC_NOT_CASENESS_FLAG,
 ENDDATE,
 IC_ProvDiag,NULL AS 'PresentingComplaintHigherCategory', NULL AS 'PresentingComplaintLowerCategory',
 IC_Count_Treatment_Appointments, ENDCODE, 'v1.5' AS Version
 FROM #Spell s
-INNER JOIN [NHSE_Sandbox_Policy].[dbo].[Referral_v15] r on CAST(r.IC_PATHWAY_ID AS varchar(100)) = s.IC_PATHWAY_ID AND IAPT_RECORD_NUMBER = CAST(s.IC_RECORD_NUMBER AS varchar)
+INNER JOIN [mesh_IAPT].[Referral_v15] r on CAST(r.IC_PATHWAY_ID AS varchar(100)) = s.IC_PATHWAY_ID AND IAPT_RECORD_NUMBER = CAST(s.IC_RECORD_NUMBER AS varchar)
 UNION
 SELECT s.*, CAST(UsePathway_Flag AS varchar) AS UsePathway_Flag, Age_ReferralRequest_ReceivedDate, CAST(RECOVERY_FLAG AS varchar), CAST(ReliableDeterioration_Flag AS varchar), CAST(ReliableImprovement_Flag AS varchar), CAST(NotCaseness_Flag AS varchar),
 ServDischDate,
 NULL As IC_ProvDiag, PresentingComplaintHigherCategory, PresentingComplaintLowerCategory,
 TreatmentCareContact_Count, ENDCODE, 'v2.0' AS Version
 FROM #Spell s
-INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS101_Referral] r on CAST(PathwayID AS varchar(100)) = s.IC_PATHWAY_ID AND RecordNumber =IC_RECORD_NUMBER 
+INNER JOIN [mesh_IAPT].[IDS101referral] r on CAST(PathwayID AS varchar(100)) = s.IC_PATHWAY_ID AND RecordNumber =IC_RECORD_NUMBER 
 
 	)_
 
@@ -249,9 +246,7 @@ INNER JOIN #Record2 m ON m.IC_PATHWAY_ID = PreviousID AND m.REFERRAL_ID = a.REFE
 -- Repeat Referrals Table ----------------------------------------------------------------------------------------------------
 
 -- The full table has to be re-run each month
-DELETE FROM [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Repeat_Referrals]
-
-USE [NHSE_IAPT_v2]
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
 
 DECLARE @Offset INT = -1
 
@@ -259,10 +254,10 @@ WHILE @Offset > -33
 
 BEGIN 
 
-DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID])
-DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID])
+DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Repeat_Referrals]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
 
 SELECT * FROM (
 
@@ -285,8 +280,8 @@ SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS 
 
 FROM	#RepeatReferrals rr
 		------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON rr.LatestCCG = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON rr.LatestProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.LatestCCG = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.LatestProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE LatestReferral BETWEEN @Period_Start AND @Period_end AND [Time between referrals] BETWEEN 0 AND 365  AND PreviousCountAppointments >= 2 
 AND LatestID <> PreviousID AND PseudoNumber IS NOT NULL AND LatestReferral <> PreviousReferral AND PseudoNumber <> '0'
@@ -308,11 +303,10 @@ SET @Offset = @Offset - 1
 END
 GO
 
--- Repeat referrals Insert 2 table -----------------------------------------------------------------------
+-- Repeat referrals Insert table -------------------------------------------------------------------------
 
-DELETE FROM [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Repeat_Referrals_Insert2]
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
-USE [NHSE_IAPT_v2]
 
 DECLARE @Offset INT = -1
 
@@ -320,10 +314,10 @@ WHILE @Offset > -36
 
 BEGIN 
 
-DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [IsLatest_SubmissionID])
+DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Repeat_Referrals_Insert2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
 SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS varchar) AS Month
 		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
@@ -340,8 +334,8 @@ SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS 
 
 FROM	#RepeatReferrals rr
 		------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON rr.LatestCCG = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON rr.LatestProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.LatestCCG = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.LatestProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE LatestReferral BETWEEN @Period_Start AND @Period_end AND [Time between referrals] BETWEEN 0 AND 365  AND PreviousCountAppointments >= 2 
 AND LatestID <> PreviousID AND PseudoNumber IS NOT NULL AND LatestReferral <> PreviousReferral AND PseudoNumber <> '0' --AND ENDCODE = '42'
@@ -358,15 +352,15 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 SET @Offset = @Offset - 1
 END
 
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] SET RepeatReferrals2 = NULL
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] SET [RepeatReferrals2] = b.[Repeat Referrals]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = NULL
+UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = b.[Repeat Referrals]
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Repeat_Referrals_Insert2] b
-INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] a ON a.[Month] = b.[Month] AND a.[Region Code] = b.[Region Code] 
+FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert] b
+INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[Month] AND a.[Region Code] = b.[Region Code] 
 AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
 AND a.[STP Code] = b.[STP Code] AND a.Category = b.[Category] AND (a.Variable = b.[Variable] OR a.[Variable] IS NULL AND b.[Variable] IS NULL)
 
 --------------------------------------------------------------------------------------------
 PRINT CHAR(10)
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Repeat_Referrals]'
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[Dashboard_Repeat_Referrals_Insert2]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]'
