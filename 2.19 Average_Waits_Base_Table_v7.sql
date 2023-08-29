@@ -1,19 +1,19 @@
-USE [NHSE_IAPT_v2]
-
-SET DATEFIRST 1
+SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
 -- Selects Max CareContact Record (subquery due to selection of multiple records for some carecontactIds where there are different recordings of time/apptype - still an issue with some carecontactIds having multiple dates - check with kaz) keep in for now
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareContact]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareContact]
 
-SELECT DISTINCT x.*, AppType,CareContTime INTO [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareContact] FROM 
+IF OBJECT_ID ('[MHDInternal].[TEMP_IAPT_AvgWaits_CareContact]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_IAPT_AvgWaits_CareContact]
+
+SELECT DISTINCT x.*, AppType,CareContTime INTO [MHDInternal].[TEMP_IAPT_AvgWaits_CareContact] FROM 
 
 (
 
 SELECT DISTINCT MAX(c.AUDITID) AS AuditID, [CareContDate], [PathwayID], [CareContactId]
 
-FROM [IDS201_CareContact] c
-INNER JOIN [dbo].[IsLatest_SubmissionID] l ON c.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND c.AuditId = l.AuditId
+FROM [mesh_IAPT].[IDS201CareContact] c
+
+INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON c.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND c.AuditId = l.AuditId
 
 WHERE ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05') and IsLatest = 1
 
@@ -21,31 +21,37 @@ GROUP BY [CareContDate], [PathwayID],[CareContactId]
 
 ) x
 
-INNER JOIN [IDS201_CareContact] a ON a.PathwayId = x.PathwayId AND a.CareContactId = x.CareContactId AND a.AuditId = x.AuditID
+INNER JOIN [mesh_IAPT].[IDS201CareContact] a ON a.PathwayId = x.PathwayId AND a.CareContactId = x.CareContactId AND a.AuditId = x.AuditID
 
 --Selects a single CareActivity Record - multiple CodeProcAndProcStatus for some apts
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareActivity]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareActivity]
+IF OBJECT_ID ('[MHDInternal].[TEMP_IAPT_AvgWaits_CareActivity]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_IAPT_AvgWaits_CareActivity]
 
-SELECT c.*, CodeProcAndProcStatus INTO [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareActivity] FROM (SELECT DISTINCT MIN(UniqueID_IDS202) AS MinRecord, [PathwayID],[CareContactId],a.AuditId FROM (
+SELECT c.*, CodeProcAndProcStatus INTO [MHDInternal].[TEMP_IAPT_AvgWaits_CareActivity] FROM (SELECT DISTINCT MIN(UniqueID_IDS202) AS MinRecord, [PathwayID], [CareContactId], a.[AuditId]
 
-SELECT DISTINCT [PathwayID],[CareContactId],a.AuditId, UniqueID_IDS202 FROM [dbo].[IDS202_CareActivity] a
-INNER JOIN [dbo].[IsLatest_SubmissionID] l ON a.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND a.AuditId = l.AuditId
-WHERE CodeProcAndProcStatus IS NOT NULL and IsLatest = 1 and (CodeProcAndProcStatus IN('1127281000000100', '1129471000000105', '842901000000108', '286711000000107', '314034001','449030000', '933221000000107', '1026131000000100', '304891004', '443730003','1098051000000103','748051000000105', '748101000000105', '748041000000107', '748091000000102', '748061000000108', '702545008', '1026111000000108', '975131000000104')
-OR CodeProcAndProcStatus IN ('228557008','409063005','440274001','786721000000109','429048003','429329005','444175001','1129491000000100','223458004','975151000000106')) -- Other SNOWMED codes assigned to LI/HI by Andy
+FROM (
+
+SELECT DISTINCT [PathwayID],[CareContactId],a.[AuditId], [UniqueID_IDS202] 
+
+FROM 	[mesh_IAPT].[IDS202careactivity] a
+		----------------------------------
+INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON a.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND a.AuditId = l.AuditId
+
+WHERE 	CodeProcAndProcStatus IS NOT NULL 
+		and IsLatest = 1 and (CodeProcAndProcStatus IN('1127281000000100', '1129471000000105', '842901000000108', '286711000000107', '314034001','449030000', '933221000000107', '1026131000000100', '304891004', '443730003','1098051000000103','748051000000105', '748101000000105', '748041000000107', '748091000000102', '748061000000108', '702545008', '1026111000000108', '975131000000104')
+		OR CodeProcAndProcStatus IN ('228557008','409063005','440274001','786721000000109','429048003','429329005','444175001','1129491000000100','223458004','975151000000106')) -- Other SNOWMED codes assigned to LI/HI by Andy
 
 ) a
 
 GROUP BY [PathwayID],[CareContactId], AuditId ) c
-INNER JOIN [dbo].[IDS202_CareActivity] a ON MinRecord = a.UniqueID_IDS202 AND a.CareContactId = c.CareContactId AND c.PathwayId = a.PathwayID AND c.AuditId = a.AuditId
+INNER JOIN [mesh_IAPT].[IDS202CareActivity] a ON MinRecord = a.UniqueID_IDS202 AND a.CareContactId = c.CareContactId AND c.PathwayId = a.PathwayID AND c.AuditId = a.AuditId
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-USE [NHSE_IAPT_v2]
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
@@ -68,15 +74,15 @@ SELECT DISTINCT
 
 INTO #Finished 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS201CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -104,9 +110,9 @@ SELECT DISTINCT f.*, CareContDate, CareContTime,a.CareContactId
 
 INTO #Base
 
-FROM #Finished f
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareContact] a ON a.PathwayID = f.PathwayID
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_AvgWaits_CareActivity] c ON a.CareContactId =c.CareContactId AND c.PathwayID = a.PathwayID  AND c.AuditId = a.AuditId
+FROM 	#Finished f
+		LEFT JOIN [MHDInternal].[TEMP_IAPT_AvgWaits_CareContact] a ON a.PathwayID = f.PathwayID
+		LEFT JOIN [MHDInternal].[TEMP_IAPT_AvgWaits_CareActivity] c ON a.CareContactId =c.CareContactId AND c.PathwayID = a.PathwayID  AND c.AuditId = a.AuditId
 
 WHERE f.ReferralRequestReceivedDate > '2020-08-31'
 
@@ -332,7 +338,7 @@ INTO #ProviderMeanRefToFirstHI FROM #WaitFirstHI GROUP BY [Month], [Provider Cod
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- [IAPT_Avg_AssessToFirstLIHI_ICB] (1 of 3) -----------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Avg_AssessToFirstLIHI]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_AssessToFirstLIHI]
 
 SELECT * FROM
 
@@ -362,7 +368,7 @@ LEFT JOIN #ProviderMeanRefToFirstHI d ON a.Level = d.Level AND a.[Month] = d.[Mo
 
 )_
 
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Avg_AssessToFirstLIHI]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_AssessToFirstLIHI]'
 
 --------------------------------------------------------------------------------------------------------------------------------------------
 -- Average Maximum Waits -------------------------------------------------------------------------------------------------------------------
@@ -421,7 +427,7 @@ PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY MaxWait) OVER(PARTITION BY [Provider
 ------------------------------------------------------------------------------------------------------------------------------------------------------
 -- [IAPT_Avg_Max_Wait_ICB] (2 of 3) ------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Avg_Max_Wait]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Max_Wait]
 
 SELECT * FROM
 
@@ -445,7 +451,7 @@ LEFT JOIN #ProviderMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month
 
 )_
 
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Avg_Max_Wait]'
+PRINT 'Updated - [MHDInternal].[IAPT_Avg_Max_Wait]'
 
 -------------------------------------------------------------------------------------------------------------------------------
  -- Average Wait Per Person ---------------------------------------------------------------------------------------------------
@@ -497,7 +503,7 @@ INTO #MedianWaitsProvider FROM #Waits2 WHERE ROWID > 1
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- [IAPT_Avg_Wait_Between_Apts] (3 of 3) ---------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Avg_Wait_Between_Apts]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Wait_Between_Apts]
 
 SELECT * FROM
 
@@ -521,4 +527,4 @@ LEFT JOIN #MedianWaitsProvider b ON a.Level = b.Level AND a.[Month] = b.[Month] 
 
 )_
 
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Avg_Wait_Between_Apts]'
+PRINT 'Updated - [MHDInternal].[IAPT_Avg_Wait_Between_Apts]'
