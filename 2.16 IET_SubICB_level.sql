@@ -4,8 +4,6 @@
 ---- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]
 ---- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]
 
-USE [NHSE_IAPT_v2]
-
 -- CREATE BASE CARE CONTACT COUNTS TABLE ----------------------------------------------------------------------------------------
 
 IF OBJECT_ID ('tempdb..#CareContact') IS NOT NULL DROP TABLE #CareContact
@@ -14,13 +12,13 @@ SELECT DISTINCT
 
 		MAX(c.AUDITID) AS AuditID
 		,[PathwayID]
-		,COUNT (distinct(case when  c.ConsMechanism IN ('01', '1', '1 ', ' 1') OR c.ConsMediumUsed IN ('01', '1', '1 ', ' 1') then c.Unique_CareContactID END )) as 'Face to face communication'
-		,COUNT (distinct(case when  c.ConsMechanism IN ('02', '2', '2 ', ' 2','03', '3', '3 ', ' 3','04', '4', '4 ', ' 4','05', '5', '5 ', ' 5','06', '6', '6 ', ' 6','98', '98 ', ' 98','08', '8', '8 ', ' 8','09', '9', '9 ', ' 9','10', '10', '10 ', ' 10','11', '11', '11 ', ' 11','12', '12', '12 ', ' 12','13', '13', '13 ', ' 13') OR c.ConsMediumUsed IN ('02', '2', '2 ', ' 2','03', '3', '3 ', ' 3','04', '4', '4 ', ' 4','05', '5', '5 ', ' 5','06', '6', '6 ', ' 6','98', '98 ', ' 98','08', '8', '8 ', ' 8','09', '9', '9 ', ' 9','10', '10', '10 ', ' 10','11', '11', '11 ', ' 11','12', '12', '12 ', ' 12','13', '13', '13 ', ' 13') then c.Unique_CareContactID END )) as 'Other'
+		,COUNT (distinct(case when c.ConsMechanism IN ('01', '1', '1 ', ' 1') OR c.ConsMediumUsed IN ('01', '1', '1 ', ' 1') then c.Unique_CareContactID END )) as 'Face to face communication'
+		,COUNT (distinct(case when c.ConsMechanism IN ('02', '2', '2 ', ' 2','03', '3', '3 ', ' 3','04', '4', '4 ', ' 4','05', '5', '5 ', ' 5','06', '6', '6 ', ' 6','98', '98 ', ' 98','08', '8', '8 ', ' 8','09', '9', '9 ', ' 9','10', '10', '10 ', ' 10','11', '11', '11 ', ' 11','12', '12', '12 ', ' 12','13', '13', '13 ', ' 13') OR c.ConsMediumUsed IN ('02', '2', '2 ', ' 2','03', '3', '3 ', ' 3','04', '4', '4 ', ' 4','05', '5', '5 ', ' 5','06', '6', '6 ', ' 6','98', '98 ', ' 98','08', '8', '8 ', ' 8','09', '9', '9 ', ' 9','10', '10', '10 ', ' 10','11', '11', '11 ', ' 11','12', '12', '12 ', ' 12','13', '13', '13 ', ' 13') then c.Unique_CareContactID END )) as 'Other'
 
 INTO #CareContact
 
-FROM	[IDS201_CareContact] c
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON c.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND c.AuditId = l.AuditId
+FROM	[mesh_IAPT].[IDS201carecontact] c
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON c.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND c.AuditId = l.AuditId
 
 WHERE ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05') and IsLatest = 1
 
@@ -28,29 +26,29 @@ GROUP BY [PathwayID]
 
 -----------------------------------------------------------------------------------------------------------------------
 
-DECLARE @Offset INT = -1
+DECLARE @@Offset INT = -1
 
-DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IDS000_Header])
-DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [dbo].[IDS000_Header])
+DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 PRINT @Period_Start
 PRINT @Period_End
 
-DECLARE  @Period_Start2 DATE = (SELECT DATEADD(MONTH,(@Offset +1),MAX(@Period_Start)) FROM [dbo].[IDS000_Header])
-DECLARE  @Period_End2 DATE = (SELECT eomonth(DATEADD(MONTH,(@Offset +1),MAX(@Period_End))) FROM [dbo].[IDS000_Header])
+DECLARE  @Period_Start2 DATE = (SELECT DATEADD(MONTH,(@@Offset +1),MAX(@Period_Start)) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE  @Period_End2 DATE = (SELECT eomonth(DATEADD(MONTH,(@@Offset +1),MAX(@Period_End))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 PRINT @Period_Start2
 PRINT @Period_End2
 
 -- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM]
+IF OBJECT_ID ('[MHDInternal].[TTAD_ADSM_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_ADSM_BASE_TABLE]
 
-SELECT * INTO [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM] FROM 
+SELECT * INTO [MHDInternal].[TTAD_ADSM_BASE_TABLE] FROM 
 
 (SELECT pc.* 
-	FROM [IDS603_PresentingComplaints] pc
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
+	FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
 		AND pc.AuditId = l.AuditId 
 		AND pc.Unique_MonthID = l.Unique_MonthID
 	WHERE IsLatest = 1 AND [ReportingPeriodStartDate] <= @Period_End
@@ -58,8 +56,8 @@ SELECT * INTO [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM] FROM
 UNION -------------------------------------------------------------------------------
 
 SELECT pc.* 
-FROM [IDS603_PresentingComplaints] pc
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
+FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
 		AND pc.AuditId = l.AuditId 
 		AND pc.Unique_MonthID = l.Unique_MonthID
 	WHERE File_Type = 'Primary' AND [ReportingPeriodStartDate] BETWEEN @Period_Start2 AND @Period_End2
@@ -67,7 +65,7 @@ FROM [IDS603_PresentingComplaints] pc
 
 -- Presenting Complaints -----------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp]
+IF OBJECT_ID ('[MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]
 
 SELECT DISTINCT pc.PathwayID
 				,Validated_PresentingComplaint
@@ -75,10 +73,10 @@ SELECT DISTINCT pc.PathwayID
 				,PresCompCodSig
 				,PresCompDate DESC, UniqueID_IDS603 DESC) AS rank
 
-INTO	[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp]
+INTO	[MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM] pc 
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId AND pc.Unique_MonthID = l.Unique_MonthID
+FROM	[MHDInternal].[TTAD_ADSM_BASE_TABLE] pc 
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId AND pc.Unique_MonthID = l.Unique_MonthID
 
 -----------------------------------------------------------------------------------------------------------------------------------------------
 SET ANSI_WARNINGS OFF -------------------------------------------------------------------------------------------------------------------------
@@ -116,15 +114,16 @@ SELECT  DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Re
 		,COUNT( DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountFinishedTreatment'
 		,COUNT( DISTINCT CASE WHEN NotCaseness_Flag = 'True'  AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountNotCaseness'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		----------------------------
-		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -178,16 +177,15 @@ SELECT  DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Re
 		,COUNT( DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountFinishedTreatment'
 		,COUNT( DISTINCT CASE WHEN NotCaseness_Flag = 'True'  AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountNotCaseness'
 
-FROM	[dbo].[IDS101_Referral] r
-		--------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		--------------------------
-		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		----------------------------
+		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -239,16 +237,15 @@ SELECT  DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Re
 		,COUNT( DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountFinishedTreatment'
 		,COUNT( DISTINCT CASE WHEN NotCaseness_Flag = 'True'  AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountNotCaseness'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		----------------------------
-		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -311,16 +308,15 @@ SELECT  DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Re
 		,COUNT( DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountFinishedTreatment'
 		,COUNT( DISTINCT CASE WHEN NotCaseness_Flag = 'True'  AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountNotCaseness'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		----------------------------
-		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -380,18 +376,17 @@ SELECT  DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Re
 		,COUNT( DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountFinishedTreatment'
 		,COUNT( DISTINCT CASE WHEN NotCaseness_Flag = 'True'  AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountNotCaseness'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		----------------------------
+		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN #CareContact a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON mpi.LSOA = IMD.[LSOA_Code]
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -435,14 +430,15 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,COUNT( DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountFinishedTreatment'
 		,COUNT( DISTINCT CASE WHEN NotCaseness_Flag = 'True'  AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS 'CountNotCaseness'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		--------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		INNER JOIN NHSE_Sandbox_MentalHealth.dbo.PreProc_Referral ppr ON mpi.[Pseudo_NHS_Number_NCDR] = ppr.[Der_Pseudo_NHS_Number] AND ppr.ReferralRequestReceivedDate >= r.ServDischDate
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -462,21 +458,7 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 -----------------------------------------------------------------------------
 PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]'
 
-GO --------------------------------------------------------------------------------------------------------------------------------------------
-
-SET DATEFIRST 1
-
--- Therapist time for IET pathway vs pathway with no IET --------------------------------------------------------------------------
-
-USE [NHSE_IAPT_v2]
-
-DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,-1,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,-1,MAX([ReportingPeriodEndDate]))) FROM [dbo].[IsLatest_SubmissionID])
-
-PRINT @Period_Start
-PRINT @Period_End
-
------------------------------------------------------------------------------------------------------------------------------------
+-- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages] ---------------------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]
 
@@ -496,15 +478,22 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurIncCareContact
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurNoCareContact
   
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
+		LEFT JOIN [mesh_IAPT].[IDS205internettherlog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
 		-----------------------------------------
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS201_CareContact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS205_InternetEnabledTherapyCareProfessionalActivityLog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
-		-----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON mpi.LSOA = IMD.[LSOA_Code]
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
+
+
+		---------------------------
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
+		---------------------------
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -525,18 +514,18 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurIncCareContact
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurNoCareContact
   
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
+		LEFT JOIN [mesh_IAPT].[IDS205internettherlog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
 		-----------------------------------------
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS201_CareContact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS205_InternetEnabledTherapyCareProfessionalActivityLog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		-----------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		-----------------------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON mpi.LSOA = IMD.[LSOA_Code]
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -559,18 +548,19 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurIncCareContact
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurNoCareContact
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-----------------------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
+		LEFT JOIN [mesh_IAPT].[IDS205internettherlog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
+		-----------------------------------------
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		-----------------------------------------
 		------------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		------------------------------------------
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS201_CareContact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS205_InternetEnabledTherapyCareProfessionalActivityLog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
-		------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		------------------------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON mpi.LSOA = IMD.[LSOA_Code]
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
  WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -594,18 +584,18 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurIncCareContact
 		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurNoCareContact
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
-		------------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		------------------------------------------
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS201_CareContact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS205_InternetEnabledTherapyCareProfessionalActivityLog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
-		------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		------------------------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON mpi.LSOA = IMD.[LSOA_Code]
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-----------------------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
+		LEFT JOIN [mesh_IAPT].[IDS205internettherlog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
+		-----------------------------------------
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		-----------------------------------------
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -618,4 +608,4 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 
 PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]'
 
-GO --------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------
