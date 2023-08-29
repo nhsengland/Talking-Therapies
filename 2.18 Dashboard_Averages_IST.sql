@@ -1,15 +1,13 @@
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
--- Refresh updates for: [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] -----------------------------------------------
-
-USE [NHSE_IAPT_v2]
+-- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_Averages] -----------------------------------------------
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD([Month],@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD([Month],@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
@@ -72,20 +70,19 @@ SELECT DISTINCT
 
 INTO	 #FinishedTreatment
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
-		------------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] p ON r.recordnumber = p.recordnumber 
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] i ON r.UniqueSubmissionID = i.UniqueSubmissionID AND r.AuditId = i.AuditId
-		------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON p.LSOA = IMD.[LSOA_Code]
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-----------------------------------------
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		-----------------------------------------
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
-WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
+WHERE	UsePathway_Flag = 'True' AND l.IsLatest = '1'
 		AND TreatmentCareContact_Count > 1 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND r.[ServDischDate] BETWEEN @PeriodStart AND @PeriodEnd
 
 ----------------------------------------------------------------------------------------------------------
@@ -113,20 +110,19 @@ SELECT DISTINCT
 
 INTO	#FinishedTreatmentSexOri
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
-		-----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] p ON r.recordnumber = p.recordnumber 
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] i ON r.UniqueSubmissionID = i.UniqueSubmissionID AND r.AuditId = i.AuditId
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		------------------------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
-WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
+WHERE	UsePathway_Flag = 'True' AND l.IsLatest = '1'
 		AND TreatmentCareContact_Count > 1 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND r.[ServDischDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND SocPerCircumstance IN('20430005', '89217008', '76102007', '38628009', '42035005', '1064711000000100', '699042003', '765288000', '440583007', '766822004')
 
@@ -149,17 +145,16 @@ SELECT DISTINCT
 
 INTO	#FirstTreatment
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
-		-----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] p ON r.recordnumber = p.recordnumber 
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] i ON r.UniqueSubmissionID = i.UniqueSubmissionID AND r.AuditId = i.AuditId
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
-WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+WHERE	UsePathway_Flag = 'True' AND l.IsLatest = '1'
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND [TherapySession_FirstDate] BETWEEN @PeriodStart AND @PeriodEnd
 
 -------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2223,7 +2218,7 @@ INTO #STPMedianWait FROM #FirstTreatment
 -- Final Table -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SELECT * FROM 
 
@@ -2349,7 +2344,7 @@ FROM	#STPMeanApps a
 		,SUM([EnteringTreatment]) AS EnteringTreatment
 		,'National' AS 'Level'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE [Month] = @MonthYear
 
@@ -2374,7 +2369,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'Region' AS 'Level'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE [Month] = @MonthYear
 
@@ -2399,7 +2394,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'STP' AS 'Level'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE [Month] = @MonthYear
 
@@ -2424,7 +2419,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'CCG' AS 'Level'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE [Month] = @MonthYear
 
@@ -2449,7 +2444,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'Provider' AS 'Level'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE [Month] = @MonthYear
 
@@ -2474,7 +2469,7 @@ SELECT	[Month],
 		CASE WHEN SUM([EnteringTreatment])< 5 THEN NULL ELSE CAST(ROUND((SUM([EnteringTreatment])+2) /5,0)*5 AS INT)  END AS [EnteringTreatment],
 		'CCG/ Provider' AS 'Level'
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 WHERE	[Month] = @MonthYear
 
@@ -2483,13 +2478,13 @@ GROUP BY [Month], [CCG Code], [CCG Name], [Provider Code], [Provider Name], [Cat
 )_
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] 
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages] 
 
 SET MeanWait =  CASE WHEN EnteringTreatment IS NULL THEN NULL ELSE MeanWait END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2501,13 +2496,13 @@ FROM	#Suppress a
 WHERE a.[Month] = @MonthYear
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SET	MedianApps =  CASE WHEN Finished IS NULL THEN NULL ELSE MedianApps END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2519,13 +2514,13 @@ FROM	#Suppress a
 WHERE	a.[Month] = @MonthYear
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SET MedianWait =  CASE WHEN EnteringTreatment IS NULL THEN NULL ELSE MedianWait END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2537,13 +2532,13 @@ FROM	#Suppress a
 WHERE	a.[Month] = @MonthYear
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SET MeanApps =  CASE WHEN Finished IS NULL THEN NULL ELSE MeanApps END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2555,13 +2550,13 @@ FROM	#Suppress a
 WHERE a.[Month] = @MonthYear
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SET MeanFirstWaitFinished =  CASE WHEN Finished IS NULL THEN NULL ELSE MeanFirstWaitFinished END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2573,13 +2568,13 @@ FROM	#Suppress a
 WHERE a.[Month] = @MonthYear
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SET MeanSecondWaitFinished =  CASE WHEN Finished IS NULL THEN NULL ELSE MeanSecondWaitFinished END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2591,13 +2586,13 @@ FROM	#Suppress a
 WHERE a.[Month] = @MonthYear
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SET MeanFirstPHQ9Finished =  CASE WHEN Finished IS NULL THEN NULL ELSE MeanFirstPHQ9Finished END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2609,13 +2604,13 @@ FROM	#Suppress a
 WHERE a.[Month] = @MonthYear
 
 --------------------------------------------------------------------------
-UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_Averages]
 
 SET MeanFirstGAD7Finished  =  CASE WHEN Finished IS NULL THEN NULL ELSE MeanFirstGAD7Finished END
 
 FROM	#Suppress a
 		----------
-		INNER JOIN [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST] b ON a.[Level] = b.[Level] 
+		INNER JOIN [MHDInternal].[DASHBOARD_TTAD_Averages] b ON a.[Level] = b.[Level] 
 		AND a.[CCG Code] = b.[CCG Code] 
 		AND a.[Month] = b.[Month] 
 		AND a.[Provider Code] = b.[Provider Code] 
@@ -2627,4 +2622,4 @@ FROM	#Suppress a
 WHERE	a.[Month] = @MonthYear
 
 -------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Averages_IST]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_Averages]'
