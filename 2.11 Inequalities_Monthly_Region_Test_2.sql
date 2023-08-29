@@ -1,31 +1,29 @@
-USE [NHSE_IAPT_v2] ---------------------------------------------------------------------------------------------------------------------------
 
-SET DATEFIRST 1
 SET NOCOUNT ON
 
--- Refresh updates for : [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2] -------------------------------
+-- Refresh updates for : [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] -------------------------------
 
 DECLARE @Offset AS INT = -1
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @Refresh AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
-DECLARE @PeriodStart_2 AS DATE = (SELECT DATEADD(MONTH,+1,MAX(@PeriodStart)) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd_2 AS DATE = (SELECT EOMONTH(DATEADD(MONTH,+1,MAX(@PeriodEnd))) FROM [IsLatest_SubmissionID])
-DECLARE @Primary AS VARCHAR(50) = (DATENAME(M, @PeriodStart_2) + ' ' + CAST(DATEPART(YYYY, @PeriodStart_2) AS VARCHAR))
+DECLARE @PeriodStart2 AS DATE = (SELECT DATEADD(MONTH,+1,MAX(@PeriodStart)) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd2 AS DATE = (SELECT EOMONTH(DATEADD(MONTH,+1,MAX(@PeriodEnd))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Primary AS VARCHAR(50) = (DATENAME(M, @PeriodStart2) + ' ' + CAST(DATEPART(YYYY, @PeriodStart2) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@Refresh AS VARCHAR(50)) + CHAR(10)
 
 -- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM]
+IF OBJECT_ID ('[MHDInternal].[TTAD_ADSM_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_ADSM_BASE_TABLE]
 
-SELECT * INTO [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM] FROM 
+SELECT * INTO [MHDInternal].[TTAD_ADSM_BASE_TABLE] FROM 
 
 (SELECT pc.* 
-	FROM [IDS603_PresentingComplaints] pc
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
+	FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
 		AND pc.AuditId = l.AuditId 
 		AND pc.Unique_MonthID = l.Unique_MonthID
 	WHERE IsLatest = 1 AND [ReportingPeriodStartDate] <= @PeriodEnd
@@ -33,16 +31,16 @@ SELECT * INTO [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM] FROM
 UNION -------------------------------------------------------------------------------
 
 SELECT pc.* 
-FROM [IDS603_PresentingComplaints] pc
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
+FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
 		AND pc.AuditId = l.AuditId 
 		AND pc.Unique_MonthID = l.Unique_MonthID
-	WHERE File_Type = 'Primary' AND [ReportingPeriodStartDate] BETWEEN @PeriodStart_2 AND @PeriodEnd_2
+	WHERE File_Type = 'Primary' AND [ReportingPeriodStartDate] BETWEEN @PeriodStart2 AND @PeriodEnd2
 )_
 
 -- Presenting Complaints -----------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp]
+IF OBJECT_ID ('[MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]
 
 SELECT DISTINCT pc.PathwayID
 				,Validated_PresentingComplaint
@@ -50,17 +48,17 @@ SELECT DISTINCT pc.PathwayID
 				,PresCompCodSig
 				,PresCompDate DESC, UniqueID_IDS603 DESC) AS rank
 
-INTO	[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp]
+INTO	[MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]
 
-FROM	[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_ADSM] pc 
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId AND pc.Unique_MonthID = l.Unique_MonthID
+FROM	[MHDInternal].[TTAD_ADSM_BASE_TABLE] pc 
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId AND pc.Unique_MonthID = l.Unique_MonthID
 
 -----------------------------------------------------------------------------------------------------------------------------------------------
 SET ANSI_WARNINGS OFF -------------------------------------------------------------------------------------------------------------------------
 
 -- Sexual Orientation --------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -164,22 +162,21 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS [Month]
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	UsePathway_Flag = 'True' 
 		AND SocPerCircumstance IN('20430005', '89217008', '76102007', '38628009', '42035005', '1064711000000100', '699042003', '765288000', '440583007', '766822004')
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -203,7 +200,7 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 
 -- Ethnicity -----------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -304,21 +301,20 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON mpi.recordnumber = spc.recordnumber
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	UsePathway_Flag = 'True' 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -339,7 +335,7 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 
 -- Age ---------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -438,21 +434,20 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON mpi.recordnumber = spc.recordnumber
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
 
 WHERE	UsePathway_Flag = 'True' 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -471,7 +466,7 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 
 -- Gender --------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -570,21 +565,20 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON mpi.recordnumber = spc.recordnumber
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	UsePathway_Flag = 'True' 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd	
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd	
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -603,7 +597,7 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 
 -- GenderIdentity --------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -704,21 +698,20 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON mpi.recordnumber = spc.recordnumber
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	UsePathway_Flag = 'True' 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd	
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd	
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -739,7 +732,7 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 		
 -- Problem Descriptor --------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -850,21 +843,20 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON mpi.recordnumber = spc.recordnumber
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	UsePathway_Flag = 'True' 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -896,7 +888,7 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 
 -- IMD ---------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -990,22 +982,22 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON mpi.recordnumber = spc.recordnumber
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 		---------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON mpi.LSOA = IMD.[LSOA_Code]
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] -- IS THIS THE CORRECT TABLE?
 	
 WHERE	UsePathway_Flag = 'True' 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -1020,7 +1012,7 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 
 -- Total ----------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 SELECT  @PeriodStart AS [Month1]
 		,'Refresh' AS DataSource
@@ -1114,21 +1106,20 @@ SELECT  @PeriodStart AS [Month1]
 		,NULL AS RepeatReferrals2
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IDS000_Header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON mpi.recordnumber = spc.recordnumber
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		---------------------------
-		LEFT JOIN [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Test2_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
+		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	UsePathway_Flag = 'True' 
-		AND h.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
 		AND IsLatest = 1
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -1141,4 +1132,4 @@ GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Oth
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
 
 ------------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Inequalities_Monthly_Region_Test_2]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]'
