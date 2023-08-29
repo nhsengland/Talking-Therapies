@@ -3,7 +3,7 @@ SET NOCOUNT ON
 
 -- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] -----------------------------
 
-DECLARE @Offset AS INT = -3
+DECLARE @Offset AS INT = -1
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
