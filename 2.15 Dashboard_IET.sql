@@ -13,7 +13,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Create base table: [MHDInternal].[TEMP_TTAD_PDT_IET] --------------------------------------------------
 
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_IET]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_IET]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_IET]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IET]
 
 SELECT	PathwayId
 		,IntEnabledTherProg, SUM(DurationIntEnabledTher) AS TotalTime
