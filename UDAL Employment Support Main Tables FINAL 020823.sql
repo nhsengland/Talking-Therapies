@@ -1,4 +1,6 @@
-﻿/****** Script for Employment Support Dashboard to produce tables for Employment Support Outcomes, National Recording of Employment Status and Sickness Absence,and Clinical Outcomes******/
+--Please note this information is experimental and it is only intended for use for management purposes.
+
+/****** Script for Employment Support Dashboard to produce tables for Employment Support Outcomes, National Recording of Employment Status and Sickness Absence,and Clinical Outcomes******/
 ------------------------------------------------------------------------------------------------------------------------
 --------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
 --There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate 
