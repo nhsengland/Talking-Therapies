@@ -5,7 +5,7 @@ SET NOCOUNT ON
 -- This script must be run AFTER the script that feeds [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] --------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = -2
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -172,4 +172,4 @@ WHERE	Category = 'Age' AND Variable = '65+' AND [Month] = @MonthYear
 GROUP BY [Month], [CCG Code], [CCG Name], [Provider Code], [Provider Name], [Category], [Variable]
 
 ------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Over_65_Metrics]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_Over_65_Metrics]'
