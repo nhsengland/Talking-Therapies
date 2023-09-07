@@ -54,9 +54,8 @@ DECLARE @PeriodEnd DATE
 SET @PeriodStart = (SELECT DATEADD(MONTH,-1,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 SET @PeriodEnd = (SELECT eomonth(DATEADD(MONTH,-1,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
---The offset needs to be set for September 2020 (e.g. @PeriodStart -30 = -31 which is the offset of September 2020)
-DECLARE @Offset int
-SET @Offset=-32
+DECLARE @PeriodStart2 DATE
+SET @PeriodStart2='2020-09-01' --this should always be September 2020
 
 SET DATEFIRST 1
 
@@ -250,7 +249,7 @@ WHERE r.UsePathway_Flag = 'True'
 		AND l.IsLatest = 1	--To get the latest data
 		AND r.CompletedTreatment_Flag = 'True'	--Data is filtered to only look at those who have completed a course of treatment
 		AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate	
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, @Offset, @PeriodStart) AND @PeriodStart	--for refresh, the offset should be 0 as only want the data for the latest month
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart2 AND @PeriodStart
 		and emp.RecordNumber is not null
 )_
 ------Output Table for Employment Support Outcomes
@@ -2880,10 +2879,10 @@ GROUP BY Month,  SexualOrientationDesc, TreatmentCareContact_Count
 
 
 --Drop temporary tables created to produce the final output tables
---DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
---DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
---DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base2]
---DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+-- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
+-- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
+-- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base2]
+-- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 
 
 	
