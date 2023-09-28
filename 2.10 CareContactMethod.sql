@@ -4,7 +4,7 @@ SET NOCOUNT ON
 
 -----------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_CareContactMethod_RankedApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_CareContactMethod_RankedApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_CareContactMethod_RankedApps]
 
 SELECT * INTO [MHDInternal].[TEMP_TTAD_CareContactMethod_RankedApps] FROM
 
@@ -86,7 +86,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS000header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		---------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMethod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
