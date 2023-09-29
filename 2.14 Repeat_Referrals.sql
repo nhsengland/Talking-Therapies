@@ -3,8 +3,6 @@ SET NOCOUNT ON
 
 -- CREATES NEW SPELL TABLE AND BASE TABLE -------------------------------------------------------------------------------------------------
 
-USE [NHSE_IAPT]
-
 -- SELECTS ALL PEOPLE AND PATHWAYS RECORD NUMBERS AND REFRECDATES FOR v1.5 and v2.0
 
 SELECT * INTO #All 
@@ -88,8 +86,6 @@ FROM #All
 WHERE Month(Refrecdate) = Month(START_DATE) AND Year(Refrecdate) = Year(START_DATE) 
 
 --CREATES BASE TABLE FOR QUERY ------------------------------------------------------------------------------------------
-
-USE NHSE_IAPT
 
 IF OBJECT_ID ('tempdb..#RepeatReferrals') IS NOT NULL DROP TABLE #RepeatReferrals
 
