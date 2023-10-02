@@ -654,7 +654,7 @@ WHERE UsePathway_Flag = 'True'
 	AND IsLatest = 1	--To get the latest data
 GO
 
---Active Provides for Employment Support
+--Active Providers for Employment Support
 --This table has the distinct list of Providers that have any records with at least 1 employment support contact (EmploymentSupport_Count>0) regardless of whether they have completed treatment
 --This is used for the Provider Participation page of the dashboard
 
