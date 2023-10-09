@@ -2,7 +2,7 @@ SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
 ---------------------------------------------------------------------------------------------------------------------------------
--- This script must be run AFTER the script that feeds [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] --------------------------
+-- This script MUST be run AFTER script 2.11 which feeds [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] ------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
 DECLARE @Offset AS INT = -1
