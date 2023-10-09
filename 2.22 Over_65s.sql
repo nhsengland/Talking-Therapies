@@ -5,7 +5,7 @@ SET NOCOUNT ON
 -- This script must be run AFTER the script that feeds [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] --------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
-DECLARE @Offset AS INT = -2
+DECLARE @Offset AS INT = -1
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
