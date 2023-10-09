@@ -3,7 +3,7 @@ SET NOCOUNT ON
 
 -- Refresh updates for : [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] -------------------------------
 
-DECLARE @Offset AS INT = -3                                         
+DECLARE @Offset AS INT = -1
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
