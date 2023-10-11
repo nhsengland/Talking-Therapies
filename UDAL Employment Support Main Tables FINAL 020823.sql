@@ -862,7 +862,7 @@ FROM [mesh_IAPT].[IDS101referral] r
 		AND ph.Effective_To IS NULL
 	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
 WHERE UsePathway_Flag = 'True' 
-	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -33, @PeriodStart) AND @PeriodStart	--for refresh the offset should be 0 as only want the data for the latest month
+	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart	--for refresh the offset should be 0 as only want the data for the latest month
 	AND IsLatest = 1	--To get the latest data
 GO
 
@@ -870,14 +870,14 @@ GO
 --This table has the distinct list of Providers that have any records with at least 1 employment support contact (EmploymentSupport_Count>0) regardless of whether they have completed treatment
 --This is used for the Provider Participation page of the dashboard
 
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
 SELECT DISTINCT
 	ProviderCode AS OrgID_Provider
 	,ProviderName AS Prov_Name
 	,RegionNameProv AS Prov_Region
 	,Month
-INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
+--INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0	--Filters for any record with EmploymentSupport_Count>0 regardless of if they have completed treatment
 
@@ -887,7 +887,8 @@ WHERE AllEmploymentSupport_Count>0	--Filters for any record with EmploymentSuppo
 --field can't be used as a filter since these referrals have no first contact date so won't have a record of an employment support contact
 --This table aggregates [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base] for the number of open referrals with no contact at the Provider, Sub-ICB, ICB and National levels
 -- for Any Appointment Type and Employment Support.
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
 --Provider, Employment
 SELECT
 	Month
@@ -904,7 +905,7 @@ SELECT
 	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
 	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
-INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+--INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EmpSupportDischargeDatePresent, DWPProviders
 
@@ -1055,8 +1056,8 @@ GROUP BY Month, DWPProviders
 --Gender Identity, Deprivation, Age, Problem Descriptor and Sexual Orientation, and for either any appointment types, any appointment type except employment support, or employment support appointments.
 --This table is used in the dashboard.
 
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 
 ----------Employment Support Appointments
 ------------------Provider, Gender, Employment
@@ -1092,7 +1093,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelImpFlag) AS ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) AS ReliableDeteriorationFlag
 
-INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+--INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderDesc,

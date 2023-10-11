@@ -59,7 +59,7 @@ FROM [mesh_IAPT].[IDS101referral] r
 	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
 WHERE UsePathway_Flag = 'True' 
 	AND IsLatest = 1	--To get the latest data
-	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -33, @PeriodStart) AND @PeriodStart	--for refresh, the offset should be 0 as only want the data for the latest month
+	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart	--for refresh, the offset should be 0 as only want the data for the latest month
 	AND emp.EmpSupportInd='Y'	--Only looking at those who are eligible for employment support
 	AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate	--Only looking at discharges within the reporting period
 
@@ -68,8 +68,8 @@ WHERE UsePathway_Flag = 'True'
 --This table sums the flags produced in the base table above at Provider, Sub-ICB, ICB and National levels. 
 
 ------------------Provider
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]
 SELECT
 	Month
 	,cast('Provider' as varchar(max)) as [OrgType]
@@ -79,7 +79,7 @@ SELECT
 	,SUM(FinishedTreatEmpSuppIndYes) as FinishedTreatEmpSuppIndYes
 	,SUM(EmpSuppFirstAppAndEmpSuppIndYes) as EmpSuppFirstAppAndEmpSuppIndYes
 	,SUM(EmpSuppIndYes) as EmpSuppIndYes
-INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]
+--INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Indicator]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Indicator_Base]
 GROUP BY Month, [ProviderName], [RegionNameProv]
 
