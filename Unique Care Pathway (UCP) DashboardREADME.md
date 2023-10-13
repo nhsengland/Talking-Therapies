@@ -1,4 +1,4 @@
-# Unique Care Pathways (UCP) Dashboard
+# Unique Care Pathway (UCP) Dashboard
 
 This folder contains the SQL scripts used for the [Unique Care Pathways Dashboard](https://future.nhs.uk/NHSTalkingTherapies/view?objectID=42586832).
 
