@@ -17,7 +17,9 @@ IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_IET]') IS NOT NULL DROP TABLE [MHDIn
 
 SELECT	PathwayId
 		,IntEnabledTherProg, SUM(DurationIntEnabledTher) AS TotalTime
-		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  desc) AS 'ROWID'
+		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  desc, StartDateIntEnabledTherLog desc, IntEnabledTherProg asc) AS 'ROWID'
+		--Ranking is based on the longest IET duration time, followed by the latest start date, followed by alphabetical order of the IET Programme
+		--There are instances where a PathwayID has more than one IET Programme with the same start date and same duration time so in these cases they are ranked in alphabetical order
 		
 INTO [MHDInternal].[TEMP_TTAD_PDT_IET] FROM (
 
