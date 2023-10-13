@@ -159,7 +159,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS [Month]
 
 FROM	[mesh_IAPT].[IDS101referral] r
@@ -298,7 +298,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
 FROM	[mesh_IAPT].[IDS101referral] r
@@ -431,7 +431,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
 FROM	[mesh_IAPT].[IDS101referral] r
@@ -562,7 +562,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month
 
 FROM	[mesh_IAPT].[IDS101referral] r
@@ -695,7 +695,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
 FROM	[mesh_IAPT].[IDS101referral] r
@@ -840,7 +840,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
 FROM	[mesh_IAPT].[IDS101referral] r
@@ -979,7 +979,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
 FROM	[mesh_IAPT].[IDS101referral] r
@@ -994,12 +994,11 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------
 		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 		---------------------------
-		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 	
 WHERE	UsePathway_Flag = 'True' 
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd 
 		AND IsLatest = 1
-		AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
@@ -1104,7 +1103,7 @@ SELECT  @PeriodStart AS [Month1]
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '48' THEN r.PathwayID END)) AS 'ended Termination of treatment earlier than patient requested'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '49' THEN r.PathwayID END)) AS 'ended Deceased (Seen and taken on for a course of treatment)'
 		,COUNT(DISTINCT(CASE WHEN ServDischDate between @PeriodStart AND @PeriodEnd and endCODE = '96' THEN r.PathwayID END)) AS 'ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS RepeatReferrals2
+
 		,DATENAME(m, @PeriodStart) + ' ' + CAST(DATEPART(yyyy, @PeriodStart) AS VARCHAR) AS Month 
 
 FROM	[mesh_IAPT].[IDS101referral] r
