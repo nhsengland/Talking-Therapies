@@ -77,12 +77,12 @@ SELECT	DISTINCT @MonthYear AS 'Month'
 			ELSE [IntEnabledTherProg] END AS 'Internet Enabled Therapy'
 		,[IntEnabledTherProg]
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Finished Treatment - 2 or more Apps'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Recovery'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'No Change'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Deterioration'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'NotCaseness'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Recovery'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NoChange_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'No Change'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableDeterioration_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Deterioration'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'NotCaseness'
 
 INTO [MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
@@ -99,29 +99,44 @@ FROM	[mesh_IAPT].[IDS101referral] r
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1 
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 
--- GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
--- 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
--- 		,CASE WHEN ch.Organisation_Code IS NOT NULL THEN ch.Organisation_Code ELSE 'Other' END 
--- 		,CASE WHEN ch.Organisation_Name IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END 
--- 		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
--- 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
--- 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
--- 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
--- 		,[IntEnabledTherProg]
-
 ---------------------------------------------------------------------------------------------------------------------------------
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_IETAggregate]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
-SELECT
+SELECT	[Region Code]
+		,[Region Name]
+		,[CCG Code]
+		,[CCG Name]
+		,[Provider Code]
+		,[Provider Name]
+		,[STP Code]
+		,[STP Name]
+		
+		,[Online Platform]
+		,[Internet Enabled Therapy]
+		
+		,SUM([Finished Treatment - 2 or more Apps]) AS 'Finished Treatment - 2 or more Apps'
+		,SUM([Recovery]) AS 'Recovery'
+		,SUM([Reliable Recovery]) AS 'Reliable Recovery'
+		,SUM([No Change]) AS 'No Change'
+		,SUM([Reliable Deterioration]) AS 'Reliable Deterioration'
+		,SUM([Reliable Improvement]) AS 'Reliable Improvement'
+		,SUM([NotCaseness]) AS 'NotCaseness'
 
-SUM([Finished Treatment - 2 or more Apps])
-,SUM([Recovery])
-,SUM([Reliable Recovery])
-,SUM([No Change])
-,SUM([Reliable Deterioration])
-,SUM([Reliable Improvement])
-,SUM([NotCaseness])
+INTO [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
 FROM [MHDInternal].[TEMP_TTAD_PDT_IETBase]
+
+GROUP BY [Region Code]
+		,[Region Name]
+		,[CCG Code]
+		,[CCG Name]
+		,[Provider Code]
+		,[Provider Name]
+		,[STP Code]
+		,[STP Name]
+		
+		,[Online Platform]
+		,[Internet Enabled Therapy]
 
 ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -131,3 +146,17 @@ FROM [MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
 -------------------------------------------------------------------------------
 --PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]'
+
+SELECT * FROM [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
+
+WHERE [Region Name] = 'London'
+
+ORDER BY [Region Code],[STP Code],[CCG Code],[Provider Code],[Provider Name]		
+		,[Online Platform],[Internet Enabled Therapy]
+		,[Finished Treatment - 2 or more Apps]
+		,[Recovery]
+		,[Reliable Recovery]
+		,[No Change]
+		,[Reliable Deterioration]
+		,[Reliable Improvement]
+		,[NotCaseness]
