@@ -1744,7 +1744,7 @@ SELECT a.[Month],
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a
 		------------------------------------------------------------------------------------
 		LEFT JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] b 
-		ON a.[Month] = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
+		ON CAST(a.[Month] AS DATE) = b.[Month] AND a.[Provider Code]=b.[Provider Code] AND a.[CCG Code] = b.[CCG Code] AND a.[STP Code]=b.[STP Code] AND a.[Region Code] = b.[Region Code] AND a.Variable = b.Variable
 
 WHERE a.Category = 'Total' AND a.[Month] = @MonthYear
 
