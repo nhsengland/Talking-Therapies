@@ -4,26 +4,27 @@ SET NOCOUNT ON
 -- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] -----------------------------
 
 --------------------------
-DECLARE @Offset INT = -3
+DECLARE @Offset INT = -5
 --------------------------
---DECLARE @Max_Offset INT = -35
+DECLARE @Max_Offset INT = -15
 ---------------------------------------|
---HILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
+WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 ---------------------------------------|
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @MonthYear DATE = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
--- Create base table: [MHDInternal].[TEMP_TTAD_PDT_IET] --------------------------------------------------
+-- Create initial base table: [MHDInternal].[TEMP_TTAD_PDT_IET] --------------------------------------------------
 
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_IET]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IET]
 
-SELECT	PathwayId
-		,IntEnabledTherProg, SUM(DurationIntEnabledTher) AS TotalTime
-		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  desc, MAX(StartDateIntEnabledTherLog) desc, MIN(IntEnabledTherProg) asc) AS 'ROWID'
+SELECT	[PathwayId]
+		,[IntEnabledTherProg]
+		,SUM([DurationIntEnabledTher]) AS 'TotalTime'
+		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  DESC, MAX(StartDateIntEnabledTherLog) DESC, MIN(IntEnabledTherProg) ASC) AS 'ROWID'
 		--Ranking is based on the longest IET duration time, followed by the latest start date, followed by alphabetical order of the IET Programme
 		--There are instances where a PathwayID has more than one IET Programme with the same start date and same duration time so in these cases they are ranked in alphabetical order
 		
@@ -39,15 +40,13 @@ FROM [mesh_IAPT].[IDS205internettherlog])_
 
 GROUP BY PathwayId, IntEnabledTherProg
 
-----------------------------------------------------------------------------
-
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET]
+-- Create secondary base table: [MHDInternal].[TEMP_TTAD_PDT_IETBase] --------------------------------------------
 
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_IETBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
-SELECT	DISTINCT @MonthYear AS 'Month'
+SELECT	DISTINCT CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS varchar) AS DATE) AS 'Month'
  		,'Refresh' AS DataSource
-		-- ,'England' AS 'GroupType'
+		,'England' AS 'GroupType'
 		,r.PathwayID
 		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
@@ -78,7 +77,7 @@ SELECT	DISTINCT @MonthYear AS 'Month'
 		,[IntEnabledTherProg]
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Finished Treatment - 2 or more Apps'
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Recovery'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NoChange_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'No Change'
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableDeterioration_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Deterioration'
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
@@ -99,10 +98,14 @@ FROM	[mesh_IAPT].[IDS101referral] r
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1 
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 
----------------------------------------------------------------------------------------------------------------------------------
+---- Create aggregate table: [MHDInternal].[TEMP_TTAD_PDT_IETAggregate] ----------------------------------------------------
+
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_IETAggregate]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
-SELECT	[Region Code]
+SELECT	[Month]
+ 		,'Refresh' AS [DataSource]
+		,'England' AS [GroupType]
+		,[Region Code]
 		,[Region Name]
 		,[CCG Code]
 		,[CCG Name]
@@ -126,7 +129,8 @@ INTO [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
 FROM [MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
-GROUP BY [Region Code]
+GROUP BY [Month]
+		,[Region Code]
 		,[Region Name]
 		,[CCG Code]
 		,[CCG Name]
@@ -138,25 +142,13 @@ GROUP BY [Region Code]
 		,[Online Platform]
 		,[Internet Enabled Therapy]
 
----------------------------------------------------------------------------------------------------------------------------------
+---- Insert into final sandbox table: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] ----------------------------------------------------
+
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET] SELECT * FROM [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
 ------------------------------|
---SET @Offset = @Offset-1 END --| <-- End loop
+SET @Offset = @Offset-1 END --| <-- End loop
 ------------------------------|
 
 -------------------------------------------------------------------------------
---PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]'
-
-SELECT * FROM [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
-
-WHERE [Region Name] = 'London'
-
-ORDER BY [Region Code],[STP Code],[CCG Code],[Provider Code],[Provider Name]		
-		,[Online Platform],[Internet Enabled Therapy]
-		,[Finished Treatment - 2 or more Apps]
-		,[Recovery]
-		,[Reliable Recovery]
-		,[No Change]
-		,[Reliable Deterioration]
-		,[Reliable Improvement]
-		,[NotCaseness]
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]' + CHAR(10)
