@@ -4,9 +4,9 @@ SET NOCOUNT ON
 -- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] -----------------------------
 
 --------------------------
-DECLARE @Offset INT = -5
+DECLARE @Offset INT = -1
 --------------------------
-DECLARE @Max_Offset INT = -15
+DECLARE @Max_Offset INT = -1
 ---------------------------------------|
 WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 ---------------------------------------|
@@ -24,7 +24,7 @@ IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_IET]') IS NOT NULL DROP TABLE [MHDIn
 SELECT	[PathwayId]
 		,[IntEnabledTherProg]
 		,SUM([DurationIntEnabledTher]) AS 'TotalTime'
-		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  DESC, MAX(StartDateIntEnabledTherLog) DESC, MIN(IntEnabledTherProg) ASC) AS 'ROWID'
+		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM([DurationIntEnabledTher])  DESC, MAX([StartDateIntEnabledTherLog]) DESC, MIN([IntEnabledTherProg]) ASC) AS 'ROWID'
 		--Ranking is based on the longest IET duration time, followed by the latest start date, followed by alphabetical order of the IET Programme
 		--There are instances where a PathwayID has more than one IET Programme with the same start date and same duration time so in these cases they are ranked in alphabetical order
 		
@@ -83,7 +83,7 @@ SELECT	DISTINCT CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATE
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
 		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'NotCaseness'
 
-INTO [MHDInternal].[TEMP_TTAD_PDT_IETBase]
+INTO 	[MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
@@ -125,9 +125,9 @@ SELECT	[Month]
 		,SUM([Reliable Improvement]) AS 'Reliable Improvement'
 		,SUM([NotCaseness]) AS 'NotCaseness'
 
-INTO [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
+INTO 	[MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
-FROM [MHDInternal].[TEMP_TTAD_PDT_IETBase]
+FROM 	[MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
 GROUP BY [Month]
 		,[Region Code]
@@ -150,5 +150,5 @@ INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET] SELECT * FROM [MHDInternal].[
 SET @Offset = @Offset-1 END --| <-- End loop
 ------------------------------|
 
--------------------------------------------------------------------------------
+--------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]' + CHAR(10)
