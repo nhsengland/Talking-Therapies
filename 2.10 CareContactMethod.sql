@@ -3,7 +3,8 @@ SET DATEFIRST 1
 SET NOCOUNT ON
 
 -----------------------------------------------------------------------------------------------------
-
+--This table counts the number of appointments per PathwayID and Referral Request Date and then filters the PathwayID and Referral Request Date based on the number of appointments
+--This produces a table with PathwayIDs and the referral request received date with the most appointments associated with it
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps]
 
 SELECT * INTO [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps] FROM
@@ -44,7 +45,9 @@ GROUP BY CASE WHEN CareContPatientTherMode IN ('1','01') THEN 'Individual patien
 WHERE RowID = 1
 
 -----------------------------------------------------------------------------------------------------------------------------
-
+--This produces a base table with one PathwayID per row along with columns for the month, geography, therapy mode, outcome flags, first treatment wait and number of appointments
+--This table only includes PathwayIDs that have a service discharge date within the reporting period and have completed treatment
+--This table is used for producing the aggregated table used in the dashboard below ([MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly])
 DECLARE @Offset AS INT = -1
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -99,6 +102,8 @@ WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- INSERT ----------------------------------------------------------------------------------------------------------------------------------------------------- 
+--This table aggregates the base table above ([MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]) at different geography levels (CCG, STP, Region, National)
+--This table is used in the dashboard
 
 --IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
