@@ -3,7 +3,7 @@ SET NOCOUNT ON
 
 -- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] ------------------------
 
-DECLARE @Offset AS INT = -14
+DECLARE @Offset AS INT = -1
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -13,7 +13,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators]
 
 SELECT  CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
 		,'Refresh' AS 'DataSource'
@@ -72,6 +72,7 @@ GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yy
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
 		,[IntEnabledTherProg]
+
 -----------------------------------------------------------------------------------------------------------------
 
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators]'
