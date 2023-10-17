@@ -9,25 +9,38 @@ SELECT * INTO #All
 
 FROM (
 
-SELECT CAST(r.[IAPT_PERSON_ID] AS varchar) AS PseudoNumber, CAST(IC_PATHWAY_ID AS varchar(100)) AS IC_PATHWAY_ID, CAST(r.IAPT_RECORD_NUMBER AS bigint) AS IC_RECORD_NUMBER, REFRECDATE, h.START_DATE, h.END_DATE, ph.Organisation_Code AS 'Provider Code', ch.Organisation_Code AS 'CCG Code' , CAST(REFERRAL_ID AS bigint) AS REFERRAL_ID
+SELECT CAST(r.[IAPT_PERSON_ID] AS VARCHAR) AS 'PseudoNumber'
+		,CAST(IC_PATHWAY_ID AS VARCHAR(100)) AS 'IC_PATHWAY_ID'
+		,CAST(r.[IAPT_RECORD_NUMBER] AS BIGINT) AS 'IC_RECORD_NUMBER'
+		,[REFRECDATE]
+		,h.[START_DATE]
+		,h.[END_DATE]
+		,ph.[Organisation_Code] AS 'Provider Code'
+		,ch.[Organisation_Code] AS 'CCG Code' 
+		,CAST([REFERRAL_ID] AS BIGINT) AS 'REFERRAL_ID'
 
 FROM	[mesh_IAPT].[Referral_v15] r
 		---------------------------------------------
-		INNER JOIN [mesh_IAPT].[Person_v15] p ON r.IAPT_RECORD_NUMBER = p.IAPT_RECORD_NUMBER
-		INNER JOIN [mesh_IAPT].[Header_v15] h ON p.HEADER_ID = h.HEADER_ID
+		INNER JOIN [mesh_IAPT].[Person_v15] p ON r.[IAPT_RECORD_NUMBER] = p.[IAPT_RECORD_NUMBER]
+		INNER JOIN [mesh_IAPT].[Header_v15] h ON p.[HEADER_ID] = h.[HEADER_ID]
 		----------------------------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies] ch ON r.IC_CCG = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies] ph ON r.OrgCodeProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies] ch ON r.[IC_CCG] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies] ph ON r.[OrgCodeProvider] = ph.[Organisation_Code] AND ph.[Effective_To] IS NULL
 
 UNION
 
-SELECT CAST([Pseudo_NHS_Number_NCDR] AS varchar), CAST(PathwayID AS varchar(100)), r.RecordNumber, ReferralRequestReceivedDate, h.[ReportingPeriodStartDate],h.[ReportingPeriodEndDate],ph.Organisation_Code AS 'Provider Code', ch.Organisation_Code AS 'CCG Code' , CAST(UniqueID_IDS101 AS bigINT)
+SELECT CAST([Pseudo_NHS_Number_NCDR] AS VARCHAR)
+		,CAST(PathwayID AS VARCHAR(100))
+		,r.[RecordNumber]
+		,[ReferralRequestReceivedDate]
+		,l.[ReportingPeriodStartDate]
+		,l.[ReportingPeriodEndDate]
+		,ph.[Organisation_Code] AS 'Provider Code'
+		,ch.[Organisation_Code] AS 'CCG Code' 
+		,CAST([UniqueID_IDS101] AS BIGINT)
 
 FROM	[mesh_IAPT].[IDS101referral] r
 		-----------------------------------------
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
-		-----------------------------------------
-		INNER JOIN [mesh_IAPT].[IDS000header] h ON r.[UniqueSubmissionID] = h.[UniqueSubmissionID]
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId AND r.Unique_MonthID = l.Unique_MonthID
 		-----------------------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies]  ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
@@ -40,18 +53,18 @@ WHERE IsLatest = 1
 -- SELECTS THE MAX RECORD NUMBER -----------------------------------------------------------------------------
 
 IF OBJECT_ID ('tempdb..#Temp3') IS NOT NULL DROP TABLE #Temp3
-SELECT IC_PATHWAY_ID,MAX(IC_RECORD_NUMBER) AS IC_RECORD_NUMBER
+SELECT IC_PATHWAY_ID,MAX(IC_RECORD_NUMBER) AS 'IC_RECORD_NUMBER'
 INTO #Temp3
 FROM #All
-GROUP BY IC_PATHWAY_ID
+GROUP BY [IC_PATHWAY_ID]
 
 -- ALLOCATES REFERRAL ORDER ---------------------------------------------------------------------------------
 
 IF OBJECT_ID ('tempdb..#Spell') IS NOT NULL DROP TABLE #Spell
-SELECT ROW_NUMBER() OVER(PARTITION BY r.PseudoNumber ORDER BY REFRECDATE DESC) AS ReferralOrder2, r.*
+SELECT ROW_NUMBER() OVER(PARTITION BY r.[PseudoNumber] ORDER BY REFRECDATE DESC) AS 'ReferralOrder2', r.*
 INTO #Spell
 FROM #All r
-INNER JOIN #Temp3 t on r.IC_PATHWAY_ID = t.IC_PATHWAY_ID AND r.IC_RECORD_NUMBER = t.IC_RECORD_NUMBER
+INNER JOIN #Temp3 t on r.[IC_PATHWAY_ID] = t.[IC_PATHWAY_ID] AND r.[IC_RECORD_NUMBER] = t.[IC_RECORD_NUMBER]
 
 --SELECTS ALL FIELDS REQUIRED FOR SPELLS TABLE FROM v1.5 and v2.0 --------------------------------------------
 
@@ -61,19 +74,44 @@ SELECT * INTO #Spell2
 
 FROM (
 
-SELECT s.*, CAST(IC_USE_PATHWAY_FLAG AS varchar) AS IC_USE_PATHWAY_FLAG, AGE_AT_REF_RECEIVED_DATE, CAST(IC_RECOVERY_FLAG As varchar) AS IC_RECOVERY_FLAG, CAST(IC_RELIABLE_DETER_FLAG AS varchar) AS IC_RELIABLE_DETER_FLAG, CAST(IC_RELIABLE_IMPROV_FLAG AS varchar) AS IC_RELIABLE_IMPROV_FLAG, CAST(IC_NOT_CASENESS_FLAG AS varchar) AS IC_NOT_CASENESS_FLAG,
-ENDDATE,
-IC_ProvDiag,NULL AS 'PresentingComplaintHigherCategory', NULL AS 'PresentingComplaintLowerCategory',
-IC_Count_Treatment_Appointments, ENDCODE, 'v1.5' AS Version
+SELECT s.*
+		,CAST([IC_USE_PATHWAY_FLAG] AS VARCHAR) AS 'IC_USE_PATHWAY_FLAG'
+		,[AGE_AT_REF_RECEIVED_DATE]
+		,CAST([IC_RECOVERY_FLAG] As VARCHAR) AS 'IC_RECOVERY_FLAG'
+		,CAST([IC_RELIABLE_DETER_FLAG] AS VARCHAR) AS 'IC_RELIABLE_DETER_FLAG'
+		,CAST([IC_RELIABLE_IMPROV_FLAG] AS VARCHAR) AS 'IC_RELIABLE_IMPROV_FLAG'
+		,CAST([IC_NOT_CASENESS_FLAG] AS VARCHAR) AS 'IC_NOT_CASENESS_FLAG'
+		,[ENDDATE]
+		,[IC_ProvDiag]
+		,NULL AS 'PresentingComplaintHigherCategory'
+		,NULL AS 'PresentingComplaintLowerCategory'
+		,[IC_Count_Treatment_Appointments]
+		,[ENDCODE]
+		,'v1.5' AS 'Version'
+
 FROM #Spell s
-INNER JOIN [mesh_IAPT].[Referral_v15] r on CAST(r.IC_PATHWAY_ID AS varchar(100)) = s.IC_PATHWAY_ID AND IAPT_RECORD_NUMBER = CAST(s.IC_RECORD_NUMBER AS varchar)
+INNER JOIN [mesh_IAPT].[Referral_v15] r on CAST(r.IC_PATHWAY_ID AS VARCHAR(100)) = s.IC_PATHWAY_ID AND IAPT_RECORD_NUMBER = CAST(s.IC_RECORD_NUMBER AS VARCHAR)
+
 UNION
-SELECT s.*, CAST(UsePathway_Flag AS varchar) AS UsePathway_Flag, Age_ReferralRequest_ReceivedDate, CAST(RECOVERY_FLAG AS varchar), CAST(ReliableDeterioration_Flag AS varchar), CAST(ReliableImprovement_Flag AS varchar), CAST(NotCaseness_Flag AS varchar),
-ServDischDate,
-NULL As IC_ProvDiag, PresentingComplaintHigherCategory, PresentingComplaintLowerCategory,
-TreatmentCareContact_Count, ENDCODE, 'v2.0' AS Version
+
+SELECT s.*
+		,CAST(UsePathway_Flag AS VARCHAR) AS UsePathway_Flag
+		,Age_ReferralRequest_ReceivedDate
+		,CAST(RECOVERY_FLAG AS VARCHAR)
+		,CAST(ReliableDeterioration_Flag AS VARCHAR)
+		,CAST(ReliableImprovement_Flag AS VARCHAR)
+		,CAST(NotCaseness_Flag AS VARCHAR)
+		,ServDischDate
+		,NULL As IC_ProvDiag
+		,PresentingComplaintHigherCategory
+		,PresentingComplaintLowerCategory
+		,TreatmentCareContact_Count
+		,ENDCODE
+		,'v2.0' AS Version
+
 FROM #Spell s
-INNER JOIN [mesh_IAPT].[IDS101referral] r on CAST(PathwayID AS varchar(100)) = s.IC_PATHWAY_ID AND RecordNumber =IC_RECORD_NUMBER 
+
+INNER JOIN [mesh_IAPT].[IDS101referral] r on CAST(PathwayID AS VARCHAR(100)) = s.IC_PATHWAY_ID AND RecordNumber =IC_RECORD_NUMBER 
 
 	)_
 
@@ -241,7 +279,8 @@ INNER JOIN #Record2 m ON m.IC_PATHWAY_ID = PreviousID AND m.REFERRAL_ID = a.REFE
 
 -- Repeat Referrals Table ----------------------------------------------------------------------------------------------------
 
--- The full table has to be re-run each month
+-- The full table has to be re-run each month ---------------------
+
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
 
 DECLARE @Offset INT = -1
@@ -257,7 +296,7 @@ INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
 
 SELECT * FROM (
 
-SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS varchar) AS Month
+SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS VARCHAR) AS Month
 		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
@@ -315,7 +354,7 @@ DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriod
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
-SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS varchar) AS Month
+SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS VARCHAR) AS Month
 		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
