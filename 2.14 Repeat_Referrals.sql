@@ -407,7 +407,7 @@ GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Othe
 SET @Offset = @Offset - 1
 END
 
--- Update [RepeatReferrals2] in [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] ---------------------------------------------------
+-- Update [RepeatReferrals2] in [DASHBOARD_TTAD_PDT_Inequalities] from [DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]-------------------
 
 UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = NULL
 UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = b.[Repeat Referrals]
