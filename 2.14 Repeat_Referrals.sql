@@ -140,22 +140,21 @@ WHERE Month(Refrecdate) = Month(START_DATE) AND Year(Refrecdate) = Year(START_DA
 IF OBJECT_ID ('tempdb..#RepeatReferrals') IS NOT NULL DROP TABLE #RepeatReferrals
 
 SELECT DISTINCT a.PseudoNumber
-,'No Match' AS LatestProvider
-,'No Match' AS PreviousProvider
-,'No Match' AS LatestCCG
-,'No Match' AS PreviousCCG
-,a.REFRECDATE AS LatestReferral
-,b.REFRECDATE AS PreviousReferral
-,a.IC_USE_PATHWAY_FLAG AS LatestFlag
-,b.IC_USE_PATHWAY_FLAG AS PreviousFlag
-,a.AGE_AT_REF_RECEIVED_DATE AS LatestAge
-,b.AGE_AT_REF_RECEIVED_DATE AS PreviousAge
-,b.IC_RECOVERY_FLAG AS PreviousRecovery
-,b.IC_RELIABLE_DETER_FLAG AS PreviousDeterioration
-,b.IC_RELIABLE_IMPROV_FLAG AS PreviousImprovement
---,b.IC_RELIABLE_RECOVERY_FLAG AS PreviousReliableRecovery
-,b.IC_NOT_CASENESS_FLAG AS PreviousNotCaseness
-,DATEDIFF(Day,b.ENDDATE,a.REFRECDATE) AS 'Time between referrals'
+,'No Match' AS 'LatestProvider'
+,'No Match' AS 'PreviousProvider'
+,'No Match' AS 'LatestCCG'
+,'No Match' AS 'PreviousCCG'
+,a.[REFRECDATE] AS 'LatestReferral'
+,b.[REFRECDATE] AS 'PreviousReferral'
+,a.[IC_USE_PATHWAY_FLAG] AS 'LatestFlag'
+,b.[IC_USE_PATHWAY_FLAG] AS 'PreviousFlag'
+,a.[AGE_AT_REF_RECEIVED_DATE] AS 'LatestAge'
+,b.[AGE_AT_REF_RECEIVED_DATE] AS 'PreviousAge'
+,b.[IC_RECOVERY_FLAG] AS 'PreviousRecovery'
+,b.[IC_RELIABLE_DETER_FLAG] AS 'PreviousDeterioration'
+,b.[IC_RELIABLE_IMPROV_FLAG] AS 'PreviousImprovement'
+,b.[IC_NOT_CASENESS_FLAG] AS 'PreviousNotCaseness'
+,DATEDIFF(Day,b.[ENDDATE],a.[REFRECDATE]) AS 'Time between referrals'
 ,CASE WHEN a.[Version] = 'v1.5' AND a.[IC_ProvDiag] LIKE 'F32%' OR a.[IC_ProvDiag] LIKE 'F33%' THEN 'F32 or F33 - Depression'
 		WHEN a.[Version] = 'v1.5' AND a.[IC_ProvDiag] = 'F400' THEN 'F400 - Agoraphobia'
 		WHEN a.[Version] = 'v1.5' AND a.[IC_ProvDiag] = 'F401' THEN 'F401 - Social Phobias'
@@ -185,7 +184,7 @@ SELECT DISTINCT a.PseudoNumber
 		WHEN a.[Version] = 'v2.0' AND a.[PresentingComplaintHigherCategory] = 'Anxiety and stress related disorders (Total)' AND a.[PresentingComplaintLowerCategory] = 'F452 Hypochondriacal Disorders' THEN 'F452 - Hypochondrial disorder'
 		WHEN a.[Version] = 'v2.0' AND a.[PresentingComplaintHigherCategory] = 'Anxiety and stress related disorders (Total)' AND a.[PresentingComplaintLowerCategory] = 'Other F40-F43 code' THEN 'Other F40 to 43 - Other Anxiety'
 		WHEN a.[Version] = 'v2.0' AND a.[PresentingComplaintHigherCategory] = 'Anxiety and stress related disorders (Total)' AND a.[PresentingComplaintLowerCategory] IS NULL THEN 'No Code'
-		ELSE 'Other' END AS LatestDiagnosis 
+		ELSE 'Other' END AS 'LatestDiagnosis'
 		,CASE WHEN b.[Version] = 'v1.5' AND b.[IC_ProvDiag] LIKE 'F32%' OR b.[IC_ProvDiag] LIKE 'F33%' THEN 'F32 or F33 - Depression'
 		WHEN b.[Version] = 'v1.5' AND b.[IC_ProvDiag] = 'F400' THEN 'F400 - Agoraphobia'
 		WHEN b.[Version] = 'v1.5' AND b.[IC_ProvDiag] = 'F401' THEN 'F401 - Social Phobias'
@@ -255,12 +254,12 @@ FROM #Spell2 a
 
 WHERE b.[ENDDATE] IS NOT NULL AND a.[PseudoNumber] <> '0' AND a.[PseudoNumber] IS NOT NULL AND b.[PseudoNumber] <> '0' AND b.[PseudoNumber] IS NOT NULL
 
--- SELECTS THE FIRST [Provider Code] LISTED (MATCHES REFERRAL COUNT ORG) 
--- For v2.0 the REFERRAL_ID field contains UniqueID_IDS101
+-- SELECTS THE FIRST [Provider Code] LISTED (MATCHES REFERRAL COUNT ORG) -- For v2.0 the REFERRAL_ID field contains UniqueID_IDS101
 
 IF OBJECT_ID ('tempdb..#Record2') IS NOT NULL DROP TABLE #Record2
 
-SELECT IC_PATHWAY_ID,MAX(REFERRAL_ID) AS 'REFERRAL_ID'
+SELECT	[IC_PATHWAY_ID]
+		,MAX([REFERRAL_ID]) AS 'REFERRAL_ID'
 
 INTO #Record2 FROM #All
 
@@ -360,64 +359,69 @@ SET @Offset = @Offset - 1
 END
 GO
 
--- Repeat referrals Insert table -------------------------------------------------------------------------
+---- Repeat referrals Insert table -------------------------------------------------------------------------
 
--- DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
+--DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
+DECLARE @Offset INT = -1
 
--- DECLARE @Offset INT = -1
+WHILE @Offset > -36
 
--- WHILE @Offset > -36
+BEGIN 
 
--- BEGIN 
+DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
--- DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
--- DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+--INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
--- INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
+SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS VARCHAR) AS 'Month'
+		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
+		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
+		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
+		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'CCG Name' 
+		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
+		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
+		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
+		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
+	,'Total' AS Category
+	,'Total' AS Variable
+	,COUNT (DISTINCT LatestID) AS 'Repeat Referrals'
 
--- SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS VARCHAR) AS Month
--- 		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
--- 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
--- 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
--- 		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'CCG Name' 
--- 		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
--- 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
--- 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
--- 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
--- 	,'Total' AS Category
--- 	,'Total' AS Variable
--- 	,COUNT (DISTINCT LatestID) AS 'Repeat Referrals'
+FROM	#RepeatReferrals rr
+		------------------
+		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.[LatestCCG] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
+		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.[LatestProvider] = ph.[Organisation_Code] AND ph.[Effective_To] IS NULL
 
--- FROM	#RepeatReferrals rr
--- 		------------------
--- 		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.LatestCCG = ch.Organisation_Code AND ch.Effective_To IS NULL
--- 		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.LatestProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
+WHERE LatestReferral BETWEEN @Period_Start AND @Period_end AND [Time between referrals] BETWEEN 0 AND 365  AND [PreviousCountAppointments] >= 2 
+AND [LatestID] <> [PreviousID] AND [PseudoNumber] IS NOT NULL AND [LatestReferral] <> [PreviousReferral] AND [PseudoNumber] <> '0'
 
--- WHERE LatestReferral BETWEEN @Period_Start AND @Period_end AND [Time between referrals] BETWEEN 0 AND 365  AND PreviousCountAppointments >= 2 
--- AND LatestID <> PreviousID AND PseudoNumber IS NOT NULL AND LatestReferral <> PreviousReferral AND PseudoNumber <> '0' --AND ENDCODE = '42'
+GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END
+		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END
+		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
+		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END
+		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
+		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
+		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END
+		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
 
--- GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
--- 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
--- 		,CASE WHEN ch.Organisation_Code IS NOT NULL THEN ch.Organisation_Code ELSE 'Other' END 
--- 		,CASE WHEN ch.Organisation_Name IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END 
--- 		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
--- 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
--- 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
--- 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
+SET @Offset = @Offset - 1
+END
 
--- SET @Offset = @Offset - 1
--- END
+-- Update [RepeatReferrals2] in [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] ---------------------------------------------------
 
--- UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = NULL
--- UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = b.[Repeat Referrals]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = NULL
+UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = b.[Repeat Referrals]
 
--- FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert] b
--- INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[Month] AND a.[Region Code] = b.[Region Code] 
--- AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
--- AND a.[STP Code] = b.[STP Code] AND a.Category = b.[Category] AND (a.Variable = b.[Variable] OR a.[Variable] IS NULL AND b.[Variable] IS NULL)
+FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert] b
 
---------------------------------------------------------------------------------------------
+INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[Month] 
+			AND a.[Region Code] = b.[Region Code] 
+			AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
+			AND a.[STP Code] = b.[STP Code] AND a.[Category] = b.[Category] 
+			AND (a.[Variable] = b.[Variable] OR a.[Variable] IS NULL AND b.[Variable] IS NULL)
+
+------------------------------------------------------------------------------------------------------------------------------------
+
 PRINT CHAR(10)
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]'
---PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]'
