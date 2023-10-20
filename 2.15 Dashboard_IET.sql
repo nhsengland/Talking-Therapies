@@ -4,11 +4,11 @@ SET NOCOUNT ON
 -- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] -----------------------------
 
 --------------------------
-DECLARE @Offset INT = -5
+DECLARE @Offset INT = -1
 --------------------------
-DECLARE @Max_Offset INT = -15
+--DECLARE @Max_Offset INT = -1
 ---------------------------------------|
-WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
+--WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 ---------------------------------------|
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -24,7 +24,7 @@ IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_IET]') IS NOT NULL DROP TABLE [MHDIn
 SELECT	[PathwayId]
 		,[IntEnabledTherProg]
 		,SUM([DurationIntEnabledTher]) AS 'TotalTime'
-		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM(DurationIntEnabledTher)  DESC, MAX(StartDateIntEnabledTherLog) DESC, MIN(IntEnabledTherProg) ASC) AS 'ROWID'
+		,row_Number() OVER( PARTITION BY [PathwayID] ORDER BY  SUM([DurationIntEnabledTher])  DESC, MAX([StartDateIntEnabledTherLog]) DESC, MIN([IntEnabledTherProg]) ASC) AS 'ROWID'
 		--Ranking is based on the longest IET duration time, followed by the latest start date, followed by alphabetical order of the IET Programme
 		--There are instances where a PathwayID has more than one IET Programme with the same start date and same duration time so in these cases they are ranked in alphabetical order
 		
@@ -47,7 +47,7 @@ IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_IETBase]') IS NOT NULL DROP TABLE [MH
 SELECT	DISTINCT CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS varchar) AS DATE) AS 'Month'
  		,'Refresh' AS DataSource
 		,'England' AS 'GroupType'
-		,r.PathwayID
+		,r.[PathwayId]
 		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
@@ -75,25 +75,25 @@ SELECT	DISTINCT CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATE
 			WHEN [IntEnabledTherProg] IS NULL THEN 'No IET'
 			ELSE [IntEnabledTherProg] END AS 'Internet Enabled Therapy'
 		,[IntEnabledTherProg]
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Finished Treatment - 2 or more Apps'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Recovery'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NoChange_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'No Change'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableDeterioration_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Deterioration'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'NotCaseness'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Finished Treatment - 2 or more Apps'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Recovery'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NoChange_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'No Change'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableDeterioration_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Deterioration'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'NotCaseness'
 
-INTO [MHDInternal].[TEMP_TTAD_PDT_IETBase]
+INTO 	[MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[recordnumber] = mpi.[recordnumber]
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		--------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_IET] iet ON r.PathwayId = iet.PathwayId AND ROWID = 1
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_IET] iet ON r.[PathwayId] = iet.[PathwayId] AND ROWID = 1
 		---------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.[OrgIDComm] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.[OrgID_Provider] = ph.[Organisation_Code] AND ph.[Effective_To] IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1 
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -125,9 +125,9 @@ SELECT	[Month]
 		,SUM([Reliable Improvement]) AS 'Reliable Improvement'
 		,SUM([NotCaseness]) AS 'NotCaseness'
 
-INTO [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
+INTO 	[MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
-FROM [MHDInternal].[TEMP_TTAD_PDT_IETBase]
+FROM 	[MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
 GROUP BY [Month]
 		,[Region Code]
@@ -147,8 +147,8 @@ GROUP BY [Month]
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET] SELECT * FROM [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
 ------------------------------|
-SET @Offset = @Offset-1 END --| <-- End loop
+--SET @Offset = @Offset-1 END --| <-- End loop
 ------------------------------|
 
--------------------------------------------------------------------------------
+--------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]' + CHAR(10)

@@ -15,7 +15,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators]
 
-SELECT  @MonthYear AS 'Month'
+SELECT  CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
 		,'Refresh' AS 'DataSource'
 		,'England' AS 'GroupType'
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
@@ -52,7 +52,6 @@ SELECT  @MonthYear AS 'Month'
 
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[recordnumber] = mpi.[recordnumber]
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		---------------------------
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.[PathwayID] = a.[PathwayID] AND a.[AuditId] = l.[AuditId]
@@ -63,7 +62,8 @@ FROM	[mesh_IAPT].[IDS101referral] r
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 
-GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
+GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE)
+		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END 
@@ -72,6 +72,7 @@ GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Othe
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
 		,[IntEnabledTherProg]
+
 -----------------------------------------------------------------------------------------------------------------
 
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators]'
