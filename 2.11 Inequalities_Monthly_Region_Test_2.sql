@@ -308,7 +308,7 @@ FROM [mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	r.UsePathway_Flag = 'True' 
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND l.IsLatest = 1
 GO
 
@@ -392,8 +392,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
@@ -408,6 +409,7 @@ GROUP BY
 	,[STP Code]
 	,[STP Name]
 GO
+
 --Sexual Orientation
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 SELECT 
@@ -485,8 +487,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
@@ -578,8 +581,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
@@ -671,8 +675,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
@@ -764,8 +769,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
@@ -857,8 +863,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
@@ -950,8 +957,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
@@ -1043,8 +1051,9 @@ SELECT
 	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
 	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
 	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen AND taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen AND taken on for a course of treatment)]
+	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
+	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
+	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
