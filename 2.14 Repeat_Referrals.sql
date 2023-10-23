@@ -297,7 +297,7 @@ INNER JOIN #Record2 m ON m.[IC_PATHWAY_ID] = [PreviousID] AND m.[REFERRAL_ID] = 
 
 -- The full table has to be re-run each month ---------------------
 
---DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
 
 DECLARE @Offset INT = -1
 
@@ -308,7 +308,7 @@ BEGIN
 DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
 
 SELECT * FROM (
 
@@ -322,8 +322,8 @@ SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS 
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
 		,'Problem Descriptor' AS 'Category'
-		,'LatestDiagnosis' AS 'LatestDiagnosis'
-		,'PreviousDiagnosis' AS 'PreviousDiagnosis'
+		,[LatestDiagnosis] AS 'LatestDiagnosis'
+		,[PreviousDiagnosis] AS 'PreviousDiagnosis'
 		,COUNT(DISTINCT CASE WHEN [Time between referrals] < 92 THEN LatestID END) AS '91 days or fewer'
 		,COUNT(DISTINCT CASE WHEN [Time between referrals] BETWEEN 92 AND 182 THEN LatestID END) AS '92-182 days'
 		,COUNT(DISTINCT CASE WHEN [Time between referrals] BETWEEN 183 AND 273 THEN LatestID END) AS '183-273 days'
@@ -331,8 +331,8 @@ SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS 
 
 FROM	#RepeatReferrals rr
 		------------------
-		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.LatestCCG = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.LatestProvider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.[LatestCCG] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
+		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.[LatestProvider] = ph.[Organisation_Code] AND ph.[Effective_To] IS NULL
 
 WHERE LatestReferral BETWEEN @Period_Start AND @Period_end 
 		AND [Time between referrals] BETWEEN 0 AND 365  
@@ -344,8 +344,8 @@ WHERE LatestReferral BETWEEN @Period_Start AND @Period_end
 
 GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
-		,CASE WHEN ch.Organisation_Code IS NOT NULL THEN ch.Organisation_Code ELSE 'Other' END 
-		,CASE WHEN ch.Organisation_Name IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END 
+		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END 
+		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END 
 		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
@@ -361,7 +361,7 @@ GO
 
 ---- Repeat referrals Insert table -------------------------------------------------------------------------
 
---DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
 DECLARE @Offset INT = -1
 
@@ -372,7 +372,7 @@ BEGIN
 DECLARE @Period_Start AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
 SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS VARCHAR) AS 'Month'
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
