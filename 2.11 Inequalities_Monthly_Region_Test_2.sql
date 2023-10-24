@@ -53,7 +53,50 @@ FROM	[MHDInternal].[TTAD_ADSM_BASE_TABLE] pc
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId
 			AND pc.Unique_MonthID = l.Unique_MonthID
 
---------------------------------------------------------
+
+--------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
+--There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate 
+--so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce 
+--[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base] table
+
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]
+SELECT *
+	,ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] desc, SocPerCircumstanceRank asc) as SocPerCircumstanceLatest
+	--ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
+INTO [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]
+FROM(
+SELECT DISTINCT
+	AuditID
+	,SocPerCircumstance
+	,SocPerCircumstanceRecDate
+	,Person_ID
+	,RecordNumber
+	,UniqueID_IDS011
+	,OrgID_Provider
+	,UniqueSubmissionID
+	,Unique_MonthID
+	,EFFECTIVE_FROM
+	--,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','38628009','42035005','765288000','766822004') THEN 1
+	--	WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 2
+	--ELSE NULL END AS SocPerCircumstanceRank1
+	,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
+	--Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual,Sexually attracted to neither male nor female sex, Confusion
+		WHEN SocPerCircumstance='38628009' THEN 2 
+		--Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record 
+		--so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
+		WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
+	ELSE NULL END AS SocPerCircumstanceRank
+	--Ranks the social personal circumstances by the amount of information they provide to help decide which one to use
+	--when a record has more than one social personal circumstance on the same day
+FROM [mesh_IAPT].[IDS011socpercircumstances]
+--Filters for codes relevant to sexual orientation
+WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
+)_
+
+
+
+
+-----------------------------------Inequalities Base Table---------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 SELECT DISTINCT
 		CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS [Month]
@@ -297,8 +340,8 @@ FROM [mesh_IAPT].[IDS101referral] r
 	INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 	INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 	---------------------------
-	LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
-	AND spc.SocPerCircumstance IN('20430005', '89217008', '76102007', '38628009', '42035005', '1064711000000100', '699042003', '765288000', '440583007', '766822004')
+	LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
+		AND spc.SocPerCircumstanceLatest=1
 
 	LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 	---------------------------
@@ -308,15 +351,15 @@ FROM [mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	r.UsePathway_Flag = 'True' 
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND l.IsLatest = 1
 GO
 
 --------------------------------------------------
 
 --Total
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
--- INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 SELECT 
 	Month
 	,'Refresh' AS DataSource
@@ -395,7 +438,7 @@ SELECT
 	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
 	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
 	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
-INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
+--INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
 GROUP BY
