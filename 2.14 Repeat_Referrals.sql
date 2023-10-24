@@ -11,8 +11,8 @@ SELECT * INTO #All
 
 FROM (
 
-SELECT CAST(r.[IAPT_PERSON_ID] AS VARCHAR) AS 'PseudoNumber'
-		,CAST(IC_PATHWAY_ID AS VARCHAR(100)) AS 'IC_PATHWAY_ID'
+SELECT CAST(p.[PseudoNumber] AS VARCHAR) AS 'PseudoNumber'
+		,CAST([IC_PATHWAY_ID] AS VARCHAR(100)) AS 'IC_PATHWAY_ID'
 		,CAST(r.[IAPT_RECORD_NUMBER] AS BIGINT) AS 'IC_RECORD_NUMBER'
 		,[REFRECDATE]
 		,h.[START_DATE]
@@ -23,7 +23,7 @@ SELECT CAST(r.[IAPT_PERSON_ID] AS VARCHAR) AS 'PseudoNumber'
 
 FROM	[mesh_IAPT].[Referral_v15] r
 		---------------------------------------------
-		INNER JOIN [mesh_IAPT].[Person_v15] p ON r.[IAPT_RECORD_NUMBER] = p.[IAPT_RECORD_NUMBER]
+		INNER JOIN [mesh_IAPT].[Person_v15] p ON r.[IAPT_RECORD_NUMBER] = p.[IAPT_RECORD_NUMBER] AND r.[IAPT_PERSON_ID] = p.[IAPT_PERSON_ID]
 		INNER JOIN [mesh_IAPT].[Header_v15] h ON p.[HEADER_ID] = h.[HEADER_ID]
 		----------------------------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies] ch ON r.[IC_CCG] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
@@ -32,7 +32,7 @@ FROM	[mesh_IAPT].[Referral_v15] r
 UNION
 
 SELECT CAST(mpi.[pseudo_nhs_number_ncdr] AS VARCHAR) AS 'PseudoNumber'
-		,CAST(PathwayID AS VARCHAR(100)) AS 'PathwayID'
+		,CAST([PathwayID] AS VARCHAR(100)) AS 'PathwayID'
 		,r.[RecordNumber] AS 'RecordNumber'
 		,[ReferralRequestReceivedDate]
 		,l.[ReportingPeriodStartDate]
@@ -90,7 +90,7 @@ SELECT s.*
 		,CAST(r.[IC_RELIABLE_IMPROV_FLAG] AS VARCHAR) AS 'IC_RELIABLE_IMPROV_FLAG'
 		,CAST(r.[IC_NOT_CASENESS_FLAG] AS VARCHAR) AS 'IC_NOT_CASENESS_FLAG'
 		,r.[ENDDATE]
-		,r.[IC_ProvDiag]
+		,r.[DER_ProvDiag] AS 'IC_Provdiag'
 		,NULL AS 'PresentingComplaintHigherCategory'
 		,NULL AS 'PresentingComplaintLowerCategory'
 		,r.[IC_Count_Treatment_Appointments]
@@ -359,7 +359,7 @@ SET @Offset = @Offset - 1
 END
 GO
 
----- Repeat referrals Insert table -------------------------------------------------------------------------
+---- Create [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert] -------------------------------------------------------------------------
 
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
@@ -407,7 +407,7 @@ GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Othe
 SET @Offset = @Offset - 1
 END
 
--- Update [RepeatReferrals2] in [DASHBOARD_TTAD_PDT_Inequalities] from [DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]-------------------
+-- Update [RepeatReferrals2] in [DASHBOARD_TTAD_PDT_Inequalities] from [DASHBOARD_TTAD_PDT_RepeatReferrals_Insert] -------------------
 
 UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = NULL
 UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = b.[Repeat Referrals]
