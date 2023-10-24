@@ -12,7 +12,7 @@ SELECT * INTO #All
 FROM (
 
 SELECT CAST(p.[PseudoNumber] AS VARCHAR) AS 'PseudoNumber'
-		,CAST(IC_PATHWAY_ID AS VARCHAR(100)) AS 'IC_PATHWAY_ID'
+		,CAST([IC_PATHWAY_ID] AS VARCHAR(100)) AS 'IC_PATHWAY_ID'
 		,CAST(r.[IAPT_RECORD_NUMBER] AS BIGINT) AS 'IC_RECORD_NUMBER'
 		,[REFRECDATE]
 		,h.[START_DATE]
@@ -23,7 +23,7 @@ SELECT CAST(p.[PseudoNumber] AS VARCHAR) AS 'PseudoNumber'
 
 FROM	[mesh_IAPT].[Referral_v15] r
 		---------------------------------------------
-		INNER JOIN [mesh_IAPT].[Person_v15] p ON r.[IAPT_RECORD_NUMBER] = p.[IAPT_RECORD_NUMBER]
+		INNER JOIN [mesh_IAPT].[Person_v15] p ON r.[IAPT_RECORD_NUMBER] = p.[IAPT_RECORD_NUMBER] AND r.[IAPT_PERSON_ID] = p.[IAPT_PERSON_ID]
 		INNER JOIN [mesh_IAPT].[Header_v15] h ON p.[HEADER_ID] = h.[HEADER_ID]
 		----------------------------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies] ch ON r.[IC_CCG] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
@@ -90,7 +90,7 @@ SELECT s.*
 		,CAST(r.[IC_RELIABLE_IMPROV_FLAG] AS VARCHAR) AS 'IC_RELIABLE_IMPROV_FLAG'
 		,CAST(r.[IC_NOT_CASENESS_FLAG] AS VARCHAR) AS 'IC_NOT_CASENESS_FLAG'
 		,r.[ENDDATE]
-		,r.[IC_ProvDiag]
+		,r.[DER_ProvDiag] AS 'IC_Provdiag'
 		,NULL AS 'PresentingComplaintHigherCategory'
 		,NULL AS 'PresentingComplaintLowerCategory'
 		,r.[IC_Count_Treatment_Appointments]
@@ -425,9 +425,3 @@ INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[M
 PRINT CHAR(10)
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]'
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]'
-
-SELECT * FROM #RepeatReferrals
-
-WHERE PseudoNumber = '100016371965'
-
-AND [LatestReferral] BETWEEN '2021-01-01' AND '2021-01-31'
