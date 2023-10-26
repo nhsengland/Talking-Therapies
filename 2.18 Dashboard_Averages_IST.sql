@@ -73,7 +73,8 @@ SELECT DISTINCT
 		,CASE WHEN mpi.Gender IN ('1','01') THEN 'Male'
 			WHEN mpi.Gender IN ('2','02') THEN 'Female'
 			WHEN mpi.Gender IN ('9','09') THEN 'Indeterminate'
-			WHEN mpi.Gender NOT IN ('1','01','2','02','9','09') OR mpi.Gender IS NULL THEN 'Unspecified' 
+			WHEN mpi.Gender IN ('x','X') THEN 'Not Known'
+			WHEN mpi.Gender NOT IN ('1','01','2','02','9','09','x','X') OR mpi.Gender IS NULL THEN 'Unspecified' 
 		END AS 'Gender'
 		,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
 			WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
@@ -1714,10 +1715,13 @@ SELECT
 	,[STP Name]
 	,[Category]
 	,[Variable]
-	,ROUND([MedianApps],1) AS [MedianApps] 
-	,ROUND([MeanApps],1) AS [MeanApps]
+
 	,ROUND([MedianWait],1) AS [MedianWait]
 	,ROUND(MeanWait,1) AS [MeanWait]
+
+	,ROUND([MedianApps],1) AS [MedianApps] 
+	,ROUND([MeanApps],1) AS [MeanApps]
+
 	,ROUND([MeanFirstWaitFinished],1) AS [MeanFirstWaitFinished] 
 	,ROUND([MeanSecondWaitFinished],1) AS [MeanSecondWaitFinished]
 	,ROUND([MeanFirstPHQ9Finished],1) AS [MeanFirstPHQ9Finished]
@@ -1742,10 +1746,13 @@ SELECT
 	,[STP Name]
 	,[Category]
 	,[Variable]
-	,CASE WHEN EnteringTreatment<5 THEN NULL ELSE ROUND([MedianApps],1) END AS [MedianApps] 
-	,CASE WHEN EnteringTreatment<5 THEN NULL ELSE ROUND([MeanApps],1) END AS [MeanApps]
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MedianWait],1) END AS [MedianWait]
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND(MeanWait,1) END AS [MeanWait]
+
+	,CASE WHEN EnteringTreatment<5 THEN NULL ELSE ROUND([MedianWait],1) END AS [MedianWait]
+	,CASE WHEN EnteringTreatment<5 THEN NULL ELSE ROUND(MeanWait,1) END AS [MeanWait]
+
+	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MedianApps],1) END AS [MedianApps] 
+	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanApps],1) END AS [MeanApps]
+	
 	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanFirstWaitFinished],1) END AS [MeanFirstWaitFinished]
 	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanSecondWaitFinished],1) END AS [MeanSecondWaitFinished]
 	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanFirstPHQ9Finished],1) END AS [MeanFirstPHQ9Finished]
