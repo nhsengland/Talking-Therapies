@@ -3,7 +3,7 @@ SET NOCOUNT ON
 
 -- Refresh updates for : [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] -------------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = -17
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -291,6 +291,7 @@ SELECT DISTINCT
 			OR (pc.[Validated_PresentingComplaint] = 'F452' AND ADSM = 'AnxietyInventory'))
 			AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
 		AS 'CountAppropriatePairedADSM'
+		--v2.1:
 		,CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.SourceOfReferralIAPT = 'B1'
 			AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
 		AS 'SelfReferral'
@@ -300,6 +301,16 @@ SELECT DISTINCT
 		,CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.SourceOfReferralIAPT NOT IN ('B1','A1')
 			AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
 		AS 'OtherReferral'
+				-- --v2.0:
+				-- ,CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.SourceOfReferralMH = 'B1'
+				-- 	AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+				-- AS 'SelfReferral'
+				-- 		,CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.SourceOfReferralMH = 'A1'
+				-- 	AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+				-- AS 'GPReferral'
+				-- ,CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.SourceOfReferralMH NOT IN ('B1','A1')
+				-- 	AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+				-- AS 'OtherReferral'
 		,CASE WHEN r.TherapySession_SecondDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate
 			AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) <=28
 			AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
@@ -351,7 +362,7 @@ FROM [mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	r.UsePathway_Flag = 'True' 
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -18, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND l.IsLatest = 1
 GO
 
