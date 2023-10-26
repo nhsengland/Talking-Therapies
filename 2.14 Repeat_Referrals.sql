@@ -5,9 +5,9 @@ SET NOCOUNT ON
 
 -- SELECTS ALL PEOPLE AND PATHWAYS RECORD NUMBERS AND REFRECDATES FOR v1.5 and v2.0
 
-IF OBJECT_ID ('tempdb..#All') IS NOT NULL DROP TABLE #All
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All]
 
-SELECT * INTO #All 
+SELECT * INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All] 
 
 FROM (
 
@@ -51,34 +51,34 @@ FROM	[mesh_IAPT].[IDS101referral] r
 
 WHERE IsLatest = 1 
 	
-) #All
+) _
 
 -- SELECTS THE MAX RECORD NUMBER ----------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#Temp3') IS NOT NULL DROP TABLE #Temp3
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_MaxRecord]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_MaxRecord]
 
 SELECT IC_PATHWAY_ID,MAX(IC_RECORD_NUMBER) AS 'IC_RECORD_NUMBER'
 
-INTO #Temp3 FROM #All
+INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_MaxRecord] FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All]
 
 GROUP BY [IC_PATHWAY_ID]
 
 -- ALLOCATES REFERRAL ORDER ---------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#Spell') IS NOT NULL DROP TABLE #Spell
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell]
 
 SELECT ROW_NUMBER() OVER(PARTITION BY r.[PseudoNumber] ORDER BY REFRECDATE DESC) AS 'ReferralOrder2'
 		, r.*
 
-INTO #Spell FROM #All r
+INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell] FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All] r
 
-INNER JOIN #Temp3 t on r.[IC_PATHWAY_ID] = t.[IC_PATHWAY_ID] AND r.[IC_RECORD_NUMBER] = t.[IC_RECORD_NUMBER]
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_MaxRecord] t on r.[IC_PATHWAY_ID] = t.[IC_PATHWAY_ID] AND r.[IC_RECORD_NUMBER] = t.[IC_RECORD_NUMBER]
 
 -- SELECTS ALL FIELDS REQUIRED FOR SPELLS TABLE FROM v1.5 and v2.0 ------------------------------------------
 
-IF OBJECT_ID ('tempdb..#Spell2') IS NOT NULL DROP TABLE #Spell2
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell2]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell2]
 
-SELECT * INTO #Spell2  
+SELECT * INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell2]  
 
 FROM (
 
@@ -97,7 +97,7 @@ SELECT s.*
 		,r.[ENDCODE]
 		,'v1.5' AS 'Version'
 
-FROM #Spell s
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell] s
 
 INNER JOIN [mesh_IAPT].[Referral_v15] r on CAST(r.[IC_PATHWAY_ID] AS VARCHAR(100)) = s.[IC_PATHWAY_ID] AND [IAPT_RECORD_NUMBER] = CAST(s.[IC_RECORD_NUMBER] AS VARCHAR)
 
@@ -118,26 +118,26 @@ SELECT s.*
 		,r.[ENDCODE]
 		,'v2.0' AS 'Version'
 
-FROM #Spell s
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell] s
 
 INNER JOIN [mesh_IAPT].[IDS101referral] r on CAST([PathwayID] AS VARCHAR(100)) = s.[IC_PATHWAY_ID] AND [RecordNumber] = [IC_RECORD_NUMBER]
 
-) #Spell2
+) _
 
 -- SELECTS ALL 'VALID' REFERRALS (NOT LATE SUBMISSIONS) -----------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#ValidReferrals') IS NOT NULL DROP TABLE #ValidReferrals
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_ValidReferrals]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_ValidReferrals]
 
 SELECT DISTINCT IC_PATHWAY_ID
 				,REFRECDATE
 
-INTO #ValidReferrals FROM #All
+INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_ValidReferrals] FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All]
 
 WHERE Month(Refrecdate) = Month(START_DATE) AND Year(Refrecdate) = Year(START_DATE) 
 
 -- CREATE BASE TABLE FOR QUERY ------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#RepeatReferrals') IS NOT NULL DROP TABLE #RepeatReferrals
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals]
 
 SELECT DISTINCT a.PseudoNumber
 ,'No Match' AS 'LatestProvider'
@@ -246,22 +246,22 @@ SELECT DISTINCT a.PseudoNumber
 		,a.[ReferralOrder2] AS 'LatestRowID'
 		,b.[ReferralOrder2] AS 'PreviousRowID'
 
-INTO #RepeatReferrals
+INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals]
 
-FROM #Spell2 a
-	INNER JOIN #Spell2 b ON a.[PseudoNumber] = b.[PseudoNumber] AND a.[ReferralOrder2] = (b.[ReferralOrder2] -1)
-	INNER JOIN #ValidReferrals v ON a.[IC_PATHWAY_ID] = v.[IC_PATHWAY_ID] AND a.[REFRECDATE] = v.[REFRECDATE]
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell2] a
+	INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell2] b ON a.[PseudoNumber] = b.[PseudoNumber] AND a.[ReferralOrder2] = (b.[ReferralOrder2] -1)
+	INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_ValidReferrals] v ON a.[IC_PATHWAY_ID] = v.[IC_PATHWAY_ID] AND a.[REFRECDATE] = v.[REFRECDATE]
 
 WHERE b.[ENDDATE] IS NOT NULL AND a.[PseudoNumber] <> '0' AND a.[PseudoNumber] IS NOT NULL AND b.[PseudoNumber] <> '0' AND b.[PseudoNumber] IS NOT NULL
 
 -- SELECTS THE FIRST [Provider Code] LISTED (MATCHES REFERRAL COUNT ORG) -- For v2.0 the REFERRAL_ID field contains UniqueID_IDS101
 
-IF OBJECT_ID ('tempdb..#Record2') IS NOT NULL DROP TABLE #Record2
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2]
 
 SELECT	[IC_PATHWAY_ID]
 		,MAX([REFERRAL_ID]) AS 'REFERRAL_ID'
 
-INTO #Record2 FROM #All
+INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2] FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All]
 
 WHERE Month(Refrecdate) = Month(START_DATE) AND Year(Refrecdate) = Year(START_DATE) 
 
@@ -269,29 +269,29 @@ GROUP BY [IC_PATHWAY_ID]
 
 ---------------------------------------------------------------------------------------------------
 
-UPDATE #RepeatReferrals
+UPDATE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals]
 SET LatestCCG =  CASE WHEN [CCG Code] IS NULL THEN 'Other' ELSE a.[CCG Code] END
-FROM #RepeatReferrals r
-INNER JOIN #All a ON [LatestID] = a.[IC_Pathway_ID]
-INNER JOIN #Record2 m ON m.[IC_PATHWAY_ID] = [LatestID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals] r
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All] a ON [LatestID] = a.[IC_Pathway_ID]
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2] m ON m.[IC_PATHWAY_ID] = [LatestID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
 
-UPDATE #RepeatReferrals
+UPDATE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals]
 SET PreviousCCG =  CASE WHEN [CCG Code] IS NULL THEN 'Other' ELSE a.[CCG Code] END
-FROM #RepeatReferrals r
-INNER JOIN #All a ON PreviousID = a.IC_Pathway_ID
-INNER JOIN #Record2 m ON m.[IC_PATHWAY_ID] = [PreviousID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals] r
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All] a ON PreviousID = a.IC_Pathway_ID
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2] m ON m.[IC_PATHWAY_ID] = [PreviousID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
 
-UPDATE #RepeatReferrals
+UPDATE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals]
 SET LatestProvider =  CASE WHEN [Provider Code] IS NULL THEN 'Other' ELSE a.[Provider Code] END
-FROM #RepeatReferrals r
-INNER JOIN #All a ON [LatestID] = a.[IC_Pathway_ID]
-INNER JOIN #Record2 m ON m.[IC_PATHWAY_ID] = [LatestID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals] r
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All] a ON [LatestID] = a.[IC_Pathway_ID]
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2] m ON m.[IC_PATHWAY_ID] = [LatestID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
 
-UPDATE #RepeatReferrals
+UPDATE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals]
 SET PreviousProvider =  CASE WHEN [Provider Code] IS NULL THEN 'Other' ELSE a.[Provider Code] END
-FROM #RepeatReferrals r
-INNER JOIN #All a ON [PreviousID] = a.[IC_Pathway_ID]
-INNER JOIN #Record2 m ON m.[IC_PATHWAY_ID] = [PreviousID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals] r
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All] a ON [PreviousID] = a.[IC_Pathway_ID]
+INNER JOIN [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2] m ON m.[IC_PATHWAY_ID] = [PreviousID] AND m.[REFERRAL_ID] = a.[REFERRAL_ID]
 
 -- Repeat Referrals Table ----------------------------------------------------------------------------------------------------
 
@@ -329,7 +329,7 @@ SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS 
 		,COUNT(DISTINCT CASE WHEN [Time between referrals] BETWEEN 183 AND 273 THEN LatestID END) AS '183-273 days'
 		,COUNT(DISTINCT CASE WHEN [Time between referrals] > 273 THEN LatestID END) AS 'More than 273 days'
 
-FROM	#RepeatReferrals rr
+FROM	[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals] rr
 		------------------
 		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.[LatestCCG] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
 		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.[LatestProvider] = ph.[Organisation_Code] AND ph.[Effective_To] IS NULL
@@ -387,13 +387,18 @@ SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS 
 	,'Total' AS Variable
 	,COUNT (DISTINCT LatestID) AS 'Repeat Referrals'
 
-FROM	#RepeatReferrals rr
+FROM	[MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_RepeatReferrals] rr
 		------------------
 		LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON rr.[LatestCCG] = ch.[Organisation_Code] AND ch.[Effective_To] IS NULL
 		LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON rr.[LatestProvider] = ph.[Organisation_Code] AND ph.[Effective_To] IS NULL
 
-WHERE LatestReferral BETWEEN @Period_Start AND @Period_end AND [Time between referrals] BETWEEN 0 AND 365  AND [PreviousCountAppointments] >= 2 
-AND [LatestID] <> [PreviousID] AND [PseudoNumber] IS NOT NULL AND [LatestReferral] <> [PreviousReferral] AND [PseudoNumber] <> '0'
+WHERE 	LatestReferral BETWEEN @Period_Start AND @Period_end 
+		AND [Time between referrals] BETWEEN 0 AND 365  
+		AND [PreviousCountAppointments] >= 2 
+		AND [LatestID] <> [PreviousID] 
+		AND [PseudoNumber] IS NOT NULL 
+		AND [LatestReferral] <> [PreviousReferral] 
+		AND [PseudoNumber] <> '0'
 
 GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END
@@ -414,7 +419,7 @@ UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = 
 
 FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert] b
 
-INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[Month] 
+INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = CAST(b.[Month] AS DATE)
 			AND a.[Region Code] = b.[Region Code] 
 			AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
 			AND a.[STP Code] = b.[STP Code] AND a.[Category] = b.[Category] 
