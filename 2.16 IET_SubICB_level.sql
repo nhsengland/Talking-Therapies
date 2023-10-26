@@ -4,6 +4,24 @@
 -- [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages] 
 -- [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals]
 
+---------------------------------------------------------------------------------------------------------------------
+
+DECLARE @@Offset INT = -1
+
+DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+
+PRINT @Period_Start
+PRINT @Period_End
+
+DECLARE  @Period_Start2 DATE = (SELECT DATEADD(MONTH,(@@Offset +1),MAX(@Period_Start)) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE  @Period_End2 DATE = (SELECT eomonth(DATEADD(MONTH,(@@Offset +1),MAX(@Period_End))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+
+PRINT @Period_Start2
+PRINT @Period_End2
+
+---------------------------------------------------------------------------------------------------------------------
+
 ---- CREATE BASE CARE CONTACT COUNTS TABLE ----------------------------------------------------------------------------------------
 
 IF OBJECT_ID ('[MHDInternal].[TTAD_CareContact_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_CareContact_BASE_TABLE]
@@ -24,23 +42,7 @@ WHERE ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND App
 
 GROUP BY [PathwayID]
 
----------------------------------------------------------------------------------------------------------------------
-
-DECLARE @@Offset INT = -1
-
-DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-
-PRINT @Period_Start
-PRINT @Period_End
-
-DECLARE  @Period_Start2 DATE = (SELECT DATEADD(MONTH,(@@Offset +1),MAX(@Period_Start)) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE  @Period_End2 DATE = (SELECT eomonth(DATEADD(MONTH,(@@Offset +1),MAX(@Period_End))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-
-PRINT @Period_Start2
-PRINT @Period_End2
-
--- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
+-- CREATE Base Table for Paired ADSM ------------------------------------------------------------------------------------------------
 
 IF OBJECT_ID ('[MHDInternal].[TTAD_ADSM_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_ADSM_BASE_TABLE]
 
@@ -119,7 +121,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
+		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId  
 		---------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
@@ -182,7 +184,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
+		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId  
 		---------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
@@ -242,7 +244,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
+		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId  
 		---------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
@@ -313,7 +315,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
+		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId  
 		---------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
@@ -381,7 +383,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		----------------------------
-		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId --LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
+		LEFT JOIN [MHDInternal].[TTAD_CareContact_BASE_TABLE] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId  
 		---------------------------
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
