@@ -486,12 +486,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId AND ([AttendOrDNACode] in ('5','6') or PlannedCareContIndicator = 'N') AND AppType IN ('01','02','03','05')
 		LEFT JOIN [mesh_IAPT].[IDS205internettherlog] iet ON cc.[AuditId] = iet.[AuditId] AND cc.ServiceRequestId = iet.ServiceRequestId
 		-----------------------------------------
-		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
-		---------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_CareContactMEthod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
-		---------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.[LSOA] = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
@@ -557,7 +552,6 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 		-----------------------------------------
-		------------------------------------------
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
  WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
