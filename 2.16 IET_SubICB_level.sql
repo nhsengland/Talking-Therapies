@@ -104,7 +104,7 @@ SELECT  DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Re
 			WHEN Validated_EthnicCategory IN ('D','E','F','G') THEN 'Mixed'
 			WHEN Validated_EthnicCategory IN ('H','J','K','L') THEN 'Asian or Asian British'
 			WHEN Validated_EthnicCategory IN ('M','N','P') THEN 'Black or Black British'
-			WHEN Validated_EthnicCategory IN ('R','S') THEN ' Other Ethnic Groups'
+			WHEN Validated_EthnicCategory IN ('R','S') THEN  'Other Ethnic Groups'
 			WHEN Validated_EthnicCategory IN ('99', 'Z', '-1','-3') THEN 'Not known/Not stated/Unspecified/Invalid data supplied'
 			ELSE 'Other' END AS 'Variable'
 		,'Refresh' AS DataSource
@@ -143,7 +143,7 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 			WHEN Validated_EthnicCategory IN ('D','E','F','G') THEN 'Mixed'
 			WHEN Validated_EthnicCategory IN ('H','J','K','L') THEN 'Asian or Asian British'
 			WHEN Validated_EthnicCategory IN ('M','N','P') THEN 'Black or Black British'
-			WHEN Validated_EthnicCategory IN ('R','S') THEN ' Other Ethnic Groups'
+			WHEN Validated_EthnicCategory IN ('R','S') THEN  'Other Ethnic Groups'
 			WHEN Validated_EthnicCategory IN ('99', 'Z', '-1','-3') THEN 'Not known/Not stated/Unspecified/Invalid data supplied'
 			ELSE 'Other' END
 		,case when r.[InternetEnabledTherapy_Count] > 0 then 'IET'
