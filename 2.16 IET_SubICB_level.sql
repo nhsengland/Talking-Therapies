@@ -460,7 +460,9 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 -----------------------------------------------------------------------------
 PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]'
 
--- [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages] ---------------------------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages] ---------------------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages]
 
@@ -600,6 +602,6 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
 )_
 
--- PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FAverages]'
+--------------------------------------------------------------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------------------------------------------------------------------
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages]'
