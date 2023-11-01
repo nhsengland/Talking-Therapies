@@ -2,7 +2,6 @@ SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
 -- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] -----------------------------
-
 -- Rank IET Programmes per PathwayID based on longest duration time: [MHDInternal].[TEMP_TTAD_PDT_IET] --------------------------------------------------
 --Sums Duration of each IET programme per PathwayID. This includes all months as it will be filtered for those discharged below.
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_IETDuration]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IETDuration]
