@@ -12,11 +12,12 @@ DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPAR
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 --------------------------------------------------------------------------------------------------------------------------------------
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_AppTypes_Totals]
 
-SELECT * FROM
-
-(
+IF OBJECT_ID('[MHDInternal].[STAGING_TTAD_PDT_PrimaryLoop_Rounded]') IS NOT NULL DROP TABLE [MHDInternal].[STAGING_TTAD_PDT_PrimaryLoop_Rounded]
+--INSERT INTO [MHDInternal].[STAGING_TTAD_PDT_PrimaryLoop_Rounded]
+SELECT * 
+INTO [MHDInternal].[STAGING_TTAD_PDT_PrimaryLoop_Rounded]
+FROM(
 
 SELECT [Month], 
 		'Refresh' AS DataSource,
@@ -179,7 +180,7 @@ SELECT [Month],
 
 FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
-WHERE [Category] = 'Total' AND [Month] = @MonthYear
+WHERE [Category] = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY [Month]
 
@@ -346,7 +347,7 @@ SELECT [Month],
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
-WHERE	[Category] = 'Total' AND [Month] = @MonthYear
+WHERE	[Category] = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY [Month]
 		,[Region Code]
@@ -538,7 +539,7 @@ SELECT [Month],
 
 FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
-WHERE [Category] = 'Total' AND [Month] = @MonthYear
+WHERE [Category] = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY [Month]
 		,[STP Code]
@@ -731,7 +732,7 @@ SELECT	[Month],
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
-WHERE	[Category] = 'Total' AND [Month] = @MonthYear
+WHERE	[Category] = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY [Month]
 		,[CCG Code]
@@ -924,7 +925,7 @@ SELECT [Month],
 
 FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
-WHERE [Category] = 'Total' AND [Month] = @MonthYear
+WHERE [Category] = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY [Month]
 		,[Provider Code]
@@ -1117,7 +1118,7 @@ SELECT [Month],
 
 FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
 
-WHERE [Category] = 'Total' AND [Month] = @MonthYear
+WHERE [Category] = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY [Month]
 		,[CCG Code]
@@ -1152,13 +1153,16 @@ GROUP BY [Month]
 )_
 
 ---------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_AppTypes_Totals]'
+PRINT 'Updated - [MHDInternal].[STAGING_TTAD_PDT_PrimaryLoop_Rounded]'
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded] ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- [MHDInternal].[STAGING_TTAD_PDT_Inequalities_Rounded] ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded]
-
+IF OBJECT_ID('[MHDInternal].[STAGING_TTAD_PDT_Inequalities_Rounded]') IS NOT NULL DROP TABLE [MHDInternal].[STAGING_TTAD_PDT_Inequalities_Rounded]
+--INSERT INTO [MHDInternal].[STAGING_TTAD_PDT_Inequalities_Rounded]
+SELECT * 
+INTO [MHDInternal].[STAGING_TTAD_PDT_Inequalities_Rounded]
+FROM(
 SELECT	Month, 
 		'Refresh' AS DataSource,
 		'England' AS GroupType,
@@ -1240,7 +1244,7 @@ SELECT	Month,
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
-WHERE	Category = 'Total' AND Month = @MonthYear
+WHERE	Category = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY Month
 
@@ -1327,7 +1331,7 @@ SELECT	Month,
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
-WHERE	Category = 'Total' AND Month = @MonthYear
+WHERE	Category = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY Month, [Region Code], [Region Name]
 
@@ -1414,7 +1418,7 @@ SELECT Month,
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
-WHERE	Category = 'Total' AND Month = @MonthYear
+WHERE	Category = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY Month, [STP Code], [STP Name]
 
@@ -1501,7 +1505,7 @@ SELECT	Month,
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
-WHERE	Category = 'Total' AND Month = @MonthYear
+WHERE	Category = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY Month, [CCG Code], [CCG Name]
 
@@ -1588,7 +1592,7 @@ SELECT	Month,
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
-WHERE	Category = 'Total' AND Month = @MonthYear
+WHERE	Category = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY Month,  [Provider Code], [Provider Name]
 
@@ -1675,17 +1679,22 @@ SELECT	Month,
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
-WHERE	Category = 'Total' AND Month = @MonthYear
+WHERE	Category = 'Total' --AND [Month] = @MonthYear
 
 GROUP BY Month, [CCG Code], [CCG Name], [Provider Code], [Provider Name]
-
+)_
 -------------------------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded]'
+PRINT 'Updated - [MHDInternal].[STAGING_TTAD_PDT_Inequalities_Rounded]'
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded] -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--This will need running once [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_New_Indicators] is updated
 
+-- IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]
+-- SELECT * 
+-- INTO [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]
+-- FROM(
 
 SELECT a.[Month], 
 		'Refresh' AS DataSource,

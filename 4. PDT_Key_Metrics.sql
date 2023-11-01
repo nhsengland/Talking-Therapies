@@ -13,7 +13,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_Rounded_Unpivot]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_KeyMetrics]
 
 SELECT	[Month]
 		,[DataSource]
@@ -32,7 +32,7 @@ SELECT	[Month]
 		,[Measure]
 		,[Value]
 
-FROM	[MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_Rounded] s
+FROM	[MHDInternal].[STAGING_TTAD_PDT_Inequalities_Rounded] s
 
 UNPIVOT ([Value] FOR [Measure] IN ([Finished Treatment - 2 or more Apps], [Referrals], [EnteringTreatment])) u
 
@@ -114,4 +114,4 @@ UNPIVOT ([Value] FOR [Measure] IN ([EnteringTreatment])) u
 WHERE	[Level] <> 'CCG/ Provider' AND [Month] = @MonthYear;
 
 -----------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities_Rounded_Unpivot]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_KeyMetrics]'
