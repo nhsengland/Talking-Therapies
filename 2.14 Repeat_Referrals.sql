@@ -367,7 +367,16 @@ INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[M
 			AND (a.[Variable] = b.[Variable] OR a.[Variable] IS NULL AND b.[Variable] IS NULL)
 
 ------------------------------------------------------------------------------------------------------------------------------------
-
+--Drop Temporary Tables
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_All]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_MaxRecord]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Spell2]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_ValidReferrals]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Base1]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Base2]
+-------------------------
 PRINT CHAR(10)
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]'
 PRINT 'Updated - [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]'

@@ -1772,5 +1772,37 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 WHERE Level<>'National'
 
+-------------------------------------------------
+--Drop Temporary Tables
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 -------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_Averages]'

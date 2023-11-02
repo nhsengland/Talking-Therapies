@@ -1128,8 +1128,8 @@ GROUP BY
 
 ------------------------------------------------------------------
 --Drop temporary tables
--- DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 ------------------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]'
