@@ -92,21 +92,27 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps] a ON r.PathwayID = a.PathwayID AND r.ReferralRequestReceivedDate = a.ReferralRequestReceivedDate
 		---------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
+			AND ch.Effective_To IS NULL
+
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+			AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
 		AND r.CompletedTreatment_Flag = 'TRUE' 
 		AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart	
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart	
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- INSERT ----------------------------------------------------------------------------------------------------------------------------------------------------- 
 --This table aggregates the base table above ([MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]) at different geography levels (CCG, STP, Region, National)
 --This table is used in the dashboard
 
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
+IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
+--INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
 SELECT  Month
 		,CAST('CCG' AS VARCHAR(255)) AS OrgType
 		,[CCG Code] AS OrgCode
@@ -127,7 +133,7 @@ SELECT  Month
 		
 		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
 		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
---INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
+INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
 FROM [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]
 
 GROUP BY Month

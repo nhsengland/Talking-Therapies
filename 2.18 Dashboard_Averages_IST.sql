@@ -129,11 +129,16 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-----------------------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-
+		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
+			AND ch.Effective_To IS NULL
+		
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+			AND ph.Effective_To IS NULL
 		--------------------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 			AND spc.SocPerCircumstanceLatest=1
 		-----------------------------------------
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
@@ -167,13 +172,19 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		------------------------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
+			AND ch.Effective_To IS NULL
+		
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+			AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = '1'
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND r.[TherapySession_FirstDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
-
+GO
 
 -------------------------------------------------------------------------------------------------------------------------------------------------
 -- National ----------------------------------------------------------------------------------------------------------------------
@@ -853,7 +864,7 @@ GROUP BY
 	,[STP Code]
 	,[STP Name]
 		
---ICB, Prolem Descriptor
+--ICB, Problem Descriptor
 INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanApps]
 SELECT DISTINCT 
 	Month
@@ -1700,7 +1711,8 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps] d ON a.[Leve
 
 -------------------------------------------------------------------------------------------------
 -- Rounding & Supression ------------------------------------------------------------------------
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_Averages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_Averages]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_Averages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_Averages]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
 SELECT 
 	[Month]
 	,[Level]
@@ -1726,7 +1738,7 @@ SELECT
 	,ROUND([MeanSecondWaitFinished],1) AS [MeanSecondWaitFinished]
 	,ROUND([MeanFirstPHQ9Finished],1) AS [MeanFirstPHQ9Finished]
 	,ROUND([MeanFirstGAD7Finished],1) AS [MeanFirstGAD7Finished]
-INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
+--INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
 FROM [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 WHERE Level='National'
 GO
@@ -1760,5 +1772,37 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 WHERE Level<>'National'
 
+-------------------------------------------------
+--Drop Temporary Tables
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanApps]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanWait]
+
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 -------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_Averages]'

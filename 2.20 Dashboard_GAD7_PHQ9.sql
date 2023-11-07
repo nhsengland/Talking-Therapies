@@ -11,183 +11,106 @@ DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPAR
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
------------------------------------------------------------------------------------------------------------------------------------------------------
--- Sub ICB / ICB ------------------------------------------------------------------------------------------------------------------------------------
+--Base Table
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_PHQ9GAD7Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PHQ9GAD7Base]
+SELECT DISTINCT
+	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS [Month]
+	,r.PathwayID
+	,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
+	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
+	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
+	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'CCG Name' 
+	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
+	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
+	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
+	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
+	,r.PHQ9_FirstScore
+	,r.GAD_FirstScore
+	,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN 1 ELSE 0 END AS Discharge
 
+	INTO [MHDInternal].[TEMP_TTAD_PDT_PHQ9GAD7Base]
+FROM	[mesh_IAPT].[IDS101referral] r
+		---------------------------	
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		---------------------------
+		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
+			AND ch.Effective_To IS NULL
+
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+			AND ph.Effective_To IS NULL
+
+WHERE
+	r.UsePathway_Flag = 'True' 
+	AND l.IsLatest = 1
+	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart
+
+-----------------------------------------------------------
+--Final Aggregate Table
+--This table aggregates the base table created above ([MHDInternal].[TEMP_TTAD_PDT_PHQ9GAD7Base]) to produce the final table used in the dashboard
+IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7]
+--INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7]
+SELECT
+	Month
+	,'Refresh' AS 'DataSource'
+	,'PHQ-9' AS 'Indicator'
+	,[Region Code]
+	,[Region Name]
+	,[CCG Code]
+	,[CCG Name]
+	,[Provider Code]
+	,[Provider Name]
+	,[STP Code]
+	,[STP Name]
+	,PHQ9_FirstScore AS Score
+	,SUM(Discharge) AS Count
+INTO [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7]
+FROM [MHDInternal].[TEMP_TTAD_PDT_PHQ9GAD7Base]
+GROUP BY
+	Month
+	,[Region Code]
+	,[Region Name]
+	,[CCG Code]
+	,[CCG Name]
+	,[Provider Code]
+	,[Provider Name]
+	,[STP Code]
+	,[STP Name]
+	,PHQ9_FirstScore
+GO
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7]
-
-SELECT	@MonthYear AS 'Month'
-		,'Refresh' AS 'DataSource'
-		,'PHQ-9' AS 'Indicator'
-		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
-		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'CCG Name' 
-		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
-		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
-		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
-		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
-		,CASE WHEN PHQ9_FirstScore = 0 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 0 
-			WHEN PHQ9_FirstScore = 1 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 1 
-			WHEN PHQ9_FirstScore = 2 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 2 
-			WHEN PHQ9_FirstScore = 3 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 3 
-			WHEN PHQ9_FirstScore = 4 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 4 
-			WHEN PHQ9_FirstScore = 5 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 5 
-			WHEN PHQ9_FirstScore = 6 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 6 
-			WHEN PHQ9_FirstScore = 7 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 7 
-			WHEN PHQ9_FirstScore = 8 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 8 
-			WHEN PHQ9_FirstScore = 9 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 9 
-			WHEN PHQ9_FirstScore = 10 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 10
-			WHEN PHQ9_FirstScore = 11 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 11 
-			WHEN PHQ9_FirstScore = 12 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 12 
-			WHEN PHQ9_FirstScore = 13 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 13 
-			WHEN PHQ9_FirstScore = 14 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 14 
-			WHEN PHQ9_FirstScore = 15 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 15 
-			WHEN PHQ9_FirstScore = 16 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 16 
-			WHEN PHQ9_FirstScore = 17 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 17 
-			WHEN PHQ9_FirstScore = 18 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 18 
-			WHEN PHQ9_FirstScore = 19 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 19 
-			WHEN PHQ9_FirstScore = 20 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 20 
-			WHEN PHQ9_FirstScore = 21 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 21
-			WHEN PHQ9_FirstScore = 22 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 22
-			WHEN PHQ9_FirstScore = 23 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 23
-			WHEN PHQ9_FirstScore = 24 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 24
-			WHEN PHQ9_FirstScore = 25 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 25
-			WHEN PHQ9_FirstScore = 26 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 26
-			WHEN PHQ9_FirstScore = 27 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 27 
-			END AS 'Score'
-		,COUNT (DISTINCT r.PathwayID) AS 'Count'
-
-FROM	[mesh_IAPT].[IDS101referral] r
-		---------------------------	
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-
-WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
-
-GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END 
-		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
-		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
-		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
-		,CASE WHEN PHQ9_FirstScore = 0 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 0 
-			WHEN PHQ9_FirstScore = 1 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 1 
-			WHEN PHQ9_FirstScore = 2 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 2 
-			WHEN PHQ9_FirstScore = 3 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 3 
-			WHEN PHQ9_FirstScore = 4 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 4 
-			WHEN PHQ9_FirstScore = 5 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 5 
-			WHEN PHQ9_FirstScore = 6 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 6 
-			WHEN PHQ9_FirstScore = 7 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 7 
-			WHEN PHQ9_FirstScore = 8 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 8 
-			WHEN PHQ9_FirstScore = 9 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 9 
-			WHEN PHQ9_FirstScore = 10 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 10
-			WHEN PHQ9_FirstScore = 11 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 11 
-			WHEN PHQ9_FirstScore = 12 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 12 
-			WHEN PHQ9_FirstScore = 13 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 13 
-			WHEN PHQ9_FirstScore = 14 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 14 
-			WHEN PHQ9_FirstScore = 15 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 15 
-			WHEN PHQ9_FirstScore = 16 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 16 
-			WHEN PHQ9_FirstScore = 17 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 17 
-			WHEN PHQ9_FirstScore = 18 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 18 
-			WHEN PHQ9_FirstScore = 19 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 19 
-			WHEN PHQ9_FirstScore = 20 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 20 
-			WHEN PHQ9_FirstScore = 21 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 21
-			WHEN PHQ9_FirstScore = 22 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 22
-			WHEN PHQ9_FirstScore = 23 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 23
-			WHEN PHQ9_FirstScore = 24 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 24
-			WHEN PHQ9_FirstScore = 25 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 25
-			WHEN PHQ9_FirstScore = 26 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 26
-			WHEN PHQ9_FirstScore = 27 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 27 
-		END
-
-UNION ----------------------------------------------------------------------------------------------------------
-
-SELECT @MonthYear AS 'Month'
-		,'Refresh' AS 'DataSource'
-		,'GAD7' AS 'Indicator'
-		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
-		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'CCG Name' 
-		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
-		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
-		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
-		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
-		,CASE WHEN GAD_FirstScore = 0 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 0 
-			WHEN GAD_FirstScore = 1 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 1 
-			WHEN GAD_FirstScore = 2 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 2 
-			WHEN GAD_FirstScore = 3 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 3 
-			WHEN GAD_FirstScore = 4 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 4 
-			WHEN GAD_FirstScore = 5 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 5 
-			WHEN GAD_FirstScore = 6 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 6 
-			WHEN GAD_FirstScore = 7 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 7 
-			WHEN GAD_FirstScore = 8 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 8 
-			WHEN GAD_FirstScore = 9 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 9 
-			WHEN GAD_FirstScore = 10 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 10
-			WHEN GAD_FirstScore = 11 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 11 
-			WHEN GAD_FirstScore = 12 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 12 
-			WHEN GAD_FirstScore = 13 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 13 
-			WHEN GAD_FirstScore = 14 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 14 
-			WHEN GAD_FirstScore = 15 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 15 
-			WHEN GAD_FirstScore = 16 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 16 
-			WHEN GAD_FirstScore = 17 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 17 
-			WHEN GAD_FirstScore = 18 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 18 
-			WHEN GAD_FirstScore = 19 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 19 
-			WHEN GAD_FirstScore = 20 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 20 
-			WHEN GAD_FirstScore = 21 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 21
-		END AS 'Score'
-		,COUNT (DISTINCT r.PathwayID) AS 'Count'
-
-FROM	[mesh_IAPT].[IDS101referral] r
-		---------------------------	
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-
-WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
-
-GROUP BY CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END 
-		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
-		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
-		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END 
-		,CASE WHEN GAD_FirstScore = 0 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 0 
-			WHEN GAD_FirstScore = 1 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 1 
-			WHEN GAD_FirstScore = 2 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 2 
-			WHEN GAD_FirstScore = 3 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 3 
-			WHEN GAD_FirstScore = 4 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 4 
-			WHEN GAD_FirstScore = 5 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 5 
-			WHEN GAD_FirstScore = 6 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 6 
-			WHEN GAD_FirstScore = 7 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 7 
-			WHEN GAD_FirstScore = 8 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 8 
-			WHEN GAD_FirstScore = 9 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 9 
-			WHEN GAD_FirstScore = 10 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 10
-			WHEN GAD_FirstScore = 11 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 11 
-			WHEN GAD_FirstScore = 12 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 12 
-			WHEN GAD_FirstScore = 13 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 13 
-			WHEN GAD_FirstScore = 14 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 14 
-			WHEN GAD_FirstScore = 15 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 15 
-			WHEN GAD_FirstScore = 16 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 16 
-			WHEN GAD_FirstScore = 17 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 17 
-			WHEN GAD_FirstScore = 18 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 18 
-			WHEN GAD_FirstScore = 19 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 19 
-			WHEN GAD_FirstScore = 20 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 20 
-			WHEN GAD_FirstScore = 21 AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN 21
-			END
+SELECT
+	Month
+	,'Refresh' AS 'DataSource'
+	,'GAD7' AS 'Indicator'
+	,[Region Code]
+	,[Region Name]
+	,[CCG Code]
+	,[CCG Name]
+	,[Provider Code]
+	,[Provider Name]
+	,[STP Code]
+	,[STP Name]
+	,GAD_FirstScore AS Score
+	,SUM(Discharge) AS Count
+FROM [MHDInternal].[TEMP_TTAD_PDT_PHQ9GAD7Base]
+GROUP BY
+	Month
+	,[Region Code]
+	,[Region Name]
+	,[CCG Code]
+	,[CCG Name]
+	,[Provider Code]
+	,[Provider Name]
+	,[STP Code]
+	,[STP Name]
+	,GAD_FirstScore
 
 ---------------------------------------------------------------------------------------------------------
-
+--Drop Temporary Table
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PHQ9GAD7Base]
+----------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7]'

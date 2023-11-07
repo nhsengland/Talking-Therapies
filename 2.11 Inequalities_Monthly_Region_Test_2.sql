@@ -3,7 +3,7 @@ SET NOCOUNT ON
 
 -- Refresh updates for : [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] -------------------------------
 
-DECLARE @Offset AS INT = -17
+DECLARE @Offset AS INT = -1
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -92,9 +92,6 @@ FROM [mesh_IAPT].[IDS011socpercircumstances]
 --Filters for codes relevant to sexual orientation
 WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
 )_
-
-
-
 
 -----------------------------------Inequalities Base Table---------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
@@ -356,13 +353,19 @@ FROM [mesh_IAPT].[IDS101referral] r
 
 	LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 	---------------------------
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+	LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
+		AND ch.Effective_To IS NULL
+
+	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+		AND ph.Effective_To IS NULL
 	---------------------------
 	LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	r.UsePathway_Flag = 'True' 
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -18, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND l.IsLatest = 1
 GO
 
@@ -1125,8 +1128,8 @@ GROUP BY
 
 ------------------------------------------------------------------
 --Drop temporary tables
--- DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 ------------------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]'
