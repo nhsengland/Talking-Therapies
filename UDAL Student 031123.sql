@@ -15,7 +15,7 @@ SELECT
     ,[Address4]
     ,ROW_NUMBER() OVER(PARTITION BY SiteCode ORDER BY Postcode1 ASC) AS PostcodeRank
 INTO [MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes]
-FROM [MHDInternal].[ODS_All_Sites]
+FROM [MHDInternal].[REFERENCE_ODS_All_Sites]
 GO
 
 -----------------------------------
