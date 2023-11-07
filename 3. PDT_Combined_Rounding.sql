@@ -2077,14 +2077,15 @@ GROUP BY a.[Month], a.[CCG Code], a.[CCG Name], a.[Provider Code], a.[Provider N
 
 -- ALSO ENSURE RIGHTCARE CCGs ARE UPDATED EACH MONTH ---------------------------------------------------------
 
--- UPDATE [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]
 
--- SET RightcareSimilarCCG = b.[Similar CCG]
+SET RightcareSimilarCCG = b.[Similar Sub ICB]
 
--- FROM	[NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_Monthly_IST_New_Indicators_Rounded] a
--- 		LEFT JOIN NHSE_Sandbox_MentalHealth.[dbo].RightcareSimilar10 b ON a.[CCG Code] = b.[CCG Code] AND a.[CCG Name] = b.[CCG Name]
+FROM	[MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded] a
+		----------------------------------------------------------------------
+		LEFT JOIN [MHDInternal].[REFERENCE_RightCare_Similar_SubICB] b ON a.[CCG Code] = b.[Sub ICB Code]
 
--- WHERE [Level] = 'CCG'
+WHERE [Level] = 'CCG'
 
 ------------------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]'
