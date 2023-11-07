@@ -173,11 +173,11 @@ SELECT DISTINCT
 		WHEN r.PHQ9_FirstScore BETWEEN 20 AND 27 THEN 'Severe' 
 	END AS 'PHQ9 Cluster'
 
-	,CASE WHEN r.InternetEnabledTherapy_Count=0 AND r.TreatmentCareContact_Count>0
+	,CASE WHEN i.Count_IET=0 AND r.TreatmentCareContact_Count>0
 		THEN 'No IET'
-		WHEN r.InternetEnabledTherapy_Count>0 AND r.TreatmentCareContact_Count=r.InternetEnabledTherapy_Count
+		WHEN i.Count_IET>0 AND r.TreatmentCareContact_Count=i.Count_IET
 		THEN 'Only IET'
-		WHEN r.InternetEnabledTherapy_Count>0 AND r.TreatmentCareContact_Count>r.InternetEnabledTherapy_Count
+		WHEN i.Count_IET>0 AND r.TreatmentCareContact_Count>i.Count_IET
 		THEN 'Mixed IET and No IET'
 	END AS UniqueMixedPathway
 
