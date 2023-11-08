@@ -943,11 +943,11 @@ FROM(
 
 -- ALSO ENSURE RIGHTCARE CCGs ARE UPDATED EACH MONTH ---------------------------------------------------------
 
-UPDATE [MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded]
+UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesNewIndicatorsRounded]
 
 SET RightcareSimilarCCG = b.[Similar Sub ICB]
 
-FROM	[MHDInternal].[DASHBOARD_TTAD_PAD_Inequalities_New_Indicators_Rounded] a
+FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesNewIndicatorsRounded] a
 		----------------------------------------------------------------------
 		LEFT JOIN [MHDInternal].[REFERENCE_RightCare_Similar_SubICB] b ON a.[CCG Code] = b.[Sub ICB Code]
 
