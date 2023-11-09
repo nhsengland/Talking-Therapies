@@ -945,7 +945,7 @@ FROM(
 
 UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesNewIndicatorsRounded]
 
-SET RightcareSimilarCCG = b.[Similar Sub ICB]
+SET RightcareSimilarCCG = b.[Similar Sub ICB Name]
 
 FROM	[MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesNewIndicatorsRounded] a
 		----------------------------------------------------------------------
