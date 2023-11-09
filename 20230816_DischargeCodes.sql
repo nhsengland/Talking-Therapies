@@ -36,8 +36,8 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		----------------------------------------
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
@@ -68,8 +68,8 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		----------------------------------------
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [MHDInternal].[ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
 WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		-------------------------------------------
