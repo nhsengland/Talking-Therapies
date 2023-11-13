@@ -1,8 +1,9 @@
 SET NOCOUNT ON
 SET DATEFIRST 1
 SET ANSI_WARNINGS OFF
-----------------
-DECLARE @Offset INT = -4
+
+--------------------
+DECLARE @Offset INT = -1
 --------------------
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -20,9 +21,9 @@ Only records where SocPerCircumstanceLatest=1 are used in the queries.
 
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
 
-SELECT *
-    ,ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] DESC, SocPerCircumstanceRank ASC) AS 'SocPerCircumstanceLatest'
-    --ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
+--ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
+
+SELECT *, ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] DESC, SocPerCircumstanceRank ASC) AS 'SocPerCircumstanceLatest'
 
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
 
@@ -40,19 +41,17 @@ SELECT DISTINCT
     ,Unique_MonthID
     ,EFFECTIVE_FROM
     ,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
-    --Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual,Sexually attracted to neither male nor female sex, Confusion
+    --Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual, Sexually attracted to neither male nor female sex, Confusion
         WHEN SocPerCircumstance='38628009' THEN 2
         --Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record
         --so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
         WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
     ELSE NULL END AS SocPerCircumstanceRank
-    --Ranks the social personal circumstances by the amount of information they provide to help decide which one to use
-    --when a record has more than one social personal circumstance on the same day
+    --Ranks the social personal circumstances by the amount of information they provide, to help decide which one to use when a record has more than one social personal circumstance on the same day
 
 FROM [mesh_IAPT].[IDS011socpercircumstances]
---Filters for codes relevant to sexual orientation
 
-WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
+WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004') --Filters for codes relevant to sexual orientation
 
 )_
 
@@ -599,4 +598,4 @@ GROUP BY [Month]
       ,[GenderIdentity]
 
 --------------------------------------------------------------------------------------------------
- PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]'
+ PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]' + CHAR(10)
