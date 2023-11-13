@@ -17,9 +17,9 @@ PRINT CHAR(10) + 'Month: ' + CAST(@Refresh AS VARCHAR(50)) + CHAR(10)
 
 -- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_InequalitiesADSMBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_InequalitiesADSMBase]
 
-SELECT * INTO [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE] FROM 
+SELECT * INTO [MHDInternal].[TEMP_TTAD_PDT_InequalitiesADSMBase] FROM 
 
 (SELECT pc.* 
 	FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
@@ -40,16 +40,16 @@ FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
 
 -- Presenting Complaints -----------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_InequalitiesPresCompBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_InequalitiesPresCompBase]
 
 SELECT DISTINCT pc.PathwayID
 				,Validated_PresentingComplaint
 				,row_number() OVER(PARTITION BY pc.PathwayID ORDER BY CASE WHEN Validated_PresentingComplaint IS NULL THEN 2 ELSE 1 END
 					,PresCompCodSig, PresCompDate DESC, UniqueID_IDS603 DESC) AS rank
 
-INTO	[MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]
+INTO	[MHDInternal].[TEMP_TTAD_PDT_InequalitiesPresCompBase]
 
-FROM	[MHDInternal].[TTAD_ADSM_BASE_TABLE] pc 
+FROM	[MHDInternal].[TEMP_TTAD_PDT_InequalitiesADSMBase] pc 
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId
 			AND pc.Unique_MonthID = l.Unique_MonthID
 
@@ -362,7 +362,7 @@ FROM [mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
 		AND ph.Effective_To IS NULL
 	---------------------------
-	LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
+	LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_InequalitiesPresCompBase] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	r.UsePathway_Flag = 'True' 
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
@@ -1129,7 +1129,7 @@ GROUP BY
 ------------------------------------------------------------------
 --Drop temporary tables
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]
-DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PRES_COMP_BASE_TABLE]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_InequalitiesPresCompBase]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 ------------------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]'
