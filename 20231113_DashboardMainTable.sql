@@ -297,23 +297,23 @@ SELECT [Month]
       ,[ICB Name]
       ,'Ethnicity - Broad' AS [Category]
       ,[Ethnicity - Broad] AS 'Variable'
-      ,SUM([Count_Referrals])
-      ,SUM([Count_AccessedTreatment])
-      ,SUM([Count_EndedCompleted])
-      ,SUM([Count_Recovery])
-      ,SUM([Count_Improvement])
-      ,SUM([Count_Finished])
-      ,SUM([Count_NotCaseness])
-      ,SUM([Count_FinishedCourseTreatmentHILI])
-      ,SUM([Count_FinishedCourseTreatmentHI])
-      ,SUM([Count_FinishedCourseTreatmentLI])
-      ,SUM([Count_EndedNotSeen])
-      ,SUM([Count_EndedMutualAgreement])
-      ,SUM([Count_OneTreatment])
-      ,SUM([Count_FirstTreatment_6Weeks])
-      ,SUM([Count_FirstTreatment_18Weeks])
-      ,SUM([Count_WaitFirstToSecond_Over90days])
-      ,SUM([Count_Ended_Seen_NotTreated])
+      ,SUM([Count_Referrals]) AS 'Count_Referrals'
+      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
+      ,SUM([Count_EndedCompleted]) AS 'Count_EndedCompleted'
+      ,SUM([Count_Recovery]) AS 'Count_Recovery'
+      ,SUM([Count_Improvement]) AS 'Count_Improvement'
+      ,SUM([Count_Finished]) AS 'Count_Finished'
+      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
+      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
+      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
+      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
+      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
+      ,SUM([Count_EndedMutualAgreement]) AS 'Count_EndedMutualAgreement'
+      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
+      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
+      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
+      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
+      ,SUM([Count_Ended_Seen_NotTreated]) AS 'Count_Ended_Seen_NotTreated'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PathwayID_Base]
 
@@ -342,23 +342,23 @@ SELECT  [Month]
       ,[ICB Name]
       ,'Ethnicity - High-Level' AS [Category]
       ,[Ethnicity - High-Level] AS 'Variable'
-      ,SUM([Count_Referrals])
-      ,SUM([Count_AccessedTreatment])
-      ,SUM([Count_EndedCompleted])
-      ,SUM([Count_Recovery])
-      ,SUM([Count_Improvement])
-      ,SUM([Count_Finished])
-      ,SUM([Count_NotCaseness])
-      ,SUM([Count_FinishedCourseTreatmentHILI])
-      ,SUM([Count_FinishedCourseTreatmentHI])
-      ,SUM([Count_FinishedCourseTreatmentLI])
-      ,SUM([Count_EndedNotSeen])
-      ,SUM([Count_EndedMutualAgreement])
-      ,SUM([Count_OneTreatment])
-      ,SUM([Count_FirstTreatment_6Weeks])
-      ,SUM([Count_FirstTreatment_18Weeks])
-      ,SUM([Count_WaitFirstToSecond_Over90days])
-      ,SUM([Count_Ended_Seen_NotTreated])
+      ,SUM([Count_Referrals]) AS 'Count_Referrals'
+      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
+      ,SUM([Count_EndedCompleted]) AS 'Count_EndedCompleted'
+      ,SUM([Count_Recovery]) AS 'Count_Recovery'
+      ,SUM([Count_Improvement]) AS 'Count_Improvement'
+      ,SUM([Count_Finished]) AS 'Count_Finished'
+      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
+      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
+      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
+      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
+      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
+      ,SUM([Count_EndedMutualAgreement]) AS 'Count_EndedMutualAgreement'
+      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
+      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
+      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
+      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
+      ,SUM([Count_Ended_Seen_NotTreated]) AS 'Count_Ended_Seen_NotTreated'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PathwayID_Base]
 
@@ -387,23 +387,23 @@ SELECT  [Month]
       ,[ICB Name]
       ,'Ethnicity - Detailed' AS [Category]
       ,[Ethnicity - Detailed] AS 'Variable'
-      ,SUM([Count_Referrals])
-      ,SUM([Count_AccessedTreatment])
-      ,SUM([Count_EndedCompleted])
-      ,SUM([Count_Recovery])
-      ,SUM([Count_Improvement])
-      ,SUM([Count_Finished])
-      ,SUM([Count_NotCaseness])
-      ,SUM([Count_FinishedCourseTreatmentHILI])
-      ,SUM([Count_FinishedCourseTreatmentHI])
-      ,SUM([Count_FinishedCourseTreatmentLI])
-      ,SUM([Count_EndedNotSeen])
-      ,SUM([Count_EndedMutualAgreement])
-      ,SUM([Count_OneTreatment])
-      ,SUM([Count_FirstTreatment_6Weeks])
-      ,SUM([Count_FirstTreatment_18Weeks])
-      ,SUM([Count_WaitFirstToSecond_Over90days])
-      ,SUM([Count_Ended_Seen_NotTreated])
+      ,SUM([Count_Referrals]) AS 'Count_Referrals'
+      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
+      ,SUM([Count_EndedCompleted]) AS 'Count_EndedCompleted'
+      ,SUM([Count_Recovery]) AS 'Count_Recovery'
+      ,SUM([Count_Improvement]) AS 'Count_Improvement'
+      ,SUM([Count_Finished]) AS 'Count_Finished'
+      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
+      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
+      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
+      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
+      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
+      ,SUM([Count_EndedMutualAgreement]) AS 'Count_EndedMutualAgreement'
+      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
+      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
+      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
+      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
+      ,SUM([Count_Ended_Seen_NotTreated]) AS 'Count_Ended_Seen_NotTreated'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PathwayID_Base]
 
@@ -432,23 +432,23 @@ SELECT  [Month]
       ,[ICB Name]
       ,'Sexual Orientation' AS [Category]
       ,[Sexual Orientation] AS 'Variable'
-      ,SUM([Count_Referrals])
-      ,SUM([Count_AccessedTreatment])
-      ,SUM([Count_EndedCompleted])
-      ,SUM([Count_Recovery])
-      ,SUM([Count_Improvement])
-      ,SUM([Count_Finished])
-      ,SUM([Count_NotCaseness])
-      ,SUM([Count_FinishedCourseTreatmentHILI])
-      ,SUM([Count_FinishedCourseTreatmentHI])
-      ,SUM([Count_FinishedCourseTreatmentLI])
-      ,SUM([Count_EndedNotSeen])
-      ,SUM([Count_EndedMutualAgreement])
-      ,SUM([Count_OneTreatment])
-      ,SUM([Count_FirstTreatment_6Weeks])
-      ,SUM([Count_FirstTreatment_18Weeks])
-      ,SUM([Count_WaitFirstToSecond_Over90days])
-      ,SUM([Count_Ended_Seen_NotTreated])
+      ,SUM([Count_Referrals]) AS 'Count_Referrals'
+      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
+      ,SUM([Count_EndedCompleted]) AS 'Count_EndedCompleted'
+      ,SUM([Count_Recovery]) AS 'Count_Recovery'
+      ,SUM([Count_Improvement]) AS 'Count_Improvement'
+      ,SUM([Count_Finished]) AS 'Count_Finished'
+      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
+      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
+      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
+      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
+      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
+      ,SUM([Count_EndedMutualAgreement]) AS 'Count_EndedMutualAgreement'
+      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
+      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
+      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
+      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
+      ,SUM([Count_Ended_Seen_NotTreated]) AS 'Count_Ended_Seen_NotTreated'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PathwayID_Base]
 
@@ -477,23 +477,23 @@ SELECT  [Month]
       ,[ICB Name]
       ,'Age' AS [Category]
       ,[Age] AS 'Variable'
-      ,SUM([Count_Referrals])
-      ,SUM([Count_AccessedTreatment])
-      ,SUM([Count_EndedCompleted])
-      ,SUM([Count_Recovery])
-      ,SUM([Count_Improvement])
-      ,SUM([Count_Finished])
-      ,SUM([Count_NotCaseness])
-      ,SUM([Count_FinishedCourseTreatmentHILI])
-      ,SUM([Count_FinishedCourseTreatmentHI])
-      ,SUM([Count_FinishedCourseTreatmentLI])
-      ,SUM([Count_EndedNotSeen])
-      ,SUM([Count_EndedMutualAgreement])
-      ,SUM([Count_OneTreatment])
-      ,SUM([Count_FirstTreatment_6Weeks])
-      ,SUM([Count_FirstTreatment_18Weeks])
-      ,SUM([Count_WaitFirstToSecond_Over90days])
-      ,SUM([Count_Ended_Seen_NotTreated])
+      ,SUM([Count_Referrals]) AS 'Count_Referrals'
+      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
+      ,SUM([Count_EndedCompleted]) AS 'Count_EndedCompleted'
+      ,SUM([Count_Recovery]) AS 'Count_Recovery'
+      ,SUM([Count_Improvement]) AS 'Count_Improvement'
+      ,SUM([Count_Finished]) AS 'Count_Finished'
+      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
+      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
+      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
+      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
+      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
+      ,SUM([Count_EndedMutualAgreement]) AS 'Count_EndedMutualAgreement'
+      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
+      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
+      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
+      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
+      ,SUM([Count_Ended_Seen_NotTreated]) AS 'Count_Ended_Seen_NotTreated'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PathwayID_Base]
 
@@ -522,23 +522,23 @@ SELECT  [Month]
       ,[ICB Name]
       ,'Gender' AS [Category]
       ,[Gender] AS 'Variable'
-      ,SUM([Count_Referrals])
-      ,SUM([Count_AccessedTreatment])
-      ,SUM([Count_EndedCompleted])
-      ,SUM([Count_Recovery])
-      ,SUM([Count_Improvement])
-      ,SUM([Count_Finished])
-      ,SUM([Count_NotCaseness])
-      ,SUM([Count_FinishedCourseTreatmentHILI])
-      ,SUM([Count_FinishedCourseTreatmentHI])
-      ,SUM([Count_FinishedCourseTreatmentLI])
-      ,SUM([Count_EndedNotSeen])
-      ,SUM([Count_EndedMutualAgreement])
-      ,SUM([Count_OneTreatment])
-      ,SUM([Count_FirstTreatment_6Weeks])
-      ,SUM([Count_FirstTreatment_18Weeks])
-      ,SUM([Count_WaitFirstToSecond_Over90days])
-      ,SUM([Count_Ended_Seen_NotTreated])
+      ,SUM([Count_Referrals]) AS 'Count_Referrals'
+      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
+      ,SUM([Count_EndedCompleted]) AS 'Count_EndedCompleted'
+      ,SUM([Count_Recovery]) AS 'Count_Recovery'
+      ,SUM([Count_Improvement]) AS 'Count_Improvement'
+      ,SUM([Count_Finished]) AS 'Count_Finished'
+      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
+      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
+      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
+      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
+      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
+      ,SUM([Count_EndedMutualAgreement]) AS 'Count_EndedMutualAgreement'
+      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
+      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
+      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
+      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
+      ,SUM([Count_Ended_Seen_NotTreated]) AS 'Count_Ended_Seen_NotTreated'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PathwayID_Base]
 
@@ -567,23 +567,23 @@ SELECT  [Month]
       ,[ICB Name]
       ,'Gender Identity' AS [Category]
       ,[GenderIdentity] AS 'Variable'
-      ,SUM([Count_Referrals])
-      ,SUM([Count_AccessedTreatment])
-      ,SUM([Count_EndedCompleted])
-      ,SUM([Count_Recovery])
-      ,SUM([Count_Improvement])
-      ,SUM([Count_Finished])
-      ,SUM([Count_NotCaseness])
-      ,SUM([Count_FinishedCourseTreatmentHILI])
-      ,SUM([Count_FinishedCourseTreatmentHI])
-      ,SUM([Count_FinishedCourseTreatmentLI])
-      ,SUM([Count_EndedNotSeen])
-      ,SUM([Count_EndedMutualAgreement])
-      ,SUM([Count_OneTreatment])
-      ,SUM([Count_FirstTreatment_6Weeks])
-      ,SUM([Count_FirstTreatment_18Weeks])
-      ,SUM([Count_WaitFirstToSecond_Over90days])
-      ,SUM([Count_Ended_Seen_NotTreated])
+      ,SUM([Count_Referrals]) AS 'Count_Referrals'
+      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
+      ,SUM([Count_EndedCompleted]) AS 'Count_EndedCompleted'
+      ,SUM([Count_Recovery]) AS 'Count_Recovery'
+      ,SUM([Count_Improvement]) AS 'Count_Improvement'
+      ,SUM([Count_Finished]) AS 'Count_Finished'
+      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
+      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
+      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
+      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
+      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
+      ,SUM([Count_EndedMutualAgreement]) AS 'Count_EndedMutualAgreement'
+      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
+      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
+      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
+      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
+      ,SUM([Count_Ended_Seen_NotTreated]) AS 'Count_Ended_Seen_NotTreated'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PathwayID_Base]
 
