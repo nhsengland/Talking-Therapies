@@ -12,10 +12,10 @@ DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATE
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 --------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
-/*
-There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks 
-each sexual orientation code based on the SocPerCircumstanceRecDate so that the latest record of a sexual orientation is 
-labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries.
+
+/* There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each 
+sexual orientation code based on the SocPerCircumstanceRecDate so that the latest record of a sexual orientation is labelled as 1. 
+Only records where SocPerCircumstanceLatest=1 are used in the queries. 
 */
 
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
