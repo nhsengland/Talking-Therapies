@@ -1,26 +1,22 @@
-USE [NHSE_IAPT_v2]
-----------------
 SET NOCOUNT ON
 SET DATEFIRST 1
 SET ANSI_WARNINGS OFF
 ----------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = -2
 --------------------
-
---------------------------------
 --DECLARE @Max_Offset INT = -30
 -----------------------------------------|
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 -----------------------------------------|
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IDS000_Header])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [IDS000_Header])
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 ---------------------------------------------------------------------------------------------------------------------|
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Ethnicity_DashboardMainTable] --------------------------|
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable] -------------------------------------------------------|
 ---------------------------------------------------------------------------------------------------------------------|
 
 SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS varchar) AS 'Month'
@@ -108,17 +104,23 @@ SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.
 
 		,COUNT(DISTINCT(CASE WHEN TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(D, TherapySession_FirstDate, TherapySession_SecondDate) > 90 AND ServDischDate IS NULL THEN r.PathwayID END)) AS 'Count_WaitFirstToSecond_Over90days'
 
+		,COUNT(DISTINCT(CASE WHEN ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 THEN r.PathwayID END)) AS 'Count_Ended_Seen_NotTreated'
+
 		----------------------------------------------------------------------------------------------------
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -244,15 +246,23 @@ SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.
 
 		,COUNT(DISTINCT(CASE WHEN TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(D, TherapySession_FirstDate, TherapySession_SecondDate) > 90 AND ServDischDate IS NULL THEN r.PathwayID END)) AS 'Count_WaitFirstToSecond_Over90days'
 
-FROM	[dbo].[IDS101_Referral] r
-		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		,COUNT(DISTINCT(CASE WHEN ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 THEN r.PathwayID END)) AS 'Count_Ended_Seen_NotTreated'
+
+		----------------------------------------------------------------------------------------------------
+
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		-------------------------
+		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -383,15 +393,23 @@ SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.
 
 		,COUNT(DISTINCT(CASE WHEN TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(D, TherapySession_FirstDate, TherapySession_SecondDate) > 90 AND ServDischDate IS NULL THEN r.PathwayID END)) AS 'Count_WaitFirstToSecond_Over90days'
 
-FROM	[dbo].[IDS101_Referral] r
-		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		,COUNT(DISTINCT(CASE WHEN ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 THEN r.PathwayID END)) AS 'Count_Ended_Seen_NotTreated'
+
+		----------------------------------------------------------------------------------------------------
+
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		-------------------------
+		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -511,16 +529,24 @@ SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.
 
 		,COUNT(DISTINCT(CASE WHEN TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(D, TherapySession_FirstDate, TherapySession_SecondDate) > 90 AND ServDischDate IS NULL THEN r.PathwayID END)) AS 'Count_WaitFirstToSecond_Over90days'
 
-FROM	[dbo].[IDS101_Referral] r
-		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		,COUNT(DISTINCT(CASE WHEN ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 THEN r.PathwayID END)) AS 'Count_Ended_Seen_NotTreated'
+
+		----------------------------------------------------------------------------------------------------
+
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-------------------------
+		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		-------------------------
+		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -638,15 +664,23 @@ SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.
 
 		,COUNT(DISTINCT(CASE WHEN TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(D, TherapySession_FirstDate, TherapySession_SecondDate) > 90 AND ServDischDate IS NULL THEN r.PathwayID END)) AS 'Count_WaitFirstToSecond_Over90days'
 
-FROM	[dbo].[IDS101_Referral] r
-		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		,COUNT(DISTINCT(CASE WHEN ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 THEN r.PathwayID END)) AS 'Count_Ended_Seen_NotTreated'
+
+		----------------------------------------------------------------------------------------------------
+
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		-------------------------
+		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -758,15 +792,23 @@ SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.
 
 		,COUNT(DISTINCT(CASE WHEN TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(D, TherapySession_FirstDate, TherapySession_SecondDate) > 90 AND ServDischDate IS NULL THEN r.PathwayID END)) AS 'Count_WaitFirstToSecond_Over90days'
 
-FROM	[dbo].[IDS101_Referral] r
-		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		,COUNT(DISTINCT(CASE WHEN ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 THEN r.PathwayID END)) AS 'Count_Ended_Seen_NotTreated'
+
+		----------------------------------------------------------------------------------------------------
+
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		-------------------------
+		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -880,15 +922,23 @@ SELECT  DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.
 
 		,COUNT(DISTINCT(CASE WHEN TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(D, TherapySession_FirstDate, TherapySession_SecondDate) > 90 AND ServDischDate IS NULL THEN r.PathwayID END)) AS 'Count_WaitFirstToSecond_Over90days'
 
-FROM	[dbo].[IDS101_Referral] r
-		---------------------------
-		INNER JOIN [dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [dbo].[IDS201_CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
-		---------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		,COUNT(DISTINCT(CASE WHEN ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 THEN r.PathwayID END)) AS 'Count_Ended_Seen_NotTreated'
+
+		----------------------------------------------------------------------------------------------------
+
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		-------------------------
+		LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
+		-------------------------
+		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -902,12 +952,13 @@ GROUP BY DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
-		,CASE WHEN (GenderIdentity IN ('1') or (Gender IN ('1') and (GenderIdentity is null or GenderIdentity not in ('1', '2', '3', '4')))) then 'Male (including trans men)'
-			WHEN (GenderIdentity IN ('2') or (Gender IN ('2') and (GenderIdentity is null or GenderIdentity not in ('1', '2', '3', '4')))) then 'Female (including trans women)'
+		,CASE WHEN GenderIdentity IN ('1','01') THEN 'Male (including trans man)'
+			WHEN GenderIdentity IN ('2','02') THEN 'Female (including trans woman)'
 			WHEN GenderIdentity IN ('3','03') THEN 'Non-binary'
 			WHEN GenderIdentity IN ('4','04') THEN 'Other (not listed)'
-			WHEN (GenderIdentity NOT IN ('1','2','3','4','x') OR GenderIdentity IS NULL) AND Gender = '9' then 'Indeterminate'
-			ELSE 'Not Known/Not Stated'
+			WHEN GenderIdentity IN ('x','X') THEN 'Not Known'
+			WHEN GenderIdentity IN ('z','Z') THEN 'Not Stated'
+			WHEN GenderIdentity NOT IN ('1','01','2','02','3','03','4','04','x','X','z','Z') OR GenderIdentity IS NULL THEN 'Unspecified'
 		END
 		
 ---------------------------------|
@@ -915,4 +966,4 @@ GROUP BY DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l
 ---------------------------------|
 
 ------------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Ethnicity_DashboardMainTable]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]'
