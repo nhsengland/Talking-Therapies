@@ -3,7 +3,7 @@ SET DATEFIRST 1
 SET ANSI_WARNINGS OFF
 
 --------------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = -2
 --------------------
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -268,8 +268,8 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest=1
 		-------------------------
-        INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_UniqeCarePathwayID_Base] u ON r.[PathwayID] = u.[PathwayID] AND r.[Unique_MonthID] = u.[Unique_MonthID]
-        -------------------------
+            LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_UniqeCarePathwayID_Base] u ON r.[PathwayID] = u.[PathwayID] AND r.[Unique_MonthID] = u.[Unique_MonthID]
+            -------------------------
 		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
