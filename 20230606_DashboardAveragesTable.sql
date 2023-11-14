@@ -112,9 +112,9 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 
-WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
+WHERE	UsePathway_Flag = 'True' AND l.IsLatest = '1'
 		AND CompletedTreatment_Flag = 'True' 
-		AND i.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND r.[ServDischDate] BETWEEN @PeriodStart AND @PeriodEnd
 
 ----------------------------------------------------------------------------------------------------------
@@ -147,8 +147,8 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
-WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
-		AND i.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+WHERE	UsePathway_Flag = 'True' AND l.IsLatest = '1'
+		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
 		AND [TherapySession_FirstDate] BETWEEN @PeriodStart AND @PeriodEnd
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -156,8 +156,6 @@ WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] 
-
-SELECT * FROM (
 
 -- 'Ethnicity - Detailed' AS 'Category'
 SELECT DISTINCT @MonthYear AS 'Month'
@@ -234,7 +232,7 @@ GROUP BY Month
 			ELSE 'Other' 
 		END
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable]----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
 
 -- 'Ethnicity - High-level' AS 'Category'
 SELECT DISTINCT Month
@@ -275,10 +273,9 @@ GROUP BY Month
 			WHEN Validated_EthnicCategory IN ('99', 'Z', '-1','-3') THEN 'Not known/Not stated/Unspecified/Invalid data supplied'
 		ELSE 'Other' END 
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+-------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Ethnicity - Broad'
 
-
--- 'Ethnicity - Broad' AS 'Category'
 SELECT DISTINCT Month
 				,'National' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -311,9 +308,9 @@ GROUP BY Month
 					ELSE 'Other' 
 					END
 
-UNION --------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Age' 
 
--- 'Age' AS 'Category'
 SELECT DISTINCT Month
 				,'National' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -350,9 +347,9 @@ GROUP BY Month
 					ELSE 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Gender'
 
--- 'Gender' AS 'Category'
 SELECT DISTINCT Month
 				,'National' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -389,9 +386,9 @@ GROUP BY Month
 					WHEN Gender NOT IN ('1','01','2','02','9','09','x','X') OR Gender IS NULL THEN 'Other' 
 				END
 
-UNION --------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'GenderIdentity'
 
--- 'GenderIdentity' AS 'Category'
 SELECT DISTINCT Month
 				,'National' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -432,9 +429,9 @@ GROUP BY Month
 					WHEN GenderIdentity NOT IN ('1','01','2','02','3','03','4','04','x','X','z','Z') OR GenderIdentity IS NULL THEN 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'SexualOrientation'
 
--- 'SexualOrientation' AS 'Category'
 SELECT DISTINCT Month
 				,'National' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -482,12 +479,12 @@ GROUP BY Month
 						WHEN SocPerCircumstance = '766822004' THEN 'Confusion'
 						ELSE 'Unspecified'
 				END
-
-UNION --------------------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Region ------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - Detailed
+
 SELECT DISTINCT Month
 				,'Region' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -565,7 +562,8 @@ GROUP BY Month
 			ELSE 'Other' 
 		END
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+----------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - High-level
 
 SELECT DISTINCT Month
 				,'Region' AS 'Level'
@@ -607,7 +605,8 @@ GROUP BY Month
 			WHEN Validated_EthnicCategory IN ('99', 'Z', '-1','-3') THEN 'Not known/Not stated/Unspecified/Invalid data supplied'
 		ELSE 'Other' END 
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+-----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - Broad
 
 SELECT DISTINCT Month
 				,'Region' AS 'Level'
@@ -642,10 +641,9 @@ GROUP BY Month
 					WHEN [Validated_EthnicCategory] = 'A' THEN 'White British'
 					ELSE 'Other' 
 					END
+-----------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Age' 
 
-UNION --------------------------------------------------------------------------------------------
-
--- 'Age' AS 'Category'
 SELECT DISTINCT Month
 				,'Region' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -683,10 +681,9 @@ GROUP BY Month
 					WHEN Age_ReferralRequest_ReceivedDate >= 65 THEN '65+'
 					ELSE 'Unspecified'
 				END
+--------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Gender'
 
-UNION --------------------------------------------------------------------------------------------
-
--- 'Gender' AS 'Category'
 SELECT DISTINCT Month
 				,'Region' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -725,9 +722,9 @@ GROUP BY Month
 					WHEN Gender NOT IN ('1','01','2','02','9','09','x','X') OR Gender IS NULL THEN 'Other' 
 				END
 
-UNION --------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'GenderIdentity'
 
--- 'GenderIdentity' AS 'Category'
 SELECT DISTINCT Month
 				,'Region' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -770,9 +767,9 @@ GROUP BY Month
 					WHEN GenderIdentity NOT IN ('1','01','2','02','3','03','4','04','x','X','z','Z') OR GenderIdentity IS NULL THEN 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'SexualOrientation'
 
--- 'SexualOrientation' AS 'Category'
 SELECT DISTINCT Month
 				,'Region' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -823,10 +820,10 @@ GROUP BY Month
 						ELSE 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
-
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ICB ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] --Ethnicity - Detailed
 
 SELECT DISTINCT Month
 				,'ICB' AS 'Level'
@@ -903,7 +900,8 @@ GROUP BY Month,[ICB Code],[ICB Name]
 			ELSE 'Other' 
 		END
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+---------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable]-- Ethnicity - High-level
 
 SELECT DISTINCT Month
 				,'ICB' AS 'Level'
@@ -943,7 +941,8 @@ GROUP BY Month,[ICB Code],[ICB Name]
 			WHEN Validated_EthnicCategory IN ('99', 'Z', '-1','-3') THEN 'Not known/Not stated/Unspecified/Invalid data supplied'
 		ELSE 'Other' END 
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable]-- Ethnicity - Broad
 
 SELECT DISTINCT Month
 				,'ICB' AS 'Level'
@@ -977,9 +976,9 @@ GROUP BY Month,[ICB Code],[ICB Name]
 					ELSE 'Other' 
 					END	
 
-UNION --------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Age'
 
--- 'Age' AS 'Category'
 SELECT DISTINCT Month
 				,'ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1018,9 +1017,9 @@ GROUP BY Month
 					ELSE 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Gender'
 
--- 'Gender' AS 'Category'
 SELECT DISTINCT Month
 				,'ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1059,9 +1058,9 @@ GROUP BY Month
 					WHEN Gender NOT IN ('1','01','2','02','9','09','x','X') OR Gender IS NULL THEN 'Other' 
 				END
 
-UNION --------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'GenderIdentity'
 
--- 'GenderIdentity' AS 'Category'
 SELECT DISTINCT Month
 				,'ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1104,9 +1103,9 @@ GROUP BY Month
 					WHEN GenderIdentity NOT IN ('1','01','2','02','3','03','4','04','x','X','z','Z') OR GenderIdentity IS NULL THEN 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'SexualOrientation'
 
--- 'SexualOrientation' AS 'Category'
 SELECT DISTINCT Month
 				,'ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1156,12 +1155,12 @@ GROUP BY Month
 						WHEN SocPerCircumstance = '766822004' THEN 'Confusion'
 						ELSE 'Unspecified'
 				END
-
-UNION --------------------------------------------------------------------------------------------
 					
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Sub-ICB -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - Detailed 
+
 SELECT DISTINCT Month
 				,'Sub-ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1237,7 +1236,8 @@ GROUP BY Month,[Sub-ICB Code],[Sub-ICB Name]
 			ELSE 'Other' 
 		END
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+----------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - High-level
 
 SELECT DISTINCT Month
 				,'Sub-ICB' AS 'Level'
@@ -1277,7 +1277,8 @@ GROUP BY Month,[Sub-ICB Code],[Sub-ICB Name]
 			WHEN Validated_EthnicCategory IN ('99', 'Z', '-1','-3') THEN 'Not known/Not stated/Unspecified/Invalid data supplied'
 		ELSE 'Other' END 
 
-UNION -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - Broad
 
 SELECT DISTINCT Month
 				,'Sub-ICB' AS 'Level'
@@ -1311,9 +1312,9 @@ GROUP BY Month,[Sub-ICB Code],[Sub-ICB Name]
 					ELSE 'Other' 
 					END
 
-UNION --------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Age' 
 
--- 'Age' AS 'Category'
 SELECT DISTINCT Month
 				,'Sub-ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1352,9 +1353,9 @@ GROUP BY Month
 					ELSE 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Gender' 
 
--- 'Gender' AS 'Category'
 SELECT DISTINCT Month
 				,'Sub-ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1393,9 +1394,9 @@ GROUP BY Month
 					WHEN Gender NOT IN ('1','01','2','02','9','09','x','X') OR Gender IS NULL THEN 'Other' 
 				END
 
-UNION --------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'GenderIdentity'
 
--- 'GenderIdentity' AS 'Category'
 SELECT DISTINCT Month
 				,'Sub-ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1438,9 +1439,9 @@ GROUP BY Month
 					WHEN GenderIdentity NOT IN ('1','01','2','02','3','03','4','04','x','X','z','Z') OR GenderIdentity IS NULL THEN 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'SexualOrientation'
 
--- 'SexualOrientation' AS 'Category'
 SELECT DISTINCT Month
 				,'Sub-ICB' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1490,13 +1491,12 @@ GROUP BY Month
 						WHEN SocPerCircumstance = '766822004' THEN 'Confusion'
 						ELSE 'Unspecified'
 				END
-
-
-UNION --------------------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Provider ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - Detailed
+
 SELECT DISTINCT Month
 				,'Provider' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1572,7 +1572,8 @@ GROUP BY Month,[Provider Code],[Provider Name]
 			ELSE 'Other' 
 		END
 
-UNION -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - High-level
 
 SELECT DISTINCT Month
 				,'Provider' AS 'Level'
@@ -1612,7 +1613,8 @@ GROUP BY Month,[Provider Code],[Provider Name]
 			WHEN Validated_EthnicCategory IN ('99', 'Z', '-1','-3') THEN 'Not known/Not stated/Unspecified/Invalid data supplied'
 		ELSE 'Other' END 
 
-UNION ----------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------
+-----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- Ethnicity - Broad
 
 SELECT DISTINCT Month
 				,'Provider' AS 'Level'
@@ -1646,9 +1648,9 @@ GROUP BY Month,[Provider Code],[Provider Name]
 					ELSE 'Other' 
 					END
 
-UNION --------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Age'
 
--- 'Age' AS 'Category'
 SELECT DISTINCT Month
 				,'Provider' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1686,10 +1688,9 @@ GROUP BY Month
 					WHEN Age_ReferralRequest_ReceivedDate >= 65 THEN '65+'
 					ELSE 'Unspecified'
 				END
+--------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'Gender'
 
-UNION --------------------------------------------------------------------------------------------
-
--- 'Gender' AS 'Category'
 SELECT DISTINCT Month
 				,'Provider' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1728,9 +1729,9 @@ GROUP BY Month
 					WHEN Gender NOT IN ('1','01','2','02','9','09','x','X') OR Gender IS NULL THEN 'Other' 
 				END
 
-UNION --------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'GenderIdentity'
 
--- 'GenderIdentity' AS 'Category'
 SELECT DISTINCT Month
 				,'Provider' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1773,9 +1774,9 @@ GROUP BY Month
 					WHEN GenderIdentity NOT IN ('1','01','2','02','3','03','4','04','x','X','z','Z') OR GenderIdentity IS NULL THEN 'Unspecified'
 				END
 
-UNION --------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] -- 'SexualOrientation'
 
--- 'SexualOrientation' AS 'Category'
 SELECT DISTINCT Month
 				,'Provider' AS 'Level'
 				,'Refresh' AS 'DataSource'
@@ -1825,7 +1826,6 @@ GROUP BY Month
 						WHEN SocPerCircumstance = '766822004' THEN 'Confusion'
 						ELSE 'Unspecified'
 				END
-)_
 
 ---------------------------------|
 --SET @Offset = @Offset -1 END --| <-- End loop
