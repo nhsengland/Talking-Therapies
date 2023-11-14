@@ -1,28 +1,68 @@
-USE [NHSE_IAPT_v2]
-----------------
+
 SET NOCOUNT ON
 SET DATEFIRST 1
 SET ANSI_WARNINGS OFF
 ----------------
-DECLARE @Offset INT = -1
---------------------
-
+DECLARE @Offset INT = -2
 --------------------------------
 --DECLARE @Max_Offset INT = -30
 -----------------------------------------|
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 -----------------------------------------|
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD([Month],@Offset,MAX([ReportingPeriodStartDate])) FROM [IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD([Month],@Offset,MAX([ReportingPeriodendDate]))) FROM [IsLatest_SubmissionID])
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50))
+PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
+
+--------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
+
+/* There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each 
+sexual orientation code based on the SocPerCircumstanceRecDate so that the latest record of a sexual orientation is labelled as 1. 
+Only records where SocPerCircumstanceLatest=1 are used in the queries. 
+*/
+
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
+
+--ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
+
+SELECT *, ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] DESC, SocPerCircumstanceRank ASC) AS 'SocPerCircumstanceLatest'
+
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
+
+FROM (
+
+SELECT DISTINCT
+    AuditID
+    ,SocPerCircumstance
+    ,SocPerCircumstanceRecDate
+    ,Person_ID
+    ,RecordNumber
+    ,UniqueID_IDS011
+    ,OrgID_Provider
+    ,UniqueSubmissionID
+    ,Unique_MonthID
+    ,EFFECTIVE_FROM
+    ,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
+    --Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual, Sexually attracted to neither male nor female sex, Confusion
+        WHEN SocPerCircumstance='38628009' THEN 2
+        --Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record
+        --so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
+        WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
+    ELSE NULL END AS SocPerCircumstanceRank
+    --Ranks the social personal circumstances by the amount of information they provide, to help decide which one to use when a record has more than one social personal circumstance on the same day
+
+FROM [mesh_IAPT].[IDS011socpercircumstances]
+
+WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004') --Filters for codes relevant to sexual orientation
+
+)_
 
 -- Drop temp tables ----------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FirstTreatment]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FirstTreatment]
-IF OBJECT_ID ('[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]') IS NOT NULL DROP TABLE [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_FirstTreatment]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_FirstTreatment]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 ----------------------------------------------------------------------------------------------------------
 -- Base table: Finished Treatment ------------------------------------------------------------------------
@@ -55,19 +95,22 @@ SELECT DISTINCT
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICB Code'
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICB Name'
 
-INTO	 [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+INTO	 [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		------------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] p ON r.recordnumber = p.recordnumber 
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] i ON r.UniqueSubmissionID = i.UniqueSubmissionID AND r.AuditId = i.AuditId
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		------------------------------------------
-		LEFT JOIN [NHSE_IAPT_v2].[dbo].[IDS011_SocialPersonalCircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
-		------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 		---------------------------
-		LEFT JOIN [NHSE_Sandbox_Policy].[dbo].[IMD_Quintile_2015] IMD ON p.LSOA = IMD.[LSOA_Code]
+		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 
 WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
 		AND CompletedTreatment_Flag = 'True' 
@@ -91,15 +134,18 @@ SELECT DISTINCT
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICB Code'
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICB Name'
 
-INTO	[NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FirstTreatment]
+INTO	[MHDInternal].[TEMP_TTAD_ProtChar_FirstTreatment]
 
-FROM	[NHSE_IAPT_v2].[dbo].[IDS101_Referral] r
-		-----------------------------------------
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IDS001_MPI] p ON r.recordnumber = p.recordnumber 
-		INNER JOIN [NHSE_IAPT_v2].[dbo].[IsLatest_SubmissionID] i ON r.UniqueSubmissionID = i.UniqueSubmissionID AND r.AuditId = i.AuditId
+FROM	[mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		------------------------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
 		AND i.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
@@ -109,7 +155,7 @@ WHERE	UsePathway_Flag = 'True' AND i.IsLatest = '1'
 -- National --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Ethnicity_DashboardAveragesTable]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable] 
 
 SELECT * FROM (
 
@@ -159,7 +205,7 @@ SELECT DISTINCT @MonthYear AS 'Month'
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 				
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,CASE WHEN [Validated_EthnicCategory] = 'A' THEN 'White British'
@@ -218,7 +264,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,CASE WHEN Validated_EthnicCategory IN ('A','B','C') THEN 'White'
@@ -257,7 +303,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,CASE WHEN Validated_EthnicCategory IN ('B','C','D','E','F','G','H','J','K','L','M','N','P','R','S') THEN 'Ethnic Minorities'
@@ -294,7 +340,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,CASE WHEN Age_ReferralRequest_ReceivedDate < 18 THEN 'Under 18' 
@@ -333,7 +379,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,CASE WHEN Gender IN ('1','01') THEN 'Male'
@@ -374,7 +420,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,CASE WHEN GenderIdentity IN ('1','01') THEN 'Male (including trans man)'
@@ -421,7 +467,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,CASE WHEN SocPerCircumstance = '20430005' THEN 'Heterosexual'
@@ -488,7 +534,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 				--CASE WHEN 'WASAS_Work_LastScore' IS NOT NULL THEN 
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Region Code]
@@ -548,7 +594,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Region Code]
@@ -587,7 +633,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Region Code]
@@ -626,7 +672,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Region Code]
@@ -667,7 +713,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Region Code]
@@ -710,7 +756,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Region Code]
@@ -759,7 +805,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Region Code]
@@ -828,7 +874,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 				--CASE WHEN 'WASAS_Work_LastScore' IS NOT NULL THEN 
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[ICB Code],[ICB Name]
 		,CASE WHEN [Validated_EthnicCategory] = 'A' THEN 'White British'
@@ -886,7 +932,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[ICB Code],[ICB Name]
 		,CASE WHEN Validated_EthnicCategory IN ('A','B','C') THEN 'White'
@@ -923,7 +969,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[ICB Code],[ICB Name]
 		,CASE WHEN Validated_EthnicCategory IN ('B','C','D','E','F','G','H','J','K','L','M','N','P','R','S') THEN 'Ethnic Minorities'
@@ -960,7 +1006,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[ICB Code]
@@ -1001,7 +1047,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[ICB Code]
@@ -1044,7 +1090,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[ICB Code]
@@ -1093,7 +1139,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[ICB Code]
@@ -1162,7 +1208,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 				--CASE WHEN 'WASAS_Work_LastScore' IS NOT NULL THEN 
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[Sub-ICB Code],[Sub-ICB Name]
 		,CASE WHEN [Validated_EthnicCategory] = 'A' THEN 'White British'
@@ -1220,7 +1266,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[Sub-ICB Code],[Sub-ICB Name]
 		,CASE WHEN Validated_EthnicCategory IN ('A','B','C') THEN 'White'
@@ -1257,7 +1303,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[Sub-ICB Code],[Sub-ICB Name]
 		,CASE WHEN Validated_EthnicCategory IN ('B','C','D','E','F','G','H','J','K','L','M','N','P','R','S') THEN 'Ethnic Minorities'
@@ -1294,7 +1340,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Sub-ICB Code]
@@ -1335,7 +1381,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Sub-ICB Code]
@@ -1378,7 +1424,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Sub-ICB Code]
@@ -1427,7 +1473,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Sub-ICB Code]
@@ -1497,7 +1543,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 				--CASE WHEN 'WASAS_Work_LastScore' IS NOT NULL THEN 
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[Provider Code],[Provider Name]
 		,CASE WHEN [Validated_EthnicCategory] = 'A' THEN 'White British'
@@ -1555,7 +1601,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[Provider Code],[Provider Name]
 		,CASE WHEN Validated_EthnicCategory IN ('A','B','C') THEN 'White'
@@ -1592,7 +1638,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month,[Provider Code],[Provider Name]
 		,CASE WHEN Validated_EthnicCategory IN ('B','C','D','E','F','G','H','J','K','L','M','N','P','R','S') THEN 'Ethnic Minorities'
@@ -1629,7 +1675,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Provider Code]
@@ -1670,7 +1716,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Provider Code]
@@ -1713,7 +1759,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Provider Code]
@@ -1762,7 +1808,7 @@ SELECT DISTINCT Month
 				,ROUND(AVG(CAST([WASAS_Work_FirstScore] AS DECIMAL)),1) AS 'Mean_FirstWSASW'
 				,ROUND(AVG(CAST([WASAS_Work_LastScore] AS DECIMAL)),1) AS 'Mean_LastWSASW'
 
-FROM [NHSE_Sandbox_MentalHealth].[dbo].[TEMP_IAPT_Ethnic_Minorities_FinishedTreatment]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_FinishedTreatment]
 
 GROUP BY Month
 		,[Provider Code]
@@ -1786,4 +1832,4 @@ GROUP BY Month
 ---------------------------------|
 
 ----------------------------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Ethnicity_DashboardAveragesTable]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_AvgsTable]'
