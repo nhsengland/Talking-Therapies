@@ -3,9 +3,9 @@ SET NOCOUNT ON
 SET DATEFIRST 1
 SET ANSI_WARNINGS OFF
 ----------------
-DECLARE @Offset INT = -2
+DECLARE @Offset INT = -1
 --------------------------------
---DECLARE @Max_Offset INT = -30
+--DECLARE @Max_Offset INT = -5
 -----------------------------------------|
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 -----------------------------------------|
@@ -102,7 +102,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		------------------------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest=1
 		------------------------------------------
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL

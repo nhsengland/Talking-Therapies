@@ -1,26 +1,64 @@
-USE [NHSE_IAPT_v2]
-----------------
 SET NOCOUNT ON
 SET DATEFIRST 1
 ----------------
-DECLARE @Offset INT = -1
---------------------
------------------------------------------------------------------------------------------------
+DECLARE @Offset INT = -2
 --------------------------------
 --DECLARE @Max_Offset INT = -31
 -----------------------------------------|
 --WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
 -----------------------------------------|
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IDS000_Header])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [IDS000_Header])
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
+--------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
+
+/* There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each 
+sexual orientation code based on the SocPerCircumstanceRecDate so that the latest record of a sexual orientation is labelled as 1. 
+Only records where SocPerCircumstanceLatest=1 are used in the queries. */
+
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
+
+-- ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
+
+SELECT *, ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] DESC, SocPerCircumstanceRank ASC) AS 'SocPerCircumstanceLatest'
+
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
+
+FROM (
+
+SELECT DISTINCT
+    AuditID
+    ,SocPerCircumstance
+    ,SocPerCircumstanceRecDate
+    ,Person_ID
+    ,RecordNumber
+    ,UniqueID_IDS011
+    ,OrgID_Provider
+    ,UniqueSubmissionID
+    ,Unique_MonthID
+    ,EFFECTIVE_FROM
+    ,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
+    --Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual, Sexually attracted to neither male nor female sex, Confusion
+        WHEN SocPerCircumstance='38628009' THEN 2
+        --Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record
+        --so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
+        WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
+    ELSE NULL END AS SocPerCircumstanceRank
+    --Ranks the social personal circumstances by the amount of information they provide, to help decide which one to use when a record has more than one social personal circumstance on the same day
+
+FROM [mesh_IAPT].[IDS011socpercircumstances]
+
+WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004') --Filters for codes relevant to sexual orientation
+
+)_
+
 ------------------------------------------------------------------------------------------------------------------------------
 
-INSERT INTO [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Ethnicity_DashboardPEQsTable]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
 
 ------------------------------------------------------------------------------------------------------------------------------
 
@@ -54,17 +92,20 @@ SELECT @MonthYear AS 'Month'
 		END AS 'Answer'
 		,COUNT(r.PathwayID) AS 'Count'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_IAPT_V2].[dbo].[IDS607_CodedScoredAssessmentCareActivity] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_UKHF].[SNOMED].[vw_Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
@@ -136,17 +177,20 @@ SELECT @MonthYear AS 'Month'
 		END AS 'Answer'
 		,COUNT(r.PathwayID) AS 'Count'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_IAPT_V2].[dbo].[IDS607_CodedScoredAssessmentCareActivity] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_UKHF].[SNOMED].[vw_Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
@@ -239,17 +283,20 @@ SELECT @MonthYear AS 'Month'
 		END AS 'Answer'
 		,COUNT(r.PathwayID) AS 'Count'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_IAPT_V2].[dbo].[IDS607_CodedScoredAssessmentCareActivity] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_UKHF].[SNOMED].[vw_Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
@@ -346,18 +393,22 @@ SELECT @MonthYear AS 'Month'
 		END AS 'Answer'
 		,COUNT(r.PathwayID) AS 'Count'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [dbo].[IDS011_SocialPersonalCircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
-		LEFT JOIN [NHSE_IAPT_V2].[dbo].[IDS607_CodedScoredAssessmentCareActivity] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_UKHF].[SNOMED].[vw_Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		-------------------------
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
@@ -435,17 +486,20 @@ SELECT @MonthYear AS 'Month'
 		END AS 'Answer'
 		,COUNT(r.PathwayID) AS 'Count'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_IAPT_V2].[dbo].[IDS607_CodedScoredAssessmentCareActivity] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_UKHF].[SNOMED].[vw_Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
@@ -517,17 +571,20 @@ SELECT @MonthYear AS 'Month'
 		END AS 'Answer'
 		,COUNT(r.PathwayID) AS 'Count'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_IAPT_V2].[dbo].[IDS607_CodedScoredAssessmentCareActivity] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_UKHF].[SNOMED].[vw_Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
@@ -601,17 +658,20 @@ SELECT @MonthYear AS 'Month'
 		END AS 'Answer'
 		,COUNT(r.PathwayID) AS 'Count'
 
-FROM	[dbo].[IDS101_Referral] r
+FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IDS001_MPI] mpi ON r.recordnumber = mpi.recordnumber
-		INNER JOIN [NHSE_IAPT_V2].[dbo].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_IAPT_V2].[dbo].[IDS607_CodedScoredAssessmentCareActivity] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
+		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
-		LEFT JOIN [NHSE_UKHF].[SNOMED].[vw_Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON CodedAssToolType = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 		-------------------------
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Commissioner_Hierarchies] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [NHSE_Reference].[dbo].[tbl_Ref_ODS_Provider_Hierarchies] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+		-------------------------
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
