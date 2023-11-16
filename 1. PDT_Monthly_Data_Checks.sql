@@ -10,7 +10,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 -----------------------------------------------------------------------------------------------------------
 -- Create table: Geographies ------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#Geographies') IS NOT NULL DROP TABLE #Geographies
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_GegraphiesCheck]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_GegraphiesCheck]
 
 SELECT  @MonthYear AS 'Month'
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
@@ -27,7 +27,7 @@ SELECT  @MonthYear AS 'Month'
 		,COUNT(DISTINCT(CASE WHEN a.CareContDate BETWEEN @PeriodStart AND @PeriodEnd AND a.AttendOrDNACode in ('5','05') THEN a.Unique_CareContactID END )) AS 'Attended Appointments'
 		,COUNT(DISTINCT CASE WHEN ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Recovery'
 
-INTO	#Geographies
+INTO	[MHDInternal].[TEMP_TTAD_PDT_GegraphiesCheck]
 
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
@@ -91,7 +91,7 @@ SELECT	@MonthYear AS 'Month'
 		,CASE WHEN SUM([Attended Appointments]) < 5 THEN NULL ELSE (ROUND(SUM([Attended Appointments])*2,-1)/2) END AS 'Attended Appointments'
 		,CASE WHEN SUM([Recovery]) < 5 THEN NULL ELSE (ROUND(SUM([Recovery])*2,-1)/2)  END AS 'Recovery'
 
-FROM	#Geographies 
+FROM	[MHDInternal].[TEMP_TTAD_PDT_GegraphiesCheck]
 
 GROUP BY [Month], [ICB Code], [ICB Name]
 
@@ -107,7 +107,7 @@ SELECT	@MonthYear AS 'Month'
 		,CASE WHEN SUM([Attended Appointments]) < 5 THEN NULL ELSE (ROUND(SUM([Attended Appointments])*2,-1)/2) END AS 'Attended Appointments'
 		,CASE WHEN SUM([Recovery]) < 5 THEN NULL ELSE (ROUND(SUM([Recovery])*2,-1)/2)  END AS 'Recovery'
 
-FROM	#Geographies 
+FROM	[MHDInternal].[TEMP_TTAD_PDT_GegraphiesCheck] 
 
 GROUP BY [Month], [Sub ICB Code], [Sub ICB Name]
 
@@ -123,6 +123,9 @@ SELECT	@MonthYear AS 'Month'
 		,CASE WHEN SUM([Attended Appointments]) < 5 THEN NULL ELSE (ROUND(SUM([Attended Appointments])*2,-1)/2) END AS 'Attended Appointments'
 		,CASE WHEN SUM([Recovery]) < 5 THEN NULL ELSE (ROUND(SUM([Recovery])*2,-1)/2)  END AS 'Recovery'
 
-FROM	#Geographies 
+FROM	[MHDInternal].[TEMP_TTAD_PDT_GegraphiesCheck]
 
 GROUP BY [Month], [Provider Code], [Provider Name]
+
+--Drop Temporary Table:
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_GegraphiesCheck]
