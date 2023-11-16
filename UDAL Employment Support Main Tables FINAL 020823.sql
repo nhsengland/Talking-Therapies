@@ -41,6 +41,41 @@ FROM [mesh_IAPT].[IDS011socpercircumstances]
 WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
 )_
 
+---Employment Support Appointment Count
+--There is currently an issue with EmploymentSupport_Count field in IDS101referral table so we are calculating the number of employment support appointments in this table
+--This is based on the criteria specified for this field in the Technical Output Specification
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]
+SELECT  
+    r.PathwayID
+	,COUNT(DISTINCT CASE WHEN c.CareContDate BETWEEN l.ReportingPeriodStartDate and l.ReportingPeriodEndDate THEN c.CareContactID ELSE NULL END) AS Count_EmpSupp
+INTO [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]
+FROM [mesh_IAPT].IDS101referral r
+INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+LEFT JOIN [mesh_IAPT].[IDS201carecontact] c ON c.RecordNumber=r.RecordNumber AND r.[UniqueSubmissionID] = c.[UniqueSubmissionID] AND r.[AuditId] = c.[AuditId]
+LEFT JOIN [mesh_IAPT].[IDS202careactivity] ca on c.PathwayID = ca.PathwayID and c.RecordNumber=ca.RecordNumber and c.CareContactID=ca.CareContactID and c.AuditId=ca.AuditId 
+LEFT JOIN [mesh_IAPT].[IDS004empstatus] e ON r.RecordNumber=e.RecordNumber AND r.AuditId=e.AuditId
+
+WHERE l.IsLatest = 1 
+AND (c.AttendOrDNACode IN (5,6) OR c.PlannedCareContIndicator='N') 
+AND 
+(
+	(c.AppType<>06 AND r.ReferralRequestReceivedDate<= c.CareContDate 
+	AND (c.CareContDate<=r.ServDischDate OR (r.ServDischDate IS NULL AND c.CareContDate<=l.ReportingPeriodEndDate))
+	AND ca.CodeProcAndProcStatus='1098051000000103'
+	)
+OR
+	(c.AppType=06 AND c.CareContDate>r.ServDischDate
+	AND ca.CodeProcAndProcStatus='1098051000000103'
+	)
+OR
+	((c.AppType=10 OR (ca.CodeProcAndProcStatus='1098051000000103' AND c.AppType=06)) AND 
+	r.ReferralRequestReceivedDate<=c.CareContDate 
+	AND (c.CareContDate<=e.EmpSupportDischargeDate OR (e.EmpSupportDischargeDate IS NULL AND c.CareContDate<=l.ReportingPeriodEndDate))
+	)
+)
+GROUP BY r.PathwayID
+
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------Employment Support Outcomes----------------------------------------------------------------------
 -- Compares the employment status, self-employment indicator, sickness absence indicator, statutory sick pay indicator,
@@ -153,11 +188,7 @@ DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingP
 		WHEN (emp.[BenefitRecInd]='N' OR emp.[ESAInd]='N' OR emp.[PIPInd]='N' OR emp.[UCInd]='N') THEN 'No Benefit Received'
 		ELSE 'Unknown/Not Stated If Benefit Received'
 		END AS 'GeneralBenefitReceived'
-		--,CASE WHEN emp.EmployStatusRecDate IS NOT NULL THEN ROW_NUMBER() OVER(PARTITION BY emp.Person_ID, emp.RecordNumber
-		--ORDER BY emp.[EmployStatusRecDate] asc) ELSE 0 END AS 'EmpFirstRecord' --ranks employment status record dates to get the first employment status record as 1 for filtering later
-		--,CASE WHEN emp.EmployStatusRecDate IS NOT NULL THEN ROW_NUMBER() OVER(PARTITION BY emp.Person_ID, emp.RecordNumber
-		--ORDER BY emp.[EmployStatusRecDate] desc) ELSE 0 END AS 'EmpLastRecord'--ranks employment status record dates to get the last employment status record as 1 for filtering later
-		
+
 	  --Protected characteristics
 ----------------Gender
 		,CASE WHEN mpi.Gender IN ('1','01') THEN 'Male'
@@ -238,63 +269,9 @@ DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingP
 		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
 		,CASE WHEN ph.[Region_Name] IS NOT NULL THEN ph.[Region_Name] ELSE 'Other' END AS 'RegionNameProv'
+		,CASE WHEN ph.[Region_Code] IS NOT NULL THEN ph.[Region_Code] ELSE 'Other' END AS 'RegionCodeProv'
 
-		,CASE WHEN ph.Organisation_Code IN (
-			'RW5ME'
-			,'AME01'
-			,'NCH'
-			,'NDC08'
-			,'NDC08'
-			,'NDC08'
-			,'NDC16'
-			,'NNE'
-			,'NO202'
-			,'NQL'
-			,'NWX08'
-			,'R1A'
-			,'R1C'
-			,'R1F'
-			,'RDYDL'
-			,'RDYLK'
-			,'RHA'
-			,'RMY'
-			,'RNUDT'
-			,'RNUDV'
-			,'RP7'
-			,'RPG'
-			,'RQX'
-			,'RQY12'
-			,'RQYPR'
-			,'RRE'
-			,'RV5CH'
-			,'RV5CK'
-			,'RV9'
-			,'RVN'
-			,'RVNCG'
-			,'RW4'
-			,'RWK53'
-			,'RWRD7'
-			,'RWX'
-			,'RX2'
-			,'RX34F'
-			,'RX3YE'
-			,'RX40C'
-			,'RXA29'
-			,'RXM'
-			,'RY6'
-			,'RYG'
-			,'TAF88'
-			,'TAF90'
-			,'NWC08'
-			,'C2J4D'
-			,'RW1'
-			,'RV5CJ'
-			,'RXA29'
-			,'RXA52'
-		) THEN 'Providers with a DWP Go Live Date' ELSE 'Providers without a DWP Go Live Date' END
-		AS 'DWPProviders'
-
-		,r.EmploymentSupport_Count
+		,CASE WHEN ec.Count_EmpSupp IS NOT NULL THEN ec.Count_EmpSupp ELSE 0 END AS Count_EmpSupp
 		,CASE WHEN emp.EmpSupportDischargeDate IS NOT NULL THEN 1 ELSE 0 END
 		AS EmpSupportDischargeDatePresent
 
@@ -310,6 +287,8 @@ FROM [mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] and IMD.Effective_Snapshot_Date='2019-12-31'
 		--Provides data for IMD
 
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
+
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
 		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
 			AND ch.Effective_To IS NULL
@@ -324,6 +303,7 @@ WHERE r.UsePathway_Flag = 'True'
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart2 AND @PeriodStart
 		and emp.RecordNumber is not null
 )_
+GO
 ------Output Table for Employment Support Outcomes
 --This table is used in the dashboard and has the status or indicator for employment outcomes at the first and last employment status record dates for comparison
 --This table is re-run each month as the full time period needs to be used for the rankings to work correctly
@@ -341,11 +321,16 @@ SELECT DISTINCT
 		,emp1.[ProblemDescriptor]
 		,emp1.[SexualOrientationDesc]
 		,emp1.[Sub-ICBName]
+		,emp1.[Sub-ICBCode]
 		,emp1.[ICBName]
+		,emp1.[ICBCode]
 		,emp1.RegionNameComm
+		,emp1.RegionCodeComm
 		,emp1.[ProviderName]
+		,emp1.ProviderCode
 		,emp1.RegionNameProv
-		,emp1.EmploymentSupport_Count	--number of employment support appointments
+		,emp1.RegionCodeProv
+		,emp1.Count_EmpSupp AS EmploymentSupport_Count	--number of employment support appointments
 		--Status/Indicator at First employment status record date:
 		,emp1.[EmployStatus] AS EmployStatusFirst
 		,emp1.[EmployStatusRecDate] AS EmployStatusRecDateFirst
@@ -393,7 +378,6 @@ SELECT DISTINCT
 		ELSE 0 END as PIPIndSameFlag
 		,emp1.EmpFirstRecord
 		,emp1.EmpLastRecord
-		,emp1.DWPProviders
 		,emp2.EmpSupportDischargeDatePresent
 INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_FirstAndLastEmp]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base] as emp1 
@@ -407,21 +391,21 @@ GO
 --------------------
 --This table aggregates the number finishing a course of treatment for National, ICB, Sub-ICB and Provider levels
 --grouped by if they receive a benefit in their first record
+--This table is re-run each month because the base table it uses ([MHDInternal].[TEMP_TTAD_EmpSupp_Base]) is run for the full time period
 IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]
 SELECT 
-CAST([Month] AS DATE) AS Month
-,CAST('National' AS VARCHAR(100)) AS OrganisationType
-,CAST('All Regions' AS VARCHAR(100)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrganisationName
-,DWPProviders
-,EmpSupportDischargeDatePresent
-,GeneralBenefitReceived
-,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
+	CAST([Month] AS DATE) AS Month
+	,CAST('National' AS VARCHAR(100)) AS OrganisationType
+	,CAST('All Regions' AS VARCHAR(100)) AS Region
+	,CAST('ENG' AS VARCHAR(255)) AS OrganisationCode
+	,CAST('England' AS VARCHAR(255)) AS OrganisationName
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
 INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
 WHERE EmpFirstRecord=1 --To look at first employment support record only
 GROUP BY [Month]
-	,DWPProviders
 	,EmpSupportDischargeDatePresent
 	,GeneralBenefitReceived
 GO
@@ -430,8 +414,8 @@ SELECT
 	CAST([Month] AS DATE) AS Month
 	,'ICB' AS OrganisationType
 	,RegionNameComm AS Region
+	,ICBCode AS OrganisationCode
 	,ICBName AS OrganisationName
-	,DWPProviders
 	,EmpSupportDischargeDatePresent
 	,GeneralBenefitReceived
 	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
@@ -440,7 +424,7 @@ WHERE EmpFirstRecord=1
 GROUP BY [Month]
 	,RegionNameComm
 	,ICBName
-	,DWPProviders
+	,ICBCode
 	,EmpSupportDischargeDatePresent
 	,GeneralBenefitReceived
 
@@ -449,8 +433,8 @@ SELECT
 	CAST([Month] AS DATE) AS Month
 	,'Sub-ICB' AS OrganisationType
 	,RegionNameComm AS Region
+	,[Sub-ICBCode] AS OrganisationCode
 	,[Sub-ICBName] AS OrganisationName
-	,DWPProviders
 	,EmpSupportDischargeDatePresent
 	,GeneralBenefitReceived
 	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
@@ -459,7 +443,7 @@ WHERE EmpFirstRecord=1
 GROUP BY [Month]
 	,RegionNameComm
 	,[Sub-ICBName]
-	,DWPProviders
+	,[SUb-ICBCode]
 	,EmpSupportDischargeDatePresent
 	,GeneralBenefitReceived
 
@@ -468,8 +452,8 @@ SELECT
 	CAST([Month] AS DATE) AS Month
 	,'Provider' AS OrganisationType
 	,RegionNameProv AS Region
+	,ProviderCode AS OrganisationCode
 	,ProviderName AS OrganisationName
-	,DWPProviders
 	,EmpSupportDischargeDatePresent
 	,GeneralBenefitReceived
 	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
@@ -478,7 +462,7 @@ WHERE EmpFirstRecord=1
 GROUP BY [Month]
 	,RegionNameProv
 	,ProviderName
-	,DWPProviders
+	,ProviderCode
 	,EmpSupportDischargeDatePresent
 	,GeneralBenefitReceived
 
@@ -544,7 +528,7 @@ SELECT
 	,SUM(FinishedTreatmentTwoSickAbsence) as FinishedTreatmentTwoSickAbsence
 	,SUM(FinishedTreatment) as FinishedTreatment
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base2]
-WHERE EmploymentSupport_Count>0
+WHERE Count_EmpSupp>0
 GROUP BY Month
 GO
 
@@ -583,6 +567,7 @@ SELECT DISTINCT
 	,CASE WHEN ([EmpSupportReferral] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS EmpReferrals	--Flag for new referrals for employment support appointments only in talking therapies, within the reporting period
 	
+	--Open Referrals - time since last contact, All Appointment Types:
 	,r.TherapySession_LastDate
 	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.TherapySession_LastDate, l.ReportingPeriodEndDate)<61 
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
@@ -596,7 +581,8 @@ SELECT DISTINCT
 	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.TherapySession_LastDate, l.ReportingPeriodEndDate) >120 
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS AllOpenReferralOver120daysTimeSinceLastContact	--Flag for all open referrals where the last therapy session date is more than 120 days prior to the reporting period end date
-
+	
+	--Open Referrals - time since last contact, Employment Support Appointments:
 	,r.EmpSupport_LastDate
 	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) <61 
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is less than 61 days prior to the reporting period end date
@@ -611,31 +597,31 @@ SELECT DISTINCT
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is more than 120 days prior to the reporting period end date
 	END AS EmpOpenReferralOver120daysTimeSinceLastContact
 	
-	--Proportions waiting for first contact - all appointment types:		
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	--Open Referrals Waiting for First Contact - All Appointment Types:		
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate) <61 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd	--Flag for all open referrals with no contact where the referral date is less than 61 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate) BETWEEN 61 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'AllOpenReferral61-90DaysReferraltoReportingPeriodEnd'	--Flag for all open referrals with no contact where the referral date is between 61 and 90 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate) BETWEEN 91 AND 120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'AllOpenReferral91-120DaysReferraltoReportingPeriodEnd'	--Flag for all open referrals with no contact where the referral date is between 91 and 120 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate)  >120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS AllOpenReferralOver120daysReferraltoReportingPeriodEnd	--Flag for all open referrals with no contact where the referral date is more than 120 days prior to the reporting period end date
 
-	--Proportions waiting for first contact - employment support appointments:	
-	,CASE WHEN r.ServDischDate IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	--Open Referrals Waiting for First Contact - Employment Support Appointments:	
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate)  <61 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd	--Flag for open referrals for employment support with no contact, where the referral date is less than 61 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate) BETWEEN 61 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd'	--Flag for open referrals for employment support with no contact, where the referral date is between 61 and 90 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate) BETWEEN 91 AND 120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd'	--Flag for open referrals for employment support with no contact, where the referral date is between 91 and 120 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate) >120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS EmpOpenReferralOver120daysReferraltoReportingPeriodEnd	--Flag for open referrals for employment support with no contact, where the referral date is over 120 days prior to the reporting period end date
 	
@@ -680,26 +666,10 @@ SELECT DISTINCT
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS AllCompTreatFlagRelDetFlag	--Flag for reliable deterioration for any appointment type, where the discharge date is within the reporting period, completed treatment flag is true and reliable deterioration flag is true
 	
-	-- ,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.Recovery_Flag = 'True' 
-	-- 	AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	-- END AS EmpCompTreatFlagRecFlag	--Flag for recovery for employment support, where the discharge date is within the reporting period, completed treatment flag is true and recovery flag is true
-	-- ,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.NotCaseness_Flag = 'True' 
-	-- 	AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	-- END AS EmpNotCaseness	--Flag for not caseness for employment support, where the discharge date is within the reporting period, completed treatment flag is true and not caseness flag is true
-	-- ,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.ReliableImprovement_Flag = 'True' 
-	-- 	AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	-- END AS EmpCompTreatFlagRelImpFlag	--Flag for reliable improvement for employment support, where the discharge date is within the reporting period, completed treatment flag is true and reliable improvement flag is true
-	-- ,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.ReliableDeterioration_Flag = 'True'
-	-- 	AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	-- END AS EmpCompTreatFlagRelDetFlag	--Flag for reliable deterioration for employment support, where the discharge date is within the reporting period, completed treatment flag is true and reliable deterioration flag is true
-	
+
 --Dosage
-	-- ,CASE WHEN CompletedTreatment_Flag = 'True' THEN r.TreatmentCareContact_Count ELSE NULL 
-	-- END AS CompletedTreatmentCareContact_Count --Total number of appointments for any type of appointment, where the completed treatment flag is true
-	-- ,CASE WHEN CompletedTreatment_Flag = 'True' THEN r.EmploymentSupport_Count ELSE NULL 
-	-- END AS CompletedEmploymentSupport_Count --Total number of appointments for employment support, where the completed treatment flag is true
 	,r.TreatmentCareContact_Count AS AllTreatmentCareContact_Count	--Total number of appointments for any type of appointment
-	,r.EmploymentSupport_Count AS AllEmploymentSupport_Count	--Total number of appointments for employment support	
+	,CASE WHEN ec.Count_EmpSupp IS NOT NULL THEN ec.Count_EmpSupp ELSE 0 END AS AllEmploymentSupport_Count	--Total number of appointments for employment support	
 
 	--Geography
 	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
@@ -711,61 +681,6 @@ SELECT DISTINCT
 	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
 	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
 	,CASE WHEN ph.[Region_Name] IS NOT NULL THEN ph.[Region_Name] ELSE 'Other' END AS 'RegionNameProv'
-
-	,CASE WHEN ph.Organisation_Code IN (
-		'RW5ME'
-		,'AME01'
-		,'NCH'
-		,'NDC08'
-		,'NDC08'
-		,'NDC08'
-		,'NDC16'
-		,'NNE'
-		,'NO202'
-		,'NQL'
-		,'NWX08'
-		,'R1A'
-		,'R1C'
-		,'R1F'
-		,'RDYDL'
-		,'RDYLK'
-		,'RHA'
-		,'RMY'
-		,'RNUDT'
-		,'RNUDV'
-		,'RP7'
-		,'RPG'
-		,'RQX'
-		,'RQY12'
-		,'RQYPR'
-		,'RRE'
-		,'RV5CH'
-		,'RV5CK'
-		,'RV9'
-		,'RVN'
-		,'RVNCG'
-		,'RW4'
-		,'RWK53'
-		,'RWRD7'
-		,'RWX'
-		,'RX2'
-		,'RX34F'
-		,'RX3YE'
-		,'RX40C'
-		,'RXA29'
-		,'RXM'
-		,'RY6'
-		,'RYG'
-		,'TAF88'
-		,'TAF90'
-		,'NWC08'
-		,'C2J4D'
-		,'RW1'
-		,'RV5CJ'
-		,'RXA29'
-		,'RXA52'
-		) THEN 'Providers with a DWP Go Live Date' ELSE 'Providers without a DWP Go Live Date' END
-	AS 'DWPProviders'
 
 --Protected characteristics
 	--Gender
@@ -854,6 +769,9 @@ FROM [mesh_IAPT].[IDS101referral] r
 	--Provides data for sexual orientation
 	LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] and IMD.Effective_Snapshot_Date='2019-12-31'
 	--Provides data for IMD
+
+	LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
+
 	LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
 	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
 		AND ch.Effective_To IS NULL
@@ -867,7 +785,7 @@ WHERE UsePathway_Flag = 'True'
 GO
 
 --Active Providers for Employment Support
---This table has the distinct list of Providers that have any records with at least 1 employment support contact (EmploymentSupport_Count>0) regardless of whether they have completed treatment
+--This table has the distinct list of Providers that have any records with at least 1 employment support contact (AllEmploymentSupport_Count>0) regardless of whether they have completed treatment
 --This is used for the Provider Participation page of the dashboard
 
 --IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
@@ -879,7 +797,7 @@ SELECT DISTINCT
 	,Month
 --INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-WHERE AllEmploymentSupport_Count>0	--Filters for any record with EmploymentSupport_Count>0 regardless of if they have completed treatment
+WHERE AllEmploymentSupport_Count>0	--Filters for any record with AllEmploymentSupport_Count>0 regardless of if they have completed treatment
 
 -------------------
 --Open Referrals No Contact Table
@@ -898,7 +816,6 @@ SELECT
 	,CAST(RegionNameProv AS varchar(max)) AS [Region]
 	,CAST('Employment Support'  AS varchar(max)) AS AppointmentType
 	,CAST(EmpSupportDischargeDatePresent AS VARCHAR(5)) AS EmpSupportDischargeDatePresent --Looks at if an employment support discharge date is present since we are looking at the ServDischDate to define the open ref
-	,DWPProviders
 
 	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
@@ -907,7 +824,7 @@ SELECT
 
 --INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EmpSupportDischargeDatePresent
 
 --Sub-ICB, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
@@ -919,17 +836,14 @@ SELECT
 	,RegionNameComm AS [Region]
 	,'Employment Support' AS AppointmentType
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
 
 	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
 	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
 	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
-
-
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EmpSupportDischargeDatePresent
 
 --ICB, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
@@ -941,7 +855,6 @@ SELECT
 	,RegionNameComm AS [Region]
 	,'Employment Support' AS AppointmentType
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
 
 	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
@@ -949,7 +862,7 @@ SELECT
 	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICBName, ICBCode, RegionNameComm, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, EmpSupportDischargeDatePresent
 
 --National, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
@@ -961,7 +874,6 @@ SELECT
 	,'All Regions' AS [Region]
 	,'Employment Support' AS AppointmentType
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
 
 	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
@@ -969,7 +881,7 @@ SELECT
 	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, EmpSupportDischargeDatePresent
 
 --Provider, Any Appointment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
@@ -981,14 +893,14 @@ SELECT
 	,RegionNameProv AS [Region]
 	,'Any Appointment Type' AS AppointmentType
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+
 	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
 	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
 	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, DWPProviders
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv
 
 --Sub-ICB, Any Appointment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
@@ -1000,7 +912,6 @@ SELECT
 	,RegionNameComm AS [Region]
 	,'Any Appointment Type' AS AppointmentType
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
 
 	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
@@ -1008,7 +919,7 @@ SELECT
 	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, DWPProviders
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm
 
 --ICB, Any Appointment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
@@ -1020,7 +931,6 @@ SELECT
 	,RegionNameComm AS [Region]
 	,'Any Appointment Type' AS AppointmentType
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
 
 	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
@@ -1028,7 +938,7 @@ SELECT
 	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICBName, ICBCode, RegionNameComm, DWPProviders
+GROUP BY Month, ICBName, ICBCode, RegionNameComm
 
 --National, Any Appointment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
@@ -1040,7 +950,6 @@ SELECT
 	,'All Regions' AS [Region]
 	,'Any Appointment Type' AS AppointmentType
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
 
 	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
 	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
@@ -1048,7 +957,7 @@ SELECT
 	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, DWPProviders
+GROUP BY Month
 
 
 --Aggregated Output Clinical Outcomes Table
@@ -1072,7 +981,6 @@ SELECT
 	,CAST('Employment Support'  AS varchar(max)) AS AppointmentType
 	,AllEmploymentSupport_Count AS Dosage
 	,CAST(EmpSupportDischargeDatePresent AS VARCHAR(5)) AS EmpSupportDischargeDatePresent
-	,DWPProviders
 
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
@@ -1097,7 +1005,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1112,7 +1020,6 @@ SELECT
 	,'Employment Support' AS AppointmentType
 	,AllEmploymentSupport_Count AS Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1135,7 +1042,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, ProblemDescriptor,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 		------------------Provider, Ethnicity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1150,7 +1057,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1173,7 +1080,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EthnicityDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 			------------------Provider, Age, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1188,7 +1095,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1211,7 +1118,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, AgeGroups,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 				------------------Provider, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1226,7 +1133,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1250,7 +1157,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, IMD_Decile,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 					------------------Provider, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1265,7 +1172,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1288,7 +1195,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderIdentityDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 					------------------Provider, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1303,7 +1210,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1326,7 +1233,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, SexualOrientationDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------------------------Sub-ICBs--------------------------------------------
 ------------------Sub-ICB, Gender, Employment
@@ -1342,7 +1249,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1365,7 +1272,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1380,7 +1287,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1403,7 +1310,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, ProblemDescriptor,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Ethnicity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1418,7 +1325,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1441,7 +1348,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EthnicityDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Age, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1456,7 +1363,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1479,7 +1386,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, AgeGroups,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1494,7 +1401,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1517,7 +1424,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, IMD_Decile,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1532,7 +1439,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1555,7 +1462,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderIdentityDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1570,7 +1477,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1593,7 +1500,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, SexualOrientationDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 --------------------------------------------------ICBs----------------------------------
 ------------------ICB, Gender, Employment
@@ -1609,7 +1516,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1632,7 +1539,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1647,7 +1554,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1670,7 +1577,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, ProblemDescriptor,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Ethnicity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1685,7 +1592,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1708,7 +1615,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, EthnicityDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Age, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1723,7 +1630,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1746,7 +1653,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, AgeGroups,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1761,7 +1668,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1784,7 +1691,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, IMD_Decile,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent,DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1799,7 +1706,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1822,7 +1729,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderIdentityDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1837,7 +1744,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1860,7 +1767,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, SexualOrientationDesc,
-AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------------------------National--------------------------------------------------------------------------------
 ------------------National, Gender, Employment
@@ -1876,7 +1783,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1898,7 +1805,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
-GROUP BY Month, GenderDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, GenderDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1913,7 +1820,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1935,7 +1842,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
-GROUP BY Month, ProblemDescriptor, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, ProblemDescriptor, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Ethnicity, Employment
@@ -1951,7 +1858,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -1973,7 +1880,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
-GROUP BY Month, EthnicityDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, EthnicityDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Age, Employment
@@ -1989,7 +1896,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -2011,7 +1918,7 @@ SELECT
 
 	FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 	WHERE AllEmploymentSupport_Count>0
-	GROUP BY Month,  AgeGroups, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+	GROUP BY Month,  AgeGroups, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2026,7 +1933,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -2048,7 +1955,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
-GROUP BY Month,  IMD_Decile, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  IMD_Decile, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2063,7 +1970,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -2085,7 +1992,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
-GROUP BY Month,  GenderIdentityDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  GenderIdentityDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2100,7 +2007,7 @@ SELECT
 	,'Employment Support' as AppointmentType
 	,AllEmploymentSupport_Count as Dosage
 	,EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
 
@@ -2122,7 +2029,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count>0
-GROUP BY Month, SexualOrientationDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, SexualOrientationDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 
 
@@ -2141,7 +2048,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2163,7 +2070,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Provider, Problem Descriptor, All
@@ -2180,7 +2087,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2202,7 +2109,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, ProblemDescriptor,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Ethnicity, All
 	
@@ -2218,7 +2125,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2241,7 +2148,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EthnicityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Age, All
 	
@@ -2257,7 +2164,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2279,7 +2186,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, AgeGroups,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Deprivation, All
 	
@@ -2295,7 +2202,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2319,7 +2226,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, IMD_Decile,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Gender Identity, All
 	
@@ -2335,7 +2242,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2357,7 +2264,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderIdentityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Sexual Orientation, All
 	
@@ -2373,7 +2280,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2395,7 +2302,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, SexualOrientationDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Gender, All
@@ -2412,7 +2319,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2434,7 +2341,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Problem Descriptor, All
@@ -2451,7 +2358,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2473,7 +2380,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, ProblemDescriptor,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Ethnicity, All
 	
@@ -2489,7 +2396,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2511,7 +2418,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EthnicityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Age, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2526,7 +2433,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2548,7 +2455,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, AgeGroups,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Deprivation, All
@@ -2564,7 +2471,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2586,7 +2493,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, IMD_Decile,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Gender Identity, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2601,7 +2508,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2623,7 +2530,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderIdentityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Sexual Orientation, All
@@ -2639,7 +2546,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2661,7 +2568,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, SexualOrientationDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Gender, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2676,7 +2583,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2698,7 +2605,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Problem Descriptor, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2713,7 +2620,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2735,7 +2642,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, ProblemDescriptor,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Ethnicity, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2750,7 +2657,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2772,7 +2679,7 @@ SELECT
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, EthnicityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------ICB, Age, All
@@ -2788,7 +2695,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2810,7 +2717,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, AgeGroups,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------ICB, Deprivation, All
@@ -2826,7 +2733,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2848,7 +2755,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, IMD_Decile,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Gender Identity, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2863,7 +2770,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2885,7 +2792,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderIdentityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Sexual Orientation, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2900,7 +2807,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2922,7 +2829,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, SexualOrientationDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Gender, All
@@ -2938,7 +2845,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2959,7 +2866,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, GenderDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, GenderDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Problem Descriptor, All
@@ -2975,7 +2882,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -2996,7 +2903,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ProblemDescriptor, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, ProblemDescriptor, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Ethnicity, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3011,7 +2918,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3032,7 +2939,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, EthnicityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, EthnicityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Age, All
@@ -3048,7 +2955,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3069,7 +2976,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  AgeGroups, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  AgeGroups, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Deprivation, All
@@ -3085,7 +2992,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3106,7 +3013,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  IMD_Decile, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  IMD_Decile, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Gender Identity, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3121,7 +3028,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3142,7 +3049,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  GenderIdentityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  GenderIdentityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Sexual Orientation, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3157,7 +3064,7 @@ SELECT
 	,'Any Appointment Type' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3178,7 +3085,7 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  SexualOrientationDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  SexualOrientationDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 --------All Appointments except Employment Support
 
@@ -3195,7 +3102,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3218,7 +3125,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Provider, Problem Descriptor, All except Emp Supp
@@ -3235,7 +3142,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3258,7 +3165,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, ProblemDescriptor,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Ethnicity, All except Emp Supp
 	
@@ -3274,7 +3181,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3298,7 +3205,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EthnicityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Age, All except Emp Supp
 	
@@ -3314,7 +3221,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3337,7 +3244,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, AgeGroups,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Deprivation, All except Emp Supp
 	
@@ -3353,7 +3260,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3378,7 +3285,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, IMD_Decile,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Gender Identity, All except Emp Supp
 	
@@ -3394,7 +3301,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3417,7 +3324,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderIdentityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Provider, Sexual Orientation, All except Emp Supp
 	
@@ -3433,7 +3340,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3456,7 +3363,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, SexualOrientationDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Gender, All except Emp Supp
@@ -3473,7 +3380,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3496,7 +3403,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Problem Descriptor, All except Emp Supp
@@ -3513,7 +3420,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3536,7 +3443,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, ProblemDescriptor,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Ethnicity, All except Emp Supp
 	
@@ -3552,7 +3459,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3575,7 +3482,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EthnicityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Age, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3590,7 +3497,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3613,7 +3520,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, AgeGroups,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Deprivation, All except Emp Supp
@@ -3629,7 +3536,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3652,7 +3559,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, IMD_Decile,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Gender Identity, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3667,7 +3574,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3690,7 +3597,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderIdentityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------Sub-ICB, Sexual Orientation, All except Emp Supp
@@ -3706,7 +3613,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3729,7 +3636,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, SexualOrientationDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Gender, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3744,7 +3651,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3767,7 +3674,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Problem Descriptor, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3782,7 +3689,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3805,7 +3712,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, ProblemDescriptor,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Ethnicity, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3820,7 +3727,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3843,7 +3750,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, EthnicityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------ICB, Age, All except Emp Supp
@@ -3859,7 +3766,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3882,7 +3789,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, AgeGroups,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------ICB, Deprivation, All except Emp Supp
@@ -3898,7 +3805,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3921,7 +3828,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, IMD_Decile,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Gender Identity, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3936,7 +3843,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3959,7 +3866,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderIdentityDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Sexual Orientation, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -3974,7 +3881,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -3997,7 +3904,7 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
 GROUP BY Month, ICBName, ICBCode, RegionNameComm, SexualOrientationDesc,
-AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Gender, All except Emp Supp
@@ -4013,7 +3920,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -4035,7 +3942,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
-GROUP BY Month, GenderDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, GenderDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Problem Descriptor, All except Emp Supp
@@ -4051,7 +3958,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -4073,7 +3980,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
-GROUP BY Month, ProblemDescriptor, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, ProblemDescriptor, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Ethnicity, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -4088,7 +3995,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -4110,7 +4017,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
-GROUP BY Month, EthnicityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month, EthnicityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Age, All except Emp Supp
@@ -4126,7 +4033,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -4148,7 +4055,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
-GROUP BY Month,  AgeGroups, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  AgeGroups, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 
 ------------------National, Deprivation, All except Emp Supp
@@ -4164,7 +4071,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -4186,7 +4093,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
-GROUP BY Month,  IMD_Decile, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  IMD_Decile, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Gender Identity, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -4201,7 +4108,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -4223,7 +4130,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
-GROUP BY Month,  GenderIdentityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  GenderIdentityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Sexual Orientation, All except Emp Supp
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -4238,7 +4145,7 @@ SELECT
 	,'Any Appointment Type except Employment Support' as AppointmentType
 	,AllTreatmentCareContact_Count as Dosage
 	,'NA' AS EmpSupportDischargeDatePresent
-	,DWPProviders
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
 
@@ -4260,7 +4167,7 @@ SELECT
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 WHERE AllEmploymentSupport_Count=0
-GROUP BY Month,  SexualOrientationDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent, DWPProviders
+GROUP BY Month,  SexualOrientationDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 --Drop temporary tables created to produce the final output tables
 -- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
