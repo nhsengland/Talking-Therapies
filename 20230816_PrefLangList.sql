@@ -18,7 +18,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 -- Create base tables -------------------------------------------------------------------------------------------------------------
 
 -- Referrals --------------------------------------------------------
-IF OBJECT_ID ('tempdb..#Referrals') IS NOT NULL DROP TABLE #Referrals
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]
 
 SELECT DISTINCT	
 
@@ -27,7 +27,7 @@ SELECT DISTINCT
 		,lcp.LanguageName AS 'PreferredLang'
 		,lct.LanguageName AS 'TreatmentLang'
 
-INTO	#Referrals
+INTO	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -44,7 +44,7 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		AND ReferralRequestReceivedDate BETWEEN @PeriodStart AND @PeriodEnd
 
 -- Accessed treatment ---------------------------------------------------------------
-IF OBJECT_ID ('tempdb..#AccessedTreatment') IS NOT NULL DROP TABLE #AccessedTreatment
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
 
 SELECT DISTINCT	
 
@@ -55,7 +55,7 @@ SELECT DISTINCT
 		,lcp.LanguageName AS 'PreferredLang'
 		,lct.LanguageName AS 'TreatmentLang'
 
-INTO	#AccessedTreatment
+INTO	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -73,7 +73,7 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		AND CareContDate = TherapySession_FirstDate
 
 -- Finished treatment ---------------------------------------------------------------
-IF OBJECT_ID ('tempdb..#FinishedTreatment') IS NOT NULL DROP TABLE #FinishedTreatment
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
 
 SELECT DISTINCT	
 
@@ -86,7 +86,7 @@ SELECT DISTINCT
 		,Recovery_Flag
 		,NotCaseness_Flag
 
-INTO	#FinishedTreatment
+INTO	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -106,17 +106,40 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 
 -- Calculate Counts --------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#Referrals_p') IS NOT NULL DROP TABLE #Referrals_p
-IF OBJECT_ID ('tempdb..#AccessedTreatment_p') IS NOT NULL DROP TABLE #AccessedTreatment_p
-IF OBJECT_ID ('tempdb..#FinishedTreatment_p') IS NOT NULL DROP TABLE #FinishedTreatment_p
-IF OBJECT_ID ('tempdb..#Recovery_p') IS NOT NULL DROP TABLE #Recovery_p
-IF OBJECT_ID ('tempdb..#NotCaseness_p') IS NOT NULL DROP TABLE #NotCaseness_p
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p]
+SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Referrals' 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p] 
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals] 
+WHERE [PreferredLang] IS NOT NULL 
+GROUP BY [PreferredLang]
 
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Referrals' INTO #Referrals_p FROM #Referrals WHERE [PreferredLang] IS NOT NULL GROUP BY [PreferredLang]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Accessed' INTO #AccessedTreatment_p FROM #AccessedTreatment WHERE [PreferredLang] IS NOT NULL GROUP BY [PreferredLang]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Finished' INTO #FinishedTreatment_p FROM #FinishedTreatment WHERE [PreferredLang] IS NOT NULL GROUP BY [PreferredLang]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Recovery' INTO #Recovery_p FROM #FinishedTreatment WHERE [PreferredLang] IS NOT NULL AND CompletedTreatment_flag = 'TRUE' AND  Recovery_Flag = 'True' GROUP BY [PreferredLang]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness' INTO #NotCaseness_p FROM #FinishedTreatment WHERE [PreferredLang] IS NOT NULL AND NotCaseness_Flag = 'TRUE' GROUP BY [PreferredLang]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]
+SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Accessed' 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
+WHERE [PreferredLang] IS NOT NULL
+GROUP BY [PreferredLang]
+
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p]
+SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Finished'
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
+WHERE [PreferredLang] IS NOT NULL
+GROUP BY [PreferredLang]
+
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]
+SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Recovery'
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
+WHERE [PreferredLang] IS NOT NULL AND CompletedTreatment_flag = 'TRUE' AND  Recovery_Flag = 'True'
+GROUP BY [PreferredLang]
+
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]
+SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness'
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
+WHERE [PreferredLang] IS NOT NULL AND NotCaseness_Flag = 'TRUE'
+GROUP BY [PreferredLang]
 
 -- Insert data -------------------------------------------------------------------------------------------------------------------
 
@@ -132,16 +155,24 @@ SELECT TOP(20)
 		,Count_Recovery
 		,Count_NotCaseness
 
-FROM	#Referrals_p rp
+FROM	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p] rp
 		---------------
-		INNER JOIN #AccessedTreatment_p atp ON rp.PreferredLang = atp.PreferredLang
-		INNER JOIN #FinishedTreatment_p ftp ON rp.PreferredLang = ftp.PreferredLang
-		INNER JOIN #Recovery_p rec ON rp.PreferredLang = rec.PreferredLang
-		INNER JOIN #NotCaseness_p nc ON rp.PreferredLang = nc.PreferredLang 
+		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p] atp ON rp.PreferredLang = atp.PreferredLang
+		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p] ftp ON rp.PreferredLang = ftp.PreferredLang
+		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p] rec ON rp.PreferredLang = rec.PreferredLang
+		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p] nc ON rp.PreferredLang = nc.PreferredLang 
 
 GROUP BY rp.PreferredLang, Count_Referrals, Count_Accessed, Count_Finished, Count_Recovery, Count_NotCaseness
 
 ORDER BY Count_Referrals DESC
 
+--Drop Temporary Tables
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]
 ----------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]'
