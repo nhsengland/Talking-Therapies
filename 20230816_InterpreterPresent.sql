@@ -18,7 +18,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Create base table of care contacts (Preferred language not = Treatment language) -----------
 
-IF OBJECT_ID ('tempdb..#InterpreterPresent') IS NOT NULL DROP TABLE #InterpreterPresent
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
 SELECT DISTINCT	
 
@@ -29,7 +29,7 @@ SELECT DISTINCT
 		,lct.LanguageName AS 'TreatmentLang'
 		,InterpreterPresentInd
 
-INTO #InterpreterPresent
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -57,7 +57,7 @@ SELECT @MonthYear as 'Month'
 		,'Yes - Professional interpreter' AS 'Variable'
 		,COUNT(CASE WHEN InterpreterPresentInd IN ('1') THEN PathwayID ELSE NULL END) AS 'Count'
 		
-FROM #InterpreterPresent
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
 UNION ------------------------------------ 
 
@@ -66,7 +66,7 @@ SELECT @MonthYear as 'Month'
 		,'Yes - Family member or friend' AS 'Variable'
 		,COUNT(CASE WHEN InterpreterPresentInd IN ('2') THEN PathwayID ELSE NULL END) AS 'Count'
 		
-FROM #InterpreterPresent
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
 UNION ------------------------------------ 
 
@@ -75,7 +75,7 @@ SELECT @MonthYear as 'Month'
 		,'Yes - Another Person' AS 'Variable'
 		,COUNT(CASE WHEN InterpreterPresentInd IN ('3') THEN PathwayID ELSE NULL END) AS 'Count'
 		
-FROM #InterpreterPresent
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
 UNION ------------------------------------ 
 
@@ -84,7 +84,7 @@ SELECT @MonthYear as 'Month'
 		,'No - Interpreter not required' AS 'Variable'
 		,COUNT(CASE WHEN InterpreterPresentInd IN ('4') THEN PathwayID ELSE NULL END) AS 'Count'
 		
-FROM #InterpreterPresent
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
 UNION ------------------------------------ 
 
@@ -93,7 +93,9 @@ SELECT @MonthYear as 'Month'
 		,'No - Interpreter was required but did not attend' AS 'Variable'
 		,COUNT(CASE WHEN InterpreterPresentInd IN ('5') THEN PathwayID ELSE NULL END) AS 'Count'
 		
-FROM #InterpreterPresent
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
+--Drop Temporary Table
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]	
 ------------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_InterpreterPresent]'
