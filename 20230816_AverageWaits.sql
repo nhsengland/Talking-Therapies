@@ -17,7 +17,7 @@ PRINT 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Create base table of care contacts (Preferred language not = English) -----------------
 
-IF OBJECT_ID ('tempdb..#CareContacts_NotEng') IS NOT NULL DROP TABLE #CareContacts_NotEng
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng]
 
 SELECT DISTINCT	
 
@@ -27,7 +27,7 @@ SELECT DISTINCT
 		,CareContDate
 		,lcp.LanguageName AS 'PreferredLang'
 
-INTO #CareContacts_NotEng
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -47,7 +47,7 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 
 -- Create base table of care contacts (Preferred language = English) -------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#CareContacts_Eng') IS NOT NULL DROP TABLE #CareContacts_Eng
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]
 
 SELECT DISTINCT	
 
@@ -57,7 +57,7 @@ SELECT DISTINCT
 		,CareContDate
 		,lcp.LanguageName AS 'PreferredLang'
 
-INTO #CareContacts_Eng
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -76,9 +76,9 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 
 -- Create table of 1st care contacts (Preferred language not = English) -------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#FirstCareContacts_NotEng') IS NOT NULL DROP TABLE #FirstCareContacts_NotEng
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
 
-SELECT * INTO #FirstCareContacts_NotEng
+SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
 
 FROM (SELECT PathwayID
 		,ReferralRequestReceivedDate
@@ -86,15 +86,15 @@ FROM (SELECT PathwayID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToFirstTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM #CareContacts_NotEng )_
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng] )_
 
 WHERE countAppts = 1
 
 -- Create table of 2nd care contacts (Preferred language not = English) -------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#SecondCareContacts_NotEng') IS NOT NULL DROP TABLE #SecondCareContacts_NotEng
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
 
-SELECT * INTO #SecondCareContacts_NotEng
+SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
 
 FROM (SELECT PathwayID
 		,ReferralRequestReceivedDate
@@ -102,15 +102,15 @@ FROM (SELECT PathwayID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToSecondTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM #CareContacts_NotEng )_
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng] )_
 
 WHERE countAppts = 2
 
 -- Create table of 1st care contacts (Preferred language = English) -----------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#FirstCareContacts') IS NOT NULL DROP TABLE #FirstCareContacts
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]
 
-SELECT * INTO #FirstCareContacts
+SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]
 
 FROM (SELECT PathwayID
 		,ReferralRequestReceivedDate
@@ -118,15 +118,15 @@ FROM (SELECT PathwayID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToFirstTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM #CareContacts_Eng )_
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng] )_
 
 WHERE countAppts = 1
 
 -- Create table of 2nd care contacts (Preferred language = English) -------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('tempdb..#SecondCareContacts') IS NOT NULL DROP TABLE #SecondCareContacts
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]
 
-SELECT * INTO #SecondCareContacts
+SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]
 
 FROM (SELECT PathwayID
 		,ReferralRequestReceivedDate
@@ -134,17 +134,17 @@ FROM (SELECT PathwayID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToSecondTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM #CareContacts_Eng )_
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng] )_
 
 WHERE countAppts = 2
 
 -- Averages --------------------------------------------------------------------------------------------------------------------------------
 
-Declare @AVG_WaitToFirst_Eng AS FLOAT = (SELECT(AVG(WaitToFirstTreatment)) AS 'Avg_WaitToFirstTreatment' FROM #FirstCareContacts WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
-Declare @AVG_WaitToFirst_NotEng AS FLOAT = (SELECT(AVG(WaitToFirstTreatment)) AS 'Avg_WaitToFirstTreatment_NotEng' FROM #FirstCareContacts_NotEng WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
+Declare @AVG_WaitToFirst_Eng AS FLOAT = (SELECT(AVG(WaitToFirstTreatment)) AS 'Avg_WaitToFirstTreatment' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
+Declare @AVG_WaitToFirst_NotEng AS FLOAT = (SELECT(AVG(WaitToFirstTreatment)) AS 'Avg_WaitToFirstTreatment_NotEng' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
 
-DECLARE @AVG_WaitToSecond_Eng AS FLOAT = (SELECT(AVG(WaitToSecondTreatment)) AS 'Avg_WaitToSecondTreatment' FROM #SecondCareContacts WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
-DECLARE @AVG_WaitToSecond_NotEng AS FLOAT = (SELECT(AVG(WaitToSecondTreatment)) AS 'Avg_WaitToSecondTreatment_NotEng' FROM #SecondCareContacts_NotEng WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
+DECLARE @AVG_WaitToSecond_Eng AS FLOAT = (SELECT(AVG(WaitToSecondTreatment)) AS 'Avg_WaitToSecondTreatment' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
+DECLARE @AVG_WaitToSecond_NotEng AS FLOAT = (SELECT(AVG(WaitToSecondTreatment)) AS 'Avg_WaitToSecondTreatment_NotEng' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
 
 -- Insert data ---------------------------------------------------------------------------------------------
 
@@ -157,5 +157,13 @@ SELECT	@MonthYear AS 'Month'
 		,@AVG_WaitToFirst_Eng AS 'AVG_WaitToFirst_Eng' 
 		,(@AVG_WaitToSecond_Eng - @AVG_WaitToFirst_Eng) AS 'AVG_WaitToSecond_Eng'
 
+
+--Drop Temporary Tables
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]
 ------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_AvgWaits]'
