@@ -16,8 +16,8 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Discharge Codes ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
--- Treatnment language not = preferred ---------------------------------------------------------------
-IF OBJECT_ID ('tempdb..#CareContacts_TreatNotPref') IS NOT NULL DROP TABLE #CareContacts_TreatNotPref
+-- Treatment language not = preferred ---------------------------------------------------------------
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]
 
 SELECT DISTINCT	
 
@@ -27,7 +27,7 @@ SELECT DISTINCT
 		,lct.LanguageName AS 'TreatmentLang'
 		,r.EndCode
 
-INTO #CareContacts_TreatNotPref
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -48,8 +48,8 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 		AND AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5')
 		AND LanguageCodeTreat <> LanguageCodePreferred
 
--- Treatnment language = preferred ------------------------------------------------------------
-IF OBJECT_ID ('tempdb..#CareContacts_PrefTreat') IS NOT NULL DROP TABLE #CareContacts_PrefTreat
+-- Treatment language = preferred ------------------------------------------------------------
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]
 
 SELECT DISTINCT	
 
@@ -59,7 +59,7 @@ SELECT DISTINCT
 		,lct.LanguageName AS 'TreatmentLang'
 		,r.EndCode
 
-INTO #CareContacts_PrefTreat
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
@@ -82,16 +82,22 @@ WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
 
 -- Create table of end codes for each PathwayID (no duplicates) ----------------------------------
 
-IF OBJECT_ID ('tempdb..#EndCodes_TreatNotPref') IS NOT NULL DROP TABLE #EndCodes_TreatNotPref
-IF OBJECT_ID ('tempdb..#EndCodes_PrefTreat') IS NOT NULL DROP TABLE #EndCodes_PrefTreat
-
-SELECT DISTINCT	PathwayID, EndCode INTO #EndCodes_TreatNotPref FROM #CareContacts_TreatNotPref WHERE EndCode IS NOT NULL
-SELECT DISTINCT	PathwayID, EndCode INTO #EndCodes_PrefTreat FROM #CareContacts_PrefTreat WHERE EndCode IS NOT NULL
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref]
+SELECT DISTINCT	PathwayID, EndCode 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref] 
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref] 
+WHERE EndCode IS NOT NULL
+	
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat]
+SELECT DISTINCT	PathwayID, EndCode 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat] 
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat] 
+WHERE EndCode IS NOT NULL
 
 -- Return all EndCodes from within the period (including percentage of all codes)  ------------------
 
-DECLARE @Total_EndCodes_TreatNotPref AS FLOAT = (SELECT COUNT(EndCode) FROM #EndCodes_TreatNotPref)
-DECLARE @Total_EndCodes_PrefTreat AS FLOAT = (SELECT COUNT(EndCode) FROM #EndCodes_PrefTreat)
+DECLARE @Total_EndCodes_TreatNotPref AS FLOAT = (SELECT COUNT(EndCode) FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref])
+DECLARE @Total_EndCodes_PrefTreat AS FLOAT = (SELECT COUNT(EndCode) FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat])
 
 -- Insert data -----------------------------------------------------------------------------------------------------------
 
@@ -125,7 +131,9 @@ SELECT	@MonthYear AS 'Month'
 		END AS 'Definition'
 		,(COUNT(EndCode)/@Total_EndCodes_TreatNotPref) AS 'Percentage'
 		
-FROM #EndCodes_TreatNotPref WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') GROUP BY [EndCode]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref] 
+WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') 
+GROUP BY [EndCode]
 
 UNION
 
@@ -157,7 +165,14 @@ SELECT	@MonthYear AS 'Month'
 		END AS 'Definition'
 		,(COUNT(EndCode)/@Total_EndCodes_PrefTreat) AS 'Percentage'
 		
-FROM #EndCodes_PrefTreat WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') GROUP BY [EndCode]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat] 
+WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') 
+GROUP BY [EndCode]
 
+--Drop Temporary tables
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat]
 ---------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_DischargeCodes]'
