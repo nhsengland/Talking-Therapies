@@ -1,198 +1,92 @@
-SET NOCOUNT ON
-SET ANSI_WARNINGS OFF
-
+-------------------------------------
+--Preferred Language Top 20 List
+-----------------------------------
 DECLARE @Offset INT = -1
--------------------------------
---DECLARE @Max_Offset INT = -1
----------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
----------------------------------------|
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
-
------------------------------------------------------------------------------------------------------------------------------------
--- Create base tables -------------------------------------------------------------------------------------------------------------
-
--- Referrals --------------------------------------------------------
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]
+-- Base Table -------------------------------------------------------------------------------------------------------------
+--This produces a table with one PathwayID per month per row
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Base]
 
 SELECT DISTINCT	
-
-		r.PathwayID
-		,cc.Unique_CareContactID
-		,lcp.LanguageName AS 'PreferredLang'
-		,lct.LanguageName AS 'TreatmentLang'
-
-INTO	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]
+	CAST(DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+	,r.PathwayID
+	,lcp.LanguageName AS 'PreferredLang'
+	,CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN 1 ELSE 0 END
+	AS Referrals
+	,CASE WHEN r.TherapySession_FirstDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate THEN 1 ELSE 0 END
+	AS Access
+	,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.TreatmentCareContact_Count > 2 AND r.Recovery_Flag='True' THEN 1 ELSE 0 END 
+	AS Recovery
+	,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.TreatmentCareContact_Count > 2 AND r.NotCaseness_Flag='True'THEN 1 ELSE 0 END 
+	AS NotCaseness
+	,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.TreatmentCareContact_Count > 2 THEN 1 ELSE 0 END 
+	AS FinishedTreatment
+	
+INTO	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Base]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
 		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
+WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND ReferralRequestReceivedDate BETWEEN @PeriodStart AND @PeriodEnd
+		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to 0 to get the latest month only
 
--- Accessed treatment ---------------------------------------------------------------
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
-
-SELECT DISTINCT	
-
-		r.PathwayID
-		,cc.Unique_CareContactID
-		,CareContDate
-		,r.TherapySession_FirstDate
-		,lcp.LanguageName AS 'PreferredLang'
-		,lct.LanguageName AS 'TreatmentLang'
-
-INTO	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
-
-FROM    [mesh_IAPT].[IDS101referral] r
-		------------------------------
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
-
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
-		-------------------------------------------
-		AND CareContDate BETWEEN @PeriodStart AND @PeriodEnd
-		AND CareContDate = TherapySession_FirstDate
-
--- Finished treatment ---------------------------------------------------------------
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
-
-SELECT DISTINCT	
-
-		r.PathwayID
-		,cc.Unique_CareContactID
-		,lcp.LanguageName AS 'PreferredLang'
-		,lct.LanguageName AS 'TreatmentLang'
-		,TreatmentCareContact_Count
-		,CompletedTreatment_Flag
-		,Recovery_Flag
-		,NotCaseness_Flag
-
-INTO	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
-
-FROM    [mesh_IAPT].[IDS101referral] r
-		------------------------------
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
-
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
-		-------------------------------------------
-		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
-		AND CompletedTreatment_Flag = 'TRUE'
-		AND CareContact_Count > 2
-
--- Calculate Counts --------------------------------------------------------------------------------------------------------------
-
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Referrals' 
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p] 
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals] 
-WHERE [PreferredLang] IS NOT NULL 
-GROUP BY [PreferredLang]
-
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Accessed' 
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
-WHERE [PreferredLang] IS NOT NULL
-GROUP BY [PreferredLang]
-
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Finished'
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p]
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
-WHERE [PreferredLang] IS NOT NULL
-GROUP BY [PreferredLang]
-
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_Recovery'
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
-WHERE [PreferredLang] IS NOT NULL AND CompletedTreatment_flag = 'TRUE' AND  Recovery_Flag = 'True'
-GROUP BY [PreferredLang]
-
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]
-SELECT PreferredLang, COUNT(DISTINCT PathwayID) AS 'Count_NotCaseness'
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
-WHERE [PreferredLang] IS NOT NULL AND NotCaseness_Flag = 'TRUE'
-GROUP BY [PreferredLang]
+--Aggregate and Rank
+--Aggregates the number of referrals, accessing, finishing treatment, recovering and not caseness nationally
+--Then the preferred languages are ranked base on the number of referrals
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AggregateAndRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AggregateAndRank]
+SELECT
+	*
+	,ROW_NUMBER() OVER(PARTITION BY Month ORDER BY Count_Referrals desc) as Rank --Ranks based on Referrals so that only the top 20 preferred languages are shown in the dashboard
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AggregateAndRank]
+FROM(
+	SELECT
+		Month
+		,PreferredLang
+		,SUM(Referrals) AS Count_Referrals
+		,SUM(Access) AS Count_Accessed
+		,SUM(FinishedTreatment) AS Count_Finished
+		,SUM([Recovery]) AS Count_Recovery
+		,SUM(NotCaseness) AS Count_NotCaseness	
+	FROM[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Base]
+	WHERE PreferredLang IS NOT NULL
+	GROUP BY 
+		Month
+		,PreferredLang
+)_
 
 -- Insert data -------------------------------------------------------------------------------------------------------------------
+--This is the final table used in the dashboard
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20]
+SELECT
+	Month
+	,PreferredLang
+	,Count_Referrals
+	,Count_Accessed
+	,Count_Finished
+	,Count_Recovery
+	,Count_NotCaseness
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20]
+FROM[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AggregateAndRank]
+WHERE Rank<=20 --Only the top 20 preferred languages are shown in the dashboard
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]
-
-SELECT TOP(20) 
-
-		@MonthYear AS 'Month'
-		,rp.PreferredLang
-		,Count_Referrals
-		,Count_Accessed
-		,Count_Finished
-		,Count_Recovery
-		,Count_NotCaseness
-
-FROM	[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p] rp
-		---------------
-		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p] atp ON rp.PreferredLang = atp.PreferredLang
-		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment_p] ftp ON rp.PreferredLang = ftp.PreferredLang
-		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p] rec ON rp.PreferredLang = rec.PreferredLang
-		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p] nc ON rp.PreferredLang = nc.PreferredLang 
-
-GROUP BY rp.PreferredLang, Count_Referrals, Count_Accessed, Count_Finished, Count_Recovery, Count_NotCaseness
-
-ORDER BY Count_Referrals DESC
-
---Drop Temporary Tables
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FinishedTreatment]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Referrals_p]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AccessedTreatment_p]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Recovery_p]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_NotCaseness_p]
+--Drop Temporary Table
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Base]
 ----------------------------------------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_Top20]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20]'
+GO
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-SET NOCOUNT ON
-SET ANSI_WARNINGS OFF
-
-DECLARE @Offset INT = -1
---------------------------
--- DECLARE @Max_Offset INT = -1
----------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
----------------------------------------|
-
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [IDS000_Header])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [IDS000_Header])
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
-
-PRINT 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
-------------------------------------------------------------------------------------------------------
+--------------------------------------
+--Average Waits
+--------------------------------------
 
 -- Create base table of care contacts (Preferred language not = English) -----------------
 
@@ -202,10 +96,11 @@ SELECT DISTINCT
 
 		r.PathwayID
 		,a.Unique_CareContactID
-		,ReferralRequestReceivedDate
-		,CareContDate
+		,r.ReferralRequestReceivedDate
+		,a.CareContDate
 		,lcp.LanguageName AS 'PreferredLang'
-
+		,l.ReportingPeriodStartDate
+		,l.ReportingPeriodEndDate
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng]
 
 FROM    [mesh_IAPT].[IDS101referral] r
@@ -218,11 +113,11 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 		
 
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
+WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND AttendOrDNACode IN ('5','05','6','06')
-		AND AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5') -- treatment based appt
-		AND LanguageCodePreferred <> 'en'
+		AND a.AttendOrDNACode IN ('5','05','6','06')
+		AND a.AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5') -- treatment based appt
+		AND mpi.LanguageCodePreferred <> 'en'
 
 -- Create base table of care contacts (Preferred language = English) -------------------------------------------------------------------------------------------
 
@@ -232,10 +127,11 @@ SELECT DISTINCT
 
 		r.PathwayID
 		,a.Unique_CareContactID
-		,ReferralRequestReceivedDate
-		,CareContDate
+		,r.ReferralRequestReceivedDate
+		,a.CareContDate
 		,lcp.LanguageName AS 'PreferredLang'
-
+		,l.ReportingPeriodStartDate
+		,l.ReportingPeriodEndDate
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]
 
 FROM    [mesh_IAPT].[IDS101referral] r
@@ -247,137 +143,215 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		----------------------------------------
 		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
+WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND AttendOrDNACode IN ('5','05','6','06')
-		AND AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5') -- treatment based appt
-		AND LanguageCodePreferred = 'en'
+		AND a.AttendOrDNACode IN ('5','05','6','06')
+		AND a.AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5') -- treatment based appt
+		AND mpi.LanguageCodePreferred = 'en'
 
 -- Create table of 1st care contacts (Preferred language not = English) -------------------------------------------------------------------------------------------
 
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
 
-SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
-
-FROM (SELECT PathwayID
+SELECT * 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
+FROM (
+	SELECT 
+		PathwayID
 		,ReferralRequestReceivedDate
 		,Unique_CareContactID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToFirstTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng] )_
-
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts'
+		,ReportingPeriodStartDate
+		,ReportingPeriodEndDate
+	FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng] 
+)_
 WHERE countAppts = 1
 
 -- Create table of 2nd care contacts (Preferred language not = English) -------------------------------------------------------------------------------------------
 
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
 
-SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
-
-FROM (SELECT PathwayID
+SELECT * 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
+FROM (
+	SELECT 
+		PathwayID
 		,ReferralRequestReceivedDate
 		,Unique_CareContactID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToSecondTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng] )_
-
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts'
+		,ReportingPeriodStartDate
+		,ReportingPeriodEndDate
+	FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng]
+)_
 WHERE countAppts = 2
 
 -- Create table of 1st care contacts (Preferred language = English) -----------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_Eng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_Eng]
 
-SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]
-
-FROM (SELECT PathwayID
+SELECT * 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_Eng]
+FROM (
+	SELECT
+		PathwayID
 		,ReferralRequestReceivedDate
 		,Unique_CareContactID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToFirstTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng] )_
-
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts'
+		,ReportingPeriodStartDate
+		,ReportingPeriodEndDate
+	FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]
+)_
 WHERE countAppts = 1
 
 -- Create table of 2nd care contacts (Preferred language = English) -------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_Eng]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_Eng]
 
-SELECT * INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]
-
-FROM (SELECT PathwayID
+SELECT * 
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_Eng]
+FROM (
+	SELECT
+		PathwayID
 		,ReferralRequestReceivedDate
 		,Unique_CareContactID
 		,CareContDate
 		,DATEDIFF(D, ReferralRequestReceivedDate, CareContDate) AS 'WaitToSecondTreatment'
 		,PreferredLang
-		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng] )_
-
+		,ROW_NUMBER() OVER(PARTITION BY [PathwayID] ORDER BY [CareContDate] ASC) AS 'countAppts'
+		,ReportingPeriodStartDate
+		,ReportingPeriodEndDate
+	FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]
+)_
 WHERE countAppts = 2
 
--- Averages --------------------------------------------------------------------------------------------------------------------------------
+-- Calculate Averages------------------------------------------------------------
+DECLARE @Offset INT = -1
 
-Declare @AVG_WaitToFirst_Eng AS FLOAT = (SELECT(AVG(WaitToFirstTreatment)) AS 'Avg_WaitToFirstTreatment' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
-Declare @AVG_WaitToFirst_NotEng AS FLOAT = (SELECT(AVG(WaitToFirstTreatment)) AS 'Avg_WaitToFirstTreatment_NotEng' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
+DECLARE @OffsetFilter INT = 0 --This is the Offset used in the filtering of each average calculation table so that more than one month can be run at once. 
+--For monthly refresh this should be set to 0 to get the latest month only.
 
-DECLARE @AVG_WaitToSecond_Eng AS FLOAT = (SELECT(AVG(WaitToSecondTreatment)) AS 'Avg_WaitToSecondTreatment' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
-DECLARE @AVG_WaitToSecond_NotEng AS FLOAT = (SELECT(AVG(WaitToSecondTreatment)) AS 'Avg_WaitToSecondTreatment_NotEng' FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng] WHERE CareContDate BETWEEN @PeriodStart AND @PeriodEnd)
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
--- Insert data ---------------------------------------------------------------------------------------------
+--First Treatment English
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstEngAvg]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstEngAvg]
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_AvgWaits]
+SELECT
+	CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+	,'National' AS 'Level'
+	,ROUND(AVG(CAST(WaitToFirstTreatment AS FLOAT)),0) AS AVG_WaitToFirst_Eng
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstEngAvg]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_Eng]
+WHERE CareContDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate
+AND ReportingPeriodStartDate BETWEEN DATEADD(MONTH, @OffsetFilter, @PeriodStart) AND @PeriodStart
+GROUP BY CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE)
 
-SELECT	@MonthYear AS 'Month'
-		,'National' AS 'Level'
-		,@AVG_WaitToFirst_NotEng AS 'AVG_WaitToFirst_NotEng'
-		,(@AVG_WaitToSecond_NotEng - @AVG_WaitToFirst_NotEng) AS 'AVG_WaitToSecond_NotEng'
-		,@AVG_WaitToFirst_Eng AS 'AVG_WaitToFirst_Eng' 
-		,(@AVG_WaitToSecond_Eng - @AVG_WaitToFirst_Eng) AS 'AVG_WaitToSecond_Eng'
+-----First Treatment Not English
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstNotEngAvg]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstNotEngAvg]
+SELECT
+	CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+	,'National' AS 'Level'
+	,ROUND(AVG(CAST(WaitToFirstTreatment AS FLOAT)),0) AS AVG_WaitToFirst_NotEng
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstNotEngAvg]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
+WHERE CareContDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate
+AND ReportingPeriodStartDate BETWEEN DATEADD(MONTH, @OffsetFilter, @PeriodStart) AND @PeriodStart
+GROUP BY CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE)
 
+-----Second Treatment English
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondEngAvg]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondEngAvg]
+SELECT
+	CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+	,'National' AS 'Level'
+	,ROUND(AVG(CAST(WaitToSecondTreatment AS FLOAT)),0) AS AVG_WaitToSecond_Eng
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondEngAvg]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_Eng]
+WHERE CareContDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate
+AND ReportingPeriodStartDate BETWEEN DATEADD(MONTH, @OffsetFilter, @PeriodStart) AND @PeriodStart
+GROUP BY CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE)
 
---Drop Temporary Tables
+-----Second Treatment Not English
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondNotEngAvg]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondNotEngAvg]
+SELECT
+	CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+	,'National' AS 'Level'
+	,ROUND(AVG(CAST(WaitToSecondTreatment AS FLOAT)),0) AS AVG_WaitToSecond_NotEng
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondNotEngAvg]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
+WHERE CareContDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate
+AND ReportingPeriodStartDate BETWEEN DATEADD(MONTH, @OffsetFilter, @PeriodStart) AND @PeriodStart
+GROUP BY CAST(DATENAME(m, ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, ReportingPeriodStartDate) AS VARCHAR) AS DATE)
+
+--Insert Data------------------------------------------------------------------
+--This is the final table used in the dashboard
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_AvgWaits]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_AvgWaits]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_AvgWaits]
+SELECT
+	fe.Month
+	,fe.Level
+	,fn.AVG_WaitToFirst_NotEng
+	,(sn.AVG_WaitToSecond_NotEng-fn.AVG_WaitToFirst_NotEng) AS 'AVG_WaitToSecond_NotEng'
+	,fe.AVG_WaitToFirst_Eng
+	,(se.AVG_WaitToSecond_Eng-fe.AVG_WaitToFirst_Eng) AS 'AVG_WaitToSecond_Eng'
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_AvgWaits]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstEngAvg] fe
+LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstNotEngAvg] fn ON fn.Month = fe.Month AND fn.Level = fe.Level
+LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondEngAvg] se ON se.Month = fe.Month AND se.Level = fe.Level
+LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondNotEngAvg] sn ON sn.Month = fe.Month AND sn.Level = fe.Level
+
+--Drop Temporary Tables----------------------------------------------
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_NotEng]
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_Eng]
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_NotEng]
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_NotEng]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstCareContacts_Eng]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondCareContacts_Eng]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstEngAvg]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_FirstNotEngAvg]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondEngAvg]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_SecondNotEngAvg]
 ------------------------------------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_AvgWaits]'
-
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_AvgWaits]'
+GO
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-SET NOCOUNT ON
-SET ANSI_WARNINGS OFF
-
+---------------------------------
+--Interpreter Present
+---------------------------------
 DECLARE @Offset INT = -1
---------------------------
--- DECLARE @Max_Offset INT = -1
----------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
----------------------------------------|
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
-
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
-
--- Interpreter present ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Create base table of care contacts (Preferred language not = Treatment language) -----------
 
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
-SELECT DISTINCT	
+SELECT DISTINCT
 
-		r.PathwayID
+		CAST(DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+		,r.PathwayID
 		,cc.Unique_CareContactID
 		,CareContDate
 		,lcp.LanguageName AS 'PreferredLang'
 		,lct.LanguageName AS 'TreatmentLang'
-		,InterpreterPresentInd
+		,cc.InterpreterPresentInd
+		,CASE WHEN cc.InterpreterPresentInd='1' THEN 'Yes - Professional interpreter'
+			WHEN cc.InterpreterPresentInd='2' THEN 'Yes - Family member or friend'
+			WHEN cc.InterpreterPresentInd='3' THEN 'Yes - Another Person'
+			WHEN cc.InterpreterPresentInd='4' THEN 'No - Interpreter not required'
+			WHEN cc.InterpreterPresentInd='5' THEN 'No - Interpreter was required but did not attend'
+			WHEN cc.InterpreterPresentInd='X' THEN 'Not Known (Not Recorded)'
+			ELSE NULL END
+		AS InterpreterPresentDesc
 
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
 
@@ -391,341 +365,245 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
 		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
+WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND CareContDate BETWEEN @PeriodStart AND @PeriodEnd
-		AND AttendOrDNACode IN ('5','05','6','06')
-		AND AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5')
-		AND LanguageCodePreferred <> LanguageCodeTreat
+		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to 0 to get the latest month only
+		AND cc.CareContDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate
+		AND cc.AttendOrDNACode IN ('5','05','6','06')
+		AND cc.AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5')
+		AND mpi.LanguageCodePreferred <> cc.LanguageCodeTreat
 
 -- Insert data -------------------------------------------------------------------------------------------------------------
-
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_InterpreterPresent]
-
-SELECT @MonthYear as 'Month'
-		,'National' AS 'Level'
-		,'Yes - Professional interpreter' AS 'Variable'
-		,COUNT(CASE WHEN InterpreterPresentInd IN ('1') THEN PathwayID ELSE NULL END) AS 'Count'
-		
+--This is the final table used in the dashboard
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_InterpreterPresent]') IS NOT NULLDROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_InterpreterPresent]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_InterpreterPresent]
+SELECT
+	MONTH
+	,'National' AS Level
+	,InterpreterPresentDesc AS Variable
+	,COUNT(Unique_CareContactID) AS Count
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_InterpreterPresent]
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
-
-UNION ------------------------------------ 
-
-SELECT @MonthYear as 'Month'
-		,'National' AS 'Level'
-		,'Yes - Family member or friend' AS 'Variable'
-		,COUNT(CASE WHEN InterpreterPresentInd IN ('2') THEN PathwayID ELSE NULL END) AS 'Count'
-		
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
-
-UNION ------------------------------------ 
-
-SELECT @MonthYear as 'Month'
-		,'National' AS 'Level'
-		,'Yes - Another Person' AS 'Variable'
-		,COUNT(CASE WHEN InterpreterPresentInd IN ('3') THEN PathwayID ELSE NULL END) AS 'Count'
-		
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
-
-UNION ------------------------------------ 
-
-SELECT @MonthYear as 'Month'
-		,'National' AS 'Level'
-		,'No - Interpreter not required' AS 'Variable'
-		,COUNT(CASE WHEN InterpreterPresentInd IN ('4') THEN PathwayID ELSE NULL END) AS 'Count'
-		
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
-
-UNION ------------------------------------ 
-
-SELECT @MonthYear as 'Month'
-		,'National' AS 'Level'
-		,'No - Interpreter was required but did not attend' AS 'Variable'
-		,COUNT(CASE WHEN InterpreterPresentInd IN ('5') THEN PathwayID ELSE NULL END) AS 'Count'
-		
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]
+WHERE InterpreterPresentInd IN ('1','2','3','4','5')
+GROUP BY
+	Month
+	,InterpreterPresentDesc
 
 --Drop Temporary Table
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_InterpreterPresent]	
 ------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_InterpreterPresent]'
-
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_InterpreterPresent]'
+GO
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-SET NOCOUNT ON
-SET ANSI_WARNINGS OFF
+------------------------------
+--Discharge Codes
+------------------------------
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodes_CareContacts]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodes_CareContacts]
+SELECT
+	*
+	,ROW_NUMBER() OVER(PARTITION BY PathwayID ORDER BY NumberOfContacts DESC, LanguagePrefOrNotPref ASC) AS Rank
+	--This ranking allows us to define whether a PathwayID has the majority of their care contacts with their preferred language or without. 
+	--The LanguagePrefOrNotPref category with the highest number of care contacts is ranked as 1
+	--If the number of contacts in the preferred language and number of contacts not in the preferred language is equal, then 'Not Preferred Language' is ranked as 1
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodes_CareContacts]
+FROM(
+	SELECT
+		PathwayID
+		,LanguagePrefOrNotPref
+		,COUNT(Unique_CareContactID) AS NumberOfContacts
 
+	FROM(
+		SELECT DISTINCT
+			cc.PathwayID
+			,cc.Unique_CareContactID
+			,cc.CareContDate
+			,lcp.LanguageName AS 'PreferredLang'
+			,lct.LanguageName AS 'TreatmentLang'
+			,CASE WHEN lcp.LanguageName <> lct.LanguageName THEN 'Not Preferred Language'
+				WHEN lcp.LanguageName=lct.LanguageName THEN 'Preferred Language'
+				ELSE NULL END
+			AS LanguagePrefOrNotPref
+		FROM [mesh_IAPT].[IDS201carecontact] cc
+			INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON cc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND cc.[AuditId] = l.[AuditId]
+			INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON cc.[RecordNumber] = mpi.[RecordNumber]
+			LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
+			LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+
+		WHERE	l.IsLatest = 1
+				AND cc.AttendOrDNACode IN ('5','05','6','06')
+				AND cc.AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5')
+                AND lcp.LanguageCode IS NOT NULL
+                AND lct.LanguageCode IS NOT NULL
+	)_
+	GROUP BY
+		PathwayID
+		,LanguagePrefOrNotPref
+)_
+
+---Discharge Codes Base Table
+--This table has one PathwayID per row and only looks at PathwayIDs finishing a course of treatment in the period 
+--and who have at least one care contact with a valid treatment language 
+--and who have a valid preferred language
 DECLARE @Offset INT = -1
---------------------------
--- DECLARE @Max_Offset INT = -1
----------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
----------------------------------------|
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodesBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodesBase]
 
--- Discharge Codes ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
--- Treatment language not = preferred ---------------------------------------------------------------
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]
-
-SELECT DISTINCT	
-
-		r.PathwayID
-		,cc.Unique_CareContactID
-		,lcp.LanguageName AS 'PreferredLang'
-		,lct.LanguageName AS 'TreatmentLang'
+SELECT DISTINCT
+		CAST(DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+		,r.PathwayID
+		,c.LanguagePrefOrNotPref
 		,r.EndCode
+		,CASE
+			-- Referred but not seen
+			WHEN r.EndCode = '50' THEN 'Not assessed'
+			-- Seen but not taken on for a course of treatment
+			WHEN r.EndCode = '10' THEN 'Not suitable for IAPT service - no action taken or directed back to referrer'
+			WHEN r.EndCode = '11' THEN 'Not suitable for IAPT service - signposted elsewhere with mutual agreement of patient'
+			WHEN r.EndCode = '12' THEN 'Discharged by mutual agreement following advice and support'
+			WHEN r.EndCode = '13' THEN 'Referred to another therapy service by mutual agreement'
+			WHEN r.EndCode = '14' THEN 'Suitable for IAPT service, but patient declined treatment that was offered'
+			WHEN r.EndCode = '16' THEN 'Incomplete Assessment (Patient dropped out)'
+			WHEN r.EndCode = '17' THEN 'Deceased (Seen but not taken on for a course of treatment)'
+			WHEN r.EndCode = '95' THEN 'Not Known (Seen but not taken on for a course of treatment)'
+			-- Seen and taken on for a course of treatment
+			WHEN r.EndCode = '46' THEN 'Mutually agreed completion of treatment'
+			WHEN r.EndCode = '47' THEN 'Termination of treatment earlier than Care Professional planned'
+			WHEN r.EndCode = '48' THEN 'Termination of treatment earlier than patient requested'
+			WHEN r.EndCode = '49' THEN 'Deceased (Seen and taken on for a course of treatment)'
+			WHEN r.EndCode = '96' THEN 'Not Known (Seen and taken on for a course of treatment)'
+			-- v1.5 (Not used)
+			WHEN r.EndCode IN ('40','42','43','44') THEN 'Other'
+			ELSE NULL
+		END AS 'Definition'
 
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodesBase]
 
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
-		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
+		INNER JOIN [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodes_CareContacts] c ON c.PathwayID = r.PathwayID AND Rank=1 
+		--Inner join so the table only has PathwayIDs completing tretament in the reporting period AND with a valid Language Preference AND Treatment Language 
 
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
+WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
-		AND CompletedTreatment_Flag = 'TRUE'
-		-------------------------------------------
-		AND AttendOrDNACode IN ('5','05','6','06')
-		AND AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5')
-		AND LanguageCodeTreat <> LanguageCodePreferred
+		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh, this offset should be set to 0 to get the latest month only
+		AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate
+		AND r.CompletedTreatment_Flag = 'TRUE'
+		AND r.EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') 
 
--- Treatment language = preferred ------------------------------------------------------------
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]
-
-SELECT DISTINCT	
-
-		r.PathwayID
-		,cc.Unique_CareContactID
-		,lcp.LanguageName AS 'PreferredLang'
-		,lct.LanguageName AS 'TreatmentLang'
-		,r.EndCode
-
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]
-
-FROM    [mesh_IAPT].[IDS101referral] r
-		------------------------------
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
-
-WHERE	UsePathway_Flag = 'TRUE' AND IsLatest = 1
-		-------------------------------------------
-		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
-		AND CompletedTreatment_Flag = 'TRUE'
-		-------------------------------------------
-		AND AttendOrDNACode IN ('5','05','6','06')
-		AND AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5') 
-		AND LanguageCodeTreat = LanguageCodePreferred
-
--- Create table of end codes for each PathwayID (no duplicates) ----------------------------------
-
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref]
-SELECT DISTINCT	PathwayID, EndCode 
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref] 
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref] 
-WHERE EndCode IS NOT NULL
-	
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat]
-SELECT DISTINCT	PathwayID, EndCode 
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat] 
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat] 
-WHERE EndCode IS NOT NULL
-
--- Return all EndCodes from within the period (including percentage of all codes)  ------------------
-
-DECLARE @Total_EndCodes_TreatNotPref AS FLOAT = (SELECT COUNT(EndCode) FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref])
-DECLARE @Total_EndCodes_PrefTreat AS FLOAT = (SELECT COUNT(EndCode) FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat])
-
--- Insert data -----------------------------------------------------------------------------------------------------------
-
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_DischargeCodes]
-
-SELECT	@MonthYear AS 'Month'
-		,'National' AS 'Level'
-		,'Treatment language not preferred' AS 'Variable'
-		,EndCode
-		,CASE
-			-- Referred but not seen
-			WHEN Endcode = '50' THEN 'Not assessed'
-			-- Seen but not taken on for a course of treatment
-			WHEN Endcode = '10' THEN 'Not suitable for IAPT service - no action taken or directed back to referrer'
-			WHEN Endcode = '11' THEN 'Not suitable for IAPT service - signposted elsewhere with mutual agreement of patient'
-			WHEN Endcode = '12' THEN 'Discharged by mutual agreement following advice and support'
-			WHEN Endcode = '13' THEN 'Referred to another therapy service by mutual agreement'
-			WHEN Endcode = '14' THEN 'Suitable for IAPT service, but patient declined treatment that was offered'
-			WHEN Endcode = '16' THEN 'Incomplete Assessment (Patient dropped out)'
-			WHEN Endcode = '17' THEN 'Deceased (Seen but not taken on for a course of treatment)'
-			WHEN Endcode = '95' THEN 'Not Known (Seen but not taken on for a course of treatment)'
-			-- Seen and taken on for a course of treatment
-			WHEN Endcode = '46' THEN 'Mutually agreed completion of treatment'
-			WHEN Endcode = '47' THEN 'Termination of treatment earlier than Care Professional planned'
-			WHEN Endcode = '48' THEN 'Termination of treatment earlier than patient requested'
-			WHEN Endcode = '49' THEN 'Deceased (Seen and taken on for a course of treatment)'
-			WHEN Endcode = '96' THEN 'Not Known (Seen and taken on for a course of treatment)'
-			-- v1.5 (Not used)
-			WHEN Endcode IN ('40','42','43','44') THEN 'Other'
-			ELSE NULL
-		END AS 'Definition'
-		,(COUNT(EndCode)/@Total_EndCodes_TreatNotPref) AS 'Percentage'
-		
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref] 
-WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') 
-GROUP BY [EndCode]
-
-UNION
-
-SELECT	@MonthYear AS 'Month'
-		,'National' AS 'Level'
-		,'Treatment language = preferred' AS 'Variable'
-		,EndCode
-		,CASE
-			-- Referred but not seen
-			WHEN Endcode = '50' THEN 'Not assessed'
-			-- Seen but not taken on for a course of treatment
-			WHEN Endcode = '10' THEN 'Not suitable for IAPT service - no action taken or directed back to referrer'
-			WHEN Endcode = '11' THEN 'Not suitable for IAPT service - signposted elsewhere with mutual agreement of patient'
-			WHEN Endcode = '12' THEN 'Discharged by mutual agreement following advice and support'
-			WHEN Endcode = '13' THEN 'Referred to another therapy service by mutual agreement'
-			WHEN Endcode = '14' THEN 'Suitable for IAPT service, but patient declined treatment that was offered'
-			WHEN Endcode = '16' THEN 'Incomplete Assessment (Patient dropped out)'
-			WHEN Endcode = '17' THEN 'Deceased (Seen but not taken on for a course of treatment)'
-			WHEN Endcode = '95' THEN 'Not Known (Seen but not taken on for a course of treatment)'
-			-- Seen and taken on for a course of treatment
-			WHEN Endcode = '46' THEN 'Mutually agreed completion of treatment'
-			WHEN Endcode = '47' THEN 'Termination of treatment earlier than Care Professional planned'
-			WHEN Endcode = '48' THEN 'Termination of treatment earlier than patient requested'
-			WHEN Endcode = '49' THEN 'Deceased (Seen and taken on for a course of treatment)'
-			WHEN Endcode = '96' THEN 'Not Known (Seen and taken on for a course of treatment)'
-			-- v1.5 (Not used)
-			WHEN Endcode IN ('40','42','43','44') THEN 'Other'
-			ELSE NULL
-		END AS 'Definition'
-		,(COUNT(EndCode)/@Total_EndCodes_PrefTreat) AS 'Percentage'
-		
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat] 
-WHERE EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') 
-GROUP BY [EndCode]
+---Insert Data
+--This is the final table used in the dashboard
+--IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_DischargeCodes]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_DischargeCodes]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_DischargeCodes]
+SELECT
+	Month
+	,'National' AS Level
+	,LanguagePrefOrNotPref AS Variable
+	,EndCode
+	,Definition
+	,COUNT(PathwayID) AS NumberFinishingACourseOfTreatment
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_DischargeCodes]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodesBase]
+GROUP BY
+	Month
+	,LanguagePrefOrNotPref
+	,EndCode
+	,Definition
 
 --Drop Temporary tables
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_TreatNotPref]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_CareContacts_PrefTreat]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_TreatNotPref]
-DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_EndCodes_PrefTreat]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodes_CareContacts]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_DischCodesBase]
 ---------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_DischargeCodes]'
-
+GO
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-SET NOCOUNT ON
-SET ANSI_WARNINGS OFF
-PRINT CHAR(10)
+------------------------
+--Outcomes
+------------------------
 
+--Outcomes Base
+--This table has one PathwayID per row
 DECLARE @Offset INT = -1
--------------------------------
---DECLARE @Max_Offset INT = -1
----------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
----------------------------------------|
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
-
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
-
 --------------------------------------------------------------------------------------------------------------------------------------------------
-
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrefLang_Outcomes]
-
-SELECT	@MonthYear AS 'Month'
-		,'National' AS 'Level'
-
-		,CASE WHEN LanguageCodeTreat <> LanguageCodePreferred THEN 'Non-Preferred Language'
-			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN 'Interpreter not required'
-			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '3' THEN 'Interpreter - Another Person'
-			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
-			WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
-		ELSE 'Other' END AS 'Language_Treated'
- 
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_OutcomesBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_OutcomesBase]
+SELECT	
+	CAST(DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS VARCHAR) AS DATE) AS Month
+	,r.PathwayID
+	,CASE WHEN cc.LanguageCodeTreat <> mpi.LanguageCodePreferred THEN 'Non-Preferred Language'
+		WHEN cc.LanguageCodeTreat = mpi.LanguageCodePreferred AND cc.InterpreterPresentInd = '4' THEN 'Interpreter not required'
+		WHEN cc.LanguageCodeTreat = mpi.LanguageCodePreferred AND cc.InterpreterPresentInd = '3' THEN 'Interpreter - Another Person'
+		WHEN cc.LanguageCodeTreat = mpi.LanguageCodePreferred AND cc.InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
+		WHEN cc.LanguageCodeTreat = mpi.LanguageCodePreferred AND cc.InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
+		ELSE 'Other' END
+	AS 'Language_Treated'
+	--------------------------
+	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+	AS Recovery
+	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.ReliableImprovement_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+	AS ReliableImprovement
+	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.Recovery_Flag = 'True' AND r.ReliableImprovement_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+	AS ReliableRecovery
+	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.NotCaseness_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+	AS NotCaseness
+	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+	AS FinishedTreatment
 		--------------------------
-		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Count_Recovery'
-		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Count_Improvement'
-		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Count_Reliable_Recovery'
-		--------------------------
-
-		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END)
-		-COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'   AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END) = 0 THEN NULL
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 
-		
-		ELSE 
-
-		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)
-		/(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS float)
-		-CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END)AS float))) END
-		AS 'Percentage_Recovery'
-		--------------------------
-
-		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) = 0 THEN NULL
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 
-		
-		ELSE 
-
-		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)
-		/(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS float))) END
-		AS 'Percentage_Improvement'
-		-----------------------------
-
-		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) = 0 THEN NULL
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 
-		
-		ELSE 
-
-		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)
-		/(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True'  AND r.ServDischDate BETWEEN ReportingPeriodStartDate AND ReportingPeriodEndDate THEN r.PathwayID ELSE NULL END) AS float))) END
-		AS 'Percentage_Reliable_Recovery'
-		-----------------------------------
-
+INTO [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_OutcomesBase]
 FROM    [mesh_IAPT].[IDS101referral] r
 		------------------------------
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 		----------------------------------------
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
-		----------------------------------------
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lct ON cc.LanguageCodeTreat = lct.LanguageCode
-		LEFT JOIN [MHDInternal].[REFERENCE_ISO_LanguageCodes] lcp ON mpi.LanguageCodePreferred = lcp.LanguageCode
 
-WHERE	l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
-		AND r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodendDate]
-		AND l.IsLatest = '1' AND UsePathway_Flag = 'True'
-		AND CompletedTreatment_Flag = 'TRUE'
-		AND LanguageCodePreferred <> 'en'
+WHERE	l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to 0 to get the latest month only
+		AND r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
+		AND l.IsLatest = '1' 
+		AND r.UsePathway_Flag = 'True'
+		AND r.CompletedTreatment_Flag = 'TRUE'
+		AND mpi.LanguageCodePreferred <> 'en'
 
-GROUP BY	DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR)
-			,CASE WHEN LanguageCodeTreat <> LanguageCodePreferred THEN 'Non-Preferred Language'
-				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '4' THEN 'Interpreter not required'
-				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '3' THEN 'Interpreter - Another Person'
-				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '2' THEN 'Interpreter - Family member or friend'
-				WHEN LanguageCodeTreat = LanguageCodePreferred AND InterpreterPresentInd = '1' THEN 'Interpreter - Professional Interpreter'
-				ELSE 'Other' END
+--Insert data
+--This is the final table used in the dashboard
 
-------------------------------|
---SET @Offset = @Offset-1 END --| <-- End loop
-------------------------------|
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes]
+SELECT
+	Month
+	,'National' AS 'Level'
+	,Language_Treated
+	
+	,SUM([Recovery]) AS Count_Recovery
+	,SUM(ReliableImprovement) AS Count_Improvement
+	,SUM(ReliableRecovery) AS Count_Reliable_Recovery
 
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrefLang_Outcomes]' + CHAR(10)
+	,CASE WHEN SUM(FinishedTreatment)-SUM(NotCaseness) = 0 THEN NULL
+		WHEN SUM(Recovery) = 0 THEN NULL 
+		ELSE (CAST(SUM(Recovery) AS FLOAT)/(CAST(SUM(FinishedTreatment) AS FLOAT)-CAST(SUM(NotCaseness) AS FLOAT))) END
+	AS 'Percentage_Recovery'
+	--------------------------
+
+	,CASE WHEN SUM(FinishedTreatment) = 0 THEN NULL
+		WHEN SUM(ReliableImprovement) = 0 THEN NULL 
+		ELSE (CAST(SUM(ReliableImprovement) AS FLOAT)/(CAST(SUM(FinishedTreatment) AS FLOAT))) END
+	AS 'Percentage_Improvement'
+	-----------------------------
+	,CASE WHEN SUM(FinishedTreatment) = 0 THEN NULL
+		WHEN SUM(ReliableRecovery) = 0 THEN NULL 
+		ELSE (CAST(SUM(ReliableRecovery) AS FLOAT)/(CAST(SUM(FinishedTreatment) AS FLOAT))) END
+	AS 'Percentage_Reliable_Recovery'
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes]
+FROM [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_OutcomesBase]
+GROUP BY
+	Month
+	,Language_Treated
+
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes]'
+GO
