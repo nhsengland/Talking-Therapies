@@ -41,6 +41,41 @@ FROM [mesh_IAPT].[IDS011socpercircumstances]
 WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
 )_
 
+---Employment Support Appointment Count
+--There is currently an issue with EmploymentSupport_Count field in IDS101referral table so we are calculating the number of employment support appointments in this table
+--This is based on the criteria specified for this field in the Technical Output Specification
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]
+SELECT  
+    r.PathwayID
+	,COUNT(DISTINCT CASE WHEN c.CareContDate BETWEEN l.ReportingPeriodStartDate and l.ReportingPeriodEndDate THEN c.CareContactID ELSE NULL END) AS Count_EmpSupp
+INTO [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]
+FROM [mesh_IAPT].IDS101referral r
+INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+LEFT JOIN [mesh_IAPT].[IDS201carecontact] c ON c.RecordNumber=r.RecordNumber AND r.[UniqueSubmissionID] = c.[UniqueSubmissionID] AND r.[AuditId] = c.[AuditId]
+LEFT JOIN [mesh_IAPT].[IDS202careactivity] ca on c.PathwayID = ca.PathwayID and c.RecordNumber=ca.RecordNumber and c.CareContactID=ca.CareContactID and c.AuditId=ca.AuditId 
+LEFT JOIN [mesh_IAPT].[IDS004empstatus] e ON r.RecordNumber=e.RecordNumber AND r.AuditId=e.AuditId
+
+WHERE l.IsLatest = 1 
+AND (c.AttendOrDNACode IN (5,6) OR c.PlannedCareContIndicator='N') 
+AND 
+(
+	(c.AppType<>06 AND r.ReferralRequestReceivedDate<= c.CareContDate 
+	AND (c.CareContDate<=r.ServDischDate OR (r.ServDischDate IS NULL AND c.CareContDate<=l.ReportingPeriodEndDate))
+	AND ca.CodeProcAndProcStatus='1098051000000103'
+	)
+OR
+	(c.AppType=06 AND c.CareContDate>r.ServDischDate
+	AND ca.CodeProcAndProcStatus='1098051000000103'
+	)
+OR
+	((c.AppType=10 OR (ca.CodeProcAndProcStatus='1098051000000103' AND c.AppType=06)) AND 
+	r.ReferralRequestReceivedDate<=c.CareContDate 
+	AND (c.CareContDate<=e.EmpSupportDischargeDate OR (e.EmpSupportDischargeDate IS NULL AND c.CareContDate<=l.ReportingPeriodEndDate))
+	)
+)
+GROUP BY r.PathwayID
+
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------Employment Support Outcomes----------------------------------------------------------------------
 -- Compares the employment status, self-employment indicator, sickness absence indicator, statutory sick pay indicator,
@@ -149,11 +184,11 @@ DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingP
 		ELSE 'Unspecified'
 		END as 'EmpSupportInd'	--Employment Support Indicator
 
-		--,CASE WHEN emp.EmployStatusRecDate IS NOT NULL THEN ROW_NUMBER() OVER(PARTITION BY emp.Person_ID, emp.RecordNumber
-		--ORDER BY emp.[EmployStatusRecDate] asc) ELSE 0 END AS 'EmpFirstRecord' --ranks employment status record dates to get the first employment status record as 1 for filtering later
-		--,CASE WHEN emp.EmployStatusRecDate IS NOT NULL THEN ROW_NUMBER() OVER(PARTITION BY emp.Person_ID, emp.RecordNumber
-		--ORDER BY emp.[EmployStatusRecDate] desc) ELSE 0 END AS 'EmpLastRecord'--ranks employment status record dates to get the last employment status record as 1 for filtering later
-		
+		,CASE WHEN (emp.[BenefitRecInd]='Y' OR emp.[ESAInd]='Y' OR emp.[PIPInd]='Y' OR emp.[UCInd]='Y') THEN 'Benefit Received'
+		WHEN (emp.[BenefitRecInd]='N' OR emp.[ESAInd]='N' OR emp.[PIPInd]='N' OR emp.[UCInd]='N') THEN 'No Benefit Received'
+		ELSE 'Unknown/Not Stated If Benefit Received'
+		END AS 'GeneralBenefitReceived'
+
 	  --Protected characteristics
 ----------------Gender
 		,CASE WHEN mpi.Gender IN ('1','01') THEN 'Male'
@@ -191,24 +226,24 @@ DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingP
 		END AS 'AgeGroups'
 ---------------------Problem Descriptor
 		,CASE WHEN r.PresentingComplaintHigherCategory = 'Depression' OR [PrimaryPresentingComplaint] = 'Depression' THEN 'F32 or F33 - Depression'
-                WHEN r.PresentingComplaintHigherCategory = 'Unspecified' OR [PrimaryPresentingComplaint] = 'Unspecified'  THEN 'Unspecified'
-                WHEN r.PresentingComplaintHigherCategory = 'Other recorded problems' OR [PrimaryPresentingComplaint] = 'Other recorded problems' THEN 'Other recorded problems'
-                WHEN r.PresentingComplaintHigherCategory = 'Other Mental Health problems' OR [PrimaryPresentingComplaint] = 'Other Mental Health problems' THEN 'Other Mental Health problems'
-                WHEN r.PresentingComplaintHigherCategory = 'Invalid Data supplied' OR [PrimaryPresentingComplaint] = 'Invalid Data supplied' THEN 'Invalid Data supplied'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = '83482000 Body Dysmorphic Disorder' OR [SecondaryPresentingComplaint] = '83482000 Body Dysmorphic Disorder') THEN '83482000 Body Dysmorphic Disorder'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F400 - Agoraphobia' OR [SecondaryPresentingComplaint] = 'F400 - Agoraphobia') THEN 'F400 - Agoraphobia'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F401 - Social phobias' OR [SecondaryPresentingComplaint] = 'F401 - Social phobias') THEN 'F401 - Social Phobias'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F402 - Specific (isolated) phobias' OR [SecondaryPresentingComplaint] = 'F402 - Specific (isolated) phobias') THEN 'F402 care- Specific Phobias'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F410 - Panic disorder [episodic paroxysmal anxiety' OR [SecondaryPresentingComplaint] = 'F410 - Panic disorder [episodic paroxysmal anxiety') THEN 'F410 - Panic Disorder'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F411 - Generalised Anxiety Disorder' OR [SecondaryPresentingComplaint] = 'F411 - Generalised Anxiety Disorder') THEN 'F411 - Generalised Anxiety'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F412 - Mixed anxiety and depressive disorder' OR [SecondaryPresentingComplaint] = 'F412 - Mixed anxiety and depressive disorder') THEN 'F412 - Mixed Anxiety'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F42 - Obsessive-compulsive disorder' OR [SecondaryPresentingComplaint] = 'F42 - Obsessive-compulsive disorder') THEN 'F42 - Obsessive Compulsive'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F431 - Post-traumatic stress disorder' OR [SecondaryPresentingComplaint] = 'F431 - Post-traumatic stress disorder') THEN 'F431 - Post-traumatic Stress'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F452 Hypochondriacal Disorders' OR [SecondaryPresentingComplaint] = 'F452 Hypochondriacal Disorders') THEN 'F452 - Hypochondrial disorder'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'Other F40-F43 code' OR [SecondaryPresentingComplaint] = 'Other F40-F43 code') THEN 'Other F40 to 43 - Other Anxiety'
-                WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory IS NULL OR [SecondaryPresentingComplaint] IS NULL) THEN 'No Code' 
-                ELSE 'Other' 
-        END AS 'ProblemDescriptor'
+			WHEN r.PresentingComplaintHigherCategory = 'Unspecified' OR [PrimaryPresentingComplaint] = 'Unspecified'  THEN 'Unspecified'
+			WHEN r.PresentingComplaintHigherCategory = 'Other recorded problems' OR [PrimaryPresentingComplaint] = 'Other recorded problems' THEN 'Other recorded problems'
+			WHEN r.PresentingComplaintHigherCategory = 'Other Mental Health problems' OR [PrimaryPresentingComplaint] = 'Other Mental Health problems' THEN 'Other Mental Health problems'
+			WHEN r.PresentingComplaintHigherCategory = 'Invalid Data supplied' OR [PrimaryPresentingComplaint] = 'Invalid Data supplied' THEN 'Invalid Data supplied'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = '83482000 Body Dysmorphic Disorder' OR [SecondaryPresentingComplaint] = '83482000 Body Dysmorphic Disorder') THEN '83482000 Body Dysmorphic Disorder'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F400 - Agoraphobia' OR [SecondaryPresentingComplaint] = 'F400 - Agoraphobia') THEN 'F400 - Agoraphobia'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F401 - Social phobias' OR [SecondaryPresentingComplaint] = 'F401 - Social phobias') THEN 'F401 - Social Phobias'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F402 - Specific (isolated) phobias' OR [SecondaryPresentingComplaint] = 'F402 - Specific (isolated) phobias') THEN 'F402 care- Specific Phobias'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F410 - Panic disorder [episodic paroxysmal anxiety' OR [SecondaryPresentingComplaint] = 'F410 - Panic disorder [episodic paroxysmal anxiety') THEN 'F410 - Panic Disorder'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F411 - Generalised Anxiety Disorder' OR [SecondaryPresentingComplaint] = 'F411 - Generalised Anxiety Disorder') THEN 'F411 - Generalised Anxiety'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F412 - Mixed anxiety and depressive disorder' OR [SecondaryPresentingComplaint] = 'F412 - Mixed anxiety and depressive disorder') THEN 'F412 - Mixed Anxiety'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F42 - Obsessive-compulsive disorder' OR [SecondaryPresentingComplaint] = 'F42 - Obsessive-compulsive disorder') THEN 'F42 - Obsessive Compulsive'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F431 - Post-traumatic stress disorder' OR [SecondaryPresentingComplaint] = 'F431 - Post-traumatic stress disorder') THEN 'F431 - Post-traumatic Stress'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'F452 Hypochondriacal Disorders' OR [SecondaryPresentingComplaint] = 'F452 Hypochondriacal Disorders') THEN 'F452 - Hypochondrial disorder'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory = 'Other F40-F43 code' OR [SecondaryPresentingComplaint] = 'Other F40-F43 code') THEN 'Other F40 to 43 - Other Anxiety'
+			WHEN (r.PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (r.PresentingComplaintLowerCategory IS NULL OR [SecondaryPresentingComplaint] IS NULL) THEN 'No Code' 
+			ELSE 'Other' 
+		END AS 'ProblemDescriptor'
 
 -----------------Sexual Orientation
 		,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
@@ -223,14 +258,22 @@ DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingP
 				WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
 				ELSE 'Unspecified'
 		END AS 'SexualOrientationDesc'
-		,ch.Organisation_Code as 'Sub-ICBCode'
-		,ch.Organisation_Name as 'Sub-ICB Name'
-		,ch.STP_Name as 'ICB Name'
-		,ch.Region_Name as 'RegionNameComm'
-		,ph.Organisation_Code as 'ProviderCode'
-		,ph.Organisation_Name as 'Provider Name'
-		,ph.Region_Name as 'RegionNameProv'
-		,r.EmploymentSupport_Count
+
+		--Geography
+		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
+		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
+		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
+		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'RegionCodeComm'
+		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
+		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
+		,CASE WHEN ph.[Region_Name] IS NOT NULL THEN ph.[Region_Name] ELSE 'Other' END AS 'RegionNameProv'
+		,CASE WHEN ph.[Region_Code] IS NOT NULL THEN ph.[Region_Code] ELSE 'Other' END AS 'RegionCodeProv'
+
+		,CASE WHEN ec.Count_EmpSupp IS NOT NULL THEN ec.Count_EmpSupp ELSE 0 END AS Count_EmpSupp
+		,CASE WHEN emp.EmpSupportDischargeDate IS NOT NULL THEN 1 ELSE 0 END
+		AS EmpSupportDischargeDatePresent
 
 FROM [mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
@@ -243,10 +286,16 @@ FROM [mesh_IAPT].[IDS101referral] r
 		--Provides data for sexual orientation
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] and IMD.Effective_Snapshot_Date='2019-12-31'
 		--Provides data for IMD
-		LEFT JOIN [MHDInternal].[REFERENCE_CCG_2020_Lookup] c ON r.OrgIDComm = c.IC_CCG					
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON c.CCG21 = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		--Three tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
+
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
+
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
+			AND ch.Effective_To IS NULL
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+			AND ph.Effective_To IS NULL
+		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
 WHERE r.UsePathway_Flag = 'True' 
 		AND l.IsLatest = 1	--To get the latest data
 		AND r.CompletedTreatment_Flag = 'True'	--Data is filtered to only look at those who have completed a course of treatment
@@ -254,6 +303,7 @@ WHERE r.UsePathway_Flag = 'True'
 		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart2 AND @PeriodStart
 		and emp.RecordNumber is not null
 )_
+GO
 ------Output Table for Employment Support Outcomes
 --This table is used in the dashboard and has the status or indicator for employment outcomes at the first and last employment status record dates for comparison
 --This table is re-run each month as the full time period needs to be used for the rankings to work correctly
@@ -270,12 +320,17 @@ SELECT DISTINCT
 		,emp1.[AgeGroups]
 		,emp1.[ProblemDescriptor]
 		,emp1.[SexualOrientationDesc]
-		,emp1.[Sub-ICB Name]
-		,emp1.[ICB Name]
+		,emp1.[Sub-ICBName]
+		,emp1.[Sub-ICBCode]
+		,emp1.[ICBName]
+		,emp1.[ICBCode]
 		,emp1.RegionNameComm
-		,emp1.[Provider Name]
+		,emp1.RegionCodeComm
+		,emp1.[ProviderName]
+		,emp1.ProviderCode
 		,emp1.RegionNameProv
-		,emp1. EmploymentSupport_Count	--number of employment support appointments
+		,emp1.RegionCodeProv
+		,emp1.Count_EmpSupp AS EmploymentSupport_Count	--number of employment support appointments
 		--Status/Indicator at First employment status record date:
 		,emp1.[EmployStatus] AS EmployStatusFirst
 		,emp1.[EmployStatusRecDate] AS EmployStatusRecDateFirst
@@ -323,6 +378,7 @@ SELECT DISTINCT
 		ELSE 0 END as PIPIndSameFlag
 		,emp1.EmpFirstRecord
 		,emp1.EmpLastRecord
+		,emp2.EmpSupportDischargeDatePresent
 INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_FirstAndLastEmp]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base] as emp1 
 INNER JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_Base] as emp2 
@@ -331,6 +387,85 @@ ON emp1.PathwayID = emp2.PathwayID AND emp1.RecordNumber = emp2.RecordNumber AND
 WHERE emp1.EmpFirstRecord = 1 AND emp2.EmpLastRecord = 1
 --Filters to just show fist  records for emp1 table and last records for emp2 table 
 GO
+
+--------------------
+--This table aggregates the number finishing a course of treatment for National, ICB, Sub-ICB and Provider levels
+--grouped by if they receive a benefit in their first record
+--This table is re-run each month because the base table it uses ([MHDInternal].[TEMP_TTAD_EmpSupp_Base]) is run for the full time period
+IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]
+SELECT 
+	CAST([Month] AS DATE) AS Month
+	,CAST('National' AS VARCHAR(100)) AS OrganisationType
+	,CAST('All Regions' AS VARCHAR(100)) AS Region
+	,CAST('ENG' AS VARCHAR(255)) AS OrganisationCode
+	,CAST('England' AS VARCHAR(255)) AS OrganisationName
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
+INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
+WHERE EmpFirstRecord=1 --To look at first employment support record only
+GROUP BY [Month]
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+GO
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]
+SELECT 
+	CAST([Month] AS DATE) AS Month
+	,'ICB' AS OrganisationType
+	,RegionNameComm AS Region
+	,ICBCode AS OrganisationCode
+	,ICBName AS OrganisationName
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
+WHERE EmpFirstRecord=1
+GROUP BY [Month]
+	,RegionNameComm
+	,ICBName
+	,ICBCode
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]
+SELECT 
+	CAST([Month] AS DATE) AS Month
+	,'Sub-ICB' AS OrganisationType
+	,RegionNameComm AS Region
+	,[Sub-ICBCode] AS OrganisationCode
+	,[Sub-ICBName] AS OrganisationName
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
+WHERE EmpFirstRecord=1
+GROUP BY [Month]
+	,RegionNameComm
+	,[Sub-ICBName]
+	,[SUb-ICBCode]
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Benefits]
+SELECT 
+	CAST([Month] AS DATE) AS Month
+	,'Provider' AS OrganisationType
+	,RegionNameProv AS Region
+	,ProviderCode AS OrganisationCode
+	,ProviderName AS OrganisationName
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+	,COUNT(PathwayID) AS NumberFinishingCourseOfTreatment
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
+WHERE EmpFirstRecord=1
+GROUP BY [Month]
+	,RegionNameProv
+	,ProviderName
+	,ProviderCode
+	,EmpSupportDischargeDatePresent
+	,GeneralBenefitReceived
+
 
 -----------------------------------------------------------------------------------------------------------------------------------
 -----------------National Recording of Employment Status and Sickness Absence------------------------------------------------------
@@ -393,7 +528,7 @@ SELECT
 	,SUM(FinishedTreatmentTwoSickAbsence) as FinishedTreatmentTwoSickAbsence
 	,SUM(FinishedTreatment) as FinishedTreatment
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Base2]
-WHERE EmploymentSupport_Count>0
+WHERE Count_EmpSupp>0
 GROUP BY Month
 GO
 
@@ -432,59 +567,61 @@ SELECT DISTINCT
 	,CASE WHEN ([EmpSupportReferral] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS EmpReferrals	--Flag for new referrals for employment support appointments only in talking therapies, within the reporting period
 	
+	--Open Referrals - time since last contact, All Appointment Types:
 	,r.TherapySession_LastDate
 	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.TherapySession_LastDate, l.ReportingPeriodEndDate)<61 
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS AllOpenReferralLessThan61DaysNoContact	--Flag for all open referrals where the last therapy session date is less than 61 days prior to the reporting period end date
+	END AS AllOpenReferralLessThan61DaysTimeSinceLastContact	--Flag for all open referrals where the last therapy session date is less than 61 days prior to the reporting period end date
 	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.TherapySession_LastDate, l.ReportingPeriodEndDate) BETWEEN 61 AND 90 
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS 'AllOpenReferral61-90DaysNoContact'	--Flag for all open referrals where the last therapy session date is between than 61 and 90 days prior to the reporting period end date
+	END AS 'AllOpenReferral61-90DaysTimeSinceLastContact'	--Flag for all open referrals where the last therapy session date is between than 61 and 90 days prior to the reporting period end date
 	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.TherapySession_LastDate, l.ReportingPeriodEndDate) BETWEEN 91 and 120 
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS 'AllOpenReferral91-120DaysNoContact'	--Flag for all open referrals where the last therapy session date is between than 91 and 120 days prior to the reporting period end date
+	END AS 'AllOpenReferral91-120DaysTimeSinceLastContact'	--Flag for all open referrals where the last therapy session date is between than 91 and 120 days prior to the reporting period end date
 	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.TherapySession_LastDate, l.ReportingPeriodEndDate) >120 
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS AllOpenReferralOver120daysNoContact	--Flag for all open referrals where the last therapy session date is more than 120 days prior to the reporting period end date
-
-	,r.EmpSupport_LastDate
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) <61 
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is less than 61 days prior to the reporting period end date
-	END AS EmpOpenReferralLessThan61DaysNoContact
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) BETWEEN 61 AND 90 
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is between 61 and 90 days prior to the reporting period end date
-	END AS 'EmpOpenReferral61-90DaysNoContact'
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) BETWEEN 91 AND 120 
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is between 91 and 120 days prior to the reporting period end date
-	END AS 'EmpOpenReferral91-120DaysNoContact'
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) >120 
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is more than 120 days prior to the reporting period end date
-	END AS EmpOpenReferralOver120daysNoContact
+	END AS AllOpenReferralOver120daysTimeSinceLastContact	--Flag for all open referrals where the last therapy session date is more than 120 days prior to the reporting period end date
 	
-	--Proportions waiting for first contact - all appointment types:		
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	--Open Referrals - time since last contact, Employment Support Appointments:
+	,r.EmpSupport_LastDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) <61 
+		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is less than 61 days prior to the reporting period end date
+	END AS EmpOpenReferralLessThan61DaysTimeSinceLastContact
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) BETWEEN 61 AND 90 
+		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is between 61 and 90 days prior to the reporting period end date
+	END AS 'EmpOpenReferral61-90DaysTimeSinceLastContact'
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) BETWEEN 91 AND 120 
+		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is between 91 and 120 days prior to the reporting period end date
+	END AS 'EmpOpenReferral91-120DaysTimeSinceLastContact'
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_LastDate<=l.ReportingPeriodEndDate AND DATEDIFF(DD ,r.EmpSupport_LastDate, l.ReportingPeriodEndDate) >120 
+		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0	--Flag for open referrals, for just employment support, where the last session date is more than 120 days prior to the reporting period end date
+	END AS EmpOpenReferralOver120daysTimeSinceLastContact
+	
+	--Open Referrals Waiting for First Contact - All Appointment Types:		
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate) <61 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd	--Flag for all open referrals with no contact where the referral date is less than 61 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate) BETWEEN 61 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'AllOpenReferral61-90DaysReferraltoReportingPeriodEnd'	--Flag for all open referrals with no contact where the referral date is between 61 and 90 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate) BETWEEN 91 AND 120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'AllOpenReferral91-120DaysReferraltoReportingPeriodEnd'	--Flag for all open referrals with no contact where the referral date is between 91 and 120 days prior to the reporting period end date
-	,CASE WHEN r.ServDischDate IS NULL AND TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.TherapySession_FirstDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,r.ReferralRequestReceivedDate, l.ReportingPeriodEndDate)  >120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS AllOpenReferralOver120daysReferraltoReportingPeriodEnd	--Flag for all open referrals with no contact where the referral date is more than 120 days prior to the reporting period end date
 
-	--Proportions waiting for first contact - employment support appointments:	
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	--Open Referrals Waiting for First Contact - Employment Support Appointments:	
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate)  <61 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd	--Flag for open referrals for employment support with no contact, where the referral date is less than 61 days prior to the reporting period end date
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate) BETWEEN 61 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd'	--Flag for open referrals for employment support with no contact, where the referral date is between 61 and 90 days prior to the reporting period end date
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate) BETWEEN 91 AND 120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS 'EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd'	--Flag for open referrals for employment support with no contact, where the referral date is between 91 and 120 days prior to the reporting period end date
-	,CASE WHEN emp.[EmpSupportDischargeDate] IS NULL AND EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
+	,CASE WHEN r.ServDischDate IS NULL AND r.EmpSupport_FirstDate IS NULL AND emp.EmpSupportReferral<=l.ReportingPeriodEndDate
 		AND DATEDIFF(DD ,emp.EmpSupportReferral, l.ReportingPeriodEndDate) >120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS EmpOpenReferralOver120daysReferraltoReportingPeriodEnd	--Flag for open referrals for employment support with no contact, where the referral date is over 120 days prior to the reporting period end date
 	
@@ -505,8 +642,10 @@ SELECT DISTINCT
 	END AS AllFinishedTreatment	--Flag for finished treatment for any appointment type, where the discharge date is within the reporting period and the completed treatment flag is true
 		
 	,emp.[EmpSupportDischargeDate] --Discharge date for employment support
-	,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate and l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS EmpFinishedTreatment	--Flag for finished treatment for employment support, where the discharge date is within the reporting period and the completed treatment flag is true
+	-- ,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate and l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
+	-- END AS EmpFinishedTreatment	--Flag for finished treatment for employment support, where the discharge date is within the reporting period and the completed treatment flag is true
+	,CASE WHEN emp.EmpSupportDischargeDate IS NOT NULL THEN 1 ELSE 0 END
+	AS EmpSupportDischargeDatePresent
 
 --Clinical Outcomes	
 	,r.Recovery_Flag
@@ -527,36 +666,21 @@ SELECT DISTINCT
 		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
 	END AS AllCompTreatFlagRelDetFlag	--Flag for reliable deterioration for any appointment type, where the discharge date is within the reporting period, completed treatment flag is true and reliable deterioration flag is true
 	
-	,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.Recovery_Flag = 'True' 
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS EmpCompTreatFlagRecFlag	--Flag for recovery for employment support, where the discharge date is within the reporting period, completed treatment flag is true and recovery flag is true
-	,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.NotCaseness_Flag = 'True' 
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS EmpNotCaseness	--Flag for not caseness for employment support, where the discharge date is within the reporting period, completed treatment flag is true and not caseness flag is true
-	,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.ReliableImprovement_Flag = 'True' 
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS EmpCompTreatFlagRelImpFlag	--Flag for reliable improvement for employment support, where the discharge date is within the reporting period, completed treatment flag is true and reliable improvement flag is true
-	,CASE WHEN (emp.[EmpSupportDischargeDate] BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate) AND r.CompletedTreatment_Flag = 'True' AND r.ReliableDeterioration_Flag = 'True'
-		AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 
-	END AS EmpCompTreatFlagRelDetFlag	--Flag for reliable deterioration for employment support, where the discharge date is within the reporting period, completed treatment flag is true and reliable deterioration flag is true
-	
---Dosage
-	,CASE WHEN CompletedTreatment_Flag = 'True' THEN r.TreatmentCareContact_Count ELSE NULL 
-	END AS TreatmentCareContact_Count --Total number of appointments for any type of appointment, where the completed treatment flag is true
-	,CASE WHEN CompletedTreatment_Flag = 'True' THEN r.EmploymentSupport_Count ELSE NULL 
-	END AS EmploymentSupport_Count --Total number of appointments for employment support, where the completed treatment flag is true
-	,r.TreatmentCareContact_Count AS AllTreatmentCareContact_Count	--Total number of appointments for any type of appointment
-	,r.EmploymentSupport_Count AS AllEmploymentSupport_Count	--Total number of appointments for employment support	
 
---Geography
-	,r.[OrgID_Provider]
-	,ph.[Organisation_Name] as [Prov_Name]
-	,ph.[Region_Name] as [Prov_Region]
-	,r.[OrgIDComm]
-	,ch.[Organisation_Name] as [SubICB_Name]
-	,ch.[STP_Code] as [ICB_Code]
-	,ch.[STP_Name] as [ICB_Name]
-	,ch.[Region_Name] as [Comm_Region]
+--Dosage
+	,r.TreatmentCareContact_Count AS AllTreatmentCareContact_Count	--Total number of appointments for any type of appointment
+	,CASE WHEN ec.Count_EmpSupp IS NOT NULL THEN ec.Count_EmpSupp ELSE 0 END AS AllEmploymentSupport_Count	--Total number of appointments for employment support	
+
+	--Geography
+	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
+	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
+	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
+	,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'RegionCodeComm'
+	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
+	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
+	,CASE WHEN ph.[Region_Name] IS NOT NULL THEN ph.[Region_Name] ELSE 'Other' END AS 'RegionNameProv'
 
 --Protected characteristics
 	--Gender
@@ -616,7 +740,7 @@ SELECT DISTINCT
 		WHEN (PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (PresentingComplaintLowerCategory = 'F452 Hypochondriacal Disorders' OR [SecondaryPresentingComplaint] = 'F452 Hypochondriacal Disorders') THEN 'F452 - Hypochondrial disorder'
 		WHEN (PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (PresentingComplaintLowerCategory = 'Other F40-F43 code' OR [SecondaryPresentingComplaint] = 'Other F40-F43 code') THEN 'Other F40 to 43 - Other Anxiety'
 		WHEN (PresentingComplaintHigherCategory = 'Anxiety and stress related disorders (Total)' OR [PrimaryPresentingComplaint] = 'Anxiety and stress related disorders (Total)') AND (PresentingComplaintLowerCategory IS NULL OR [SecondaryPresentingComplaint] IS NULL) THEN 'No Code' 
-		ELSE 'Other' 
+		ELSE 'Other'
 	END AS 'ProblemDescriptor'
 
 	--Sexual Orientation
@@ -645,594 +769,471 @@ FROM [mesh_IAPT].[IDS101referral] r
 	--Provides data for sexual orientation
 	LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] and IMD.Effective_Snapshot_Date='2019-12-31'
 	--Provides data for IMD
-	LEFT JOIN [MHDInternal].[REFERENCE_CCG_2020_Lookup] c ON r.OrgIDComm = c.IC_CCG					
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON c.CCG21 = ch.Organisation_Code AND ch.Effective_To IS NULL
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-	--Three tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
+
+	LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
+
+	LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
+		AND ch.Effective_To IS NULL
+	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+		AND ph.Effective_To IS NULL
+	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
 WHERE UsePathway_Flag = 'True' 
 	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart	--for refresh the offset should be 0 as only want the data for the latest month
 	AND IsLatest = 1	--To get the latest data
 GO
 
 --Active Providers for Employment Support
---This table has the distinct list of Providers that have any records with at least 1 employment support contact (EmploymentSupport_Count>0) regardless of whether they have completed treatment
+--This table has the distinct list of Providers that have any records with at least 1 employment support contact (AllEmploymentSupport_Count>0) regardless of whether they have completed treatment
 --This is used for the Provider Participation page of the dashboard
 
 --IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
 SELECT DISTINCT
-	OrgID_Provider
-	,Prov_Name
-	,Prov_Region
+	ProviderCode AS OrgID_Provider
+	,ProviderName AS Prov_Name
+	,RegionNameProv AS Prov_Region
 	,Month
 --INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ActiveEAProviders]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-WHERE AllEmploymentSupport_Count>0	--Filters for any record with EmploymentSupport_Count>0 regardless of if they have completed treatment
+WHERE AllEmploymentSupport_Count>0	--Filters for any record with AllEmploymentSupport_Count>0 regardless of if they have completed treatment
+
+-------------------
+--Open Referrals No Contact Table
+--This table is just for Open Referrals with no first contact date. It is separate to the clinical outcomes table below as the EmploymentSupport_Count
+--field can't be used as a filter since these referrals have no first contact date so won't have a record of an employment support contact
+--This table aggregates [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base] for the number of open referrals with no contact at the Provider, Sub-ICB, ICB and National levels
+-- for Any Appointment Type and Employment Support.
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+--Provider, Employment
+SELECT
+	Month
+	,CAST('Provider' AS varchar(max)) AS [OrgType]
+	,CAST(ProviderName AS varchar(max)) AS [OrgName]
+	,CAST(ProviderCode AS varchar(max)) AS [OrgCode]
+	,CAST(RegionNameProv AS varchar(max)) AS [Region]
+	,CAST('Employment Support'  AS varchar(max)) AS AppointmentType
+	,CAST(EmpSupportDischargeDatePresent AS VARCHAR(5)) AS EmpSupportDischargeDatePresent --Looks at if an employment support discharge date is present since we are looking at the ServDischDate to define the open ref
+
+	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+--INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EmpSupportDischargeDatePresent
+
+--Sub-ICB, Employment
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+SELECT
+	Month
+	,'Sub-ICB' AS [OrgType]
+	,[Sub-ICBName] AS [OrgName]
+	,[Sub-ICBCode] AS [OrgCode]
+	,RegionNameComm AS [Region]
+	,'Employment Support' AS AppointmentType
+	,EmpSupportDischargeDatePresent
+
+	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EmpSupportDischargeDatePresent
+
+--ICB, Employment
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+SELECT
+	Month
+	,'ICB' AS [OrgType]
+	,[ICBName] AS [OrgName]
+	,[ICBCode] AS [OrgCode]
+	,RegionNameComm AS [Region]
+	,'Employment Support' AS AppointmentType
+	,EmpSupportDischargeDatePresent
+
+	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, EmpSupportDischargeDatePresent
+
+--National, Employment
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+SELECT
+	Month
+	,'National' AS [OrgType]
+	,'England' AS [OrgName]
+	,'ENG' AS [OrgCode]
+	,'All Regions' AS [Region]
+	,'Employment Support' AS AppointmentType
+	,EmpSupportDischargeDatePresent
+
+	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, EmpSupportDischargeDatePresent
+
+--Provider, Any Appointment
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+SELECT
+	Month
+	,'Provider' AS [OrgType]
+	,ProviderName AS [OrgName]
+	,ProviderCode AS [OrgCode]
+	,RegionNameProv AS [Region]
+	,'Any Appointment Type' AS AppointmentType
+	,'NA' AS EmpSupportDischargeDatePresent
+
+	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv
+
+--Sub-ICB, Any Appointment
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+SELECT
+	Month
+	,'Sub-ICB' AS [OrgType]
+	,[Sub-ICBName] AS [OrgName]
+	,[Sub-ICBCode] AS [OrgCode]
+	,RegionNameComm AS [Region]
+	,'Any Appointment Type' AS AppointmentType
+	,'NA' AS EmpSupportDischargeDatePresent
+
+	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm
+
+--ICB, Any Appointment
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+SELECT
+	Month
+	,'ICB' AS [OrgType]
+	,[ICBName] AS [OrgName]
+	,[ICBCode] AS [OrgCode]
+	,RegionNameComm AS [Region]
+	,'Any Appointment Type' AS AppointmentType
+	,'NA' AS EmpSupportDischargeDatePresent
+
+	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm
+
+--National, Any Appointment
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_OpenRefsNoContact]
+SELECT
+	Month
+	,'National' AS [OrgType]
+	,'England' AS [OrgName]
+	,'ENG' AS [OrgCode]
+	,'All Regions' AS [Region]
+	,'Any Appointment Type' AS AppointmentType
+	,'NA' AS EmpSupportDischargeDatePresent
+
+	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
+	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
+	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
+	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month
+
 
 --Aggregated Output Clinical Outcomes Table
 --This table sums the flags produced in the base table above to produce the aggregate values at provider/Sub-ICB/ICB/National levels, for the protected characteristics of Gender, Ethnicity, 
---Gender Identity, Deprivation, Age, Problem Descriptor and Sexual Orientation, and for either any appointment types or employment support appointments.
+--Gender Identity, Deprivation, Age, Problem Descriptor and Sexual Orientation, and for either any appointment types, any appointment type except employment support, or employment support appointments.
 --This table is used in the dashboard.
 
 --IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+
+----------Employment Support Appointments
 ------------------Provider, Gender, Employment
 SELECT
 	Month
-	,cast('Provider' as varchar(max)) as [OrgType]
-	,cast(Prov_Name as varchar(max)) as [OrgName]
-	,cast(OrgID_Provider as varchar(max)) as [OrgCode]
-	,cast(Prov_Region as varchar(max)) as [Region]
-	,cast('Gender' as varchar(max)) as Category
-	,cast(GenderDesc as varchar(max)) as Variable
-	,cast('Employment Support'  as varchar(max)) as AppointmentType
-	,EmploymentSupport_Count as Dosage
+	,CAST('Provider' AS varchar(max)) AS [OrgType]
+	,CAST(ProviderName AS varchar(max)) AS [OrgName]
+	,CAST(ProviderCode AS varchar(max)) AS [OrgCode]
+	,CAST(RegionNameProv AS varchar(max)) AS [Region]
+	,CAST('Gender' AS varchar(max)) AS Category
+	,CAST(GenderDesc AS varchar(max)) AS Variable
+	,CAST('Employment Support'  AS varchar(max)) AS AppointmentType
+	,AllEmploymentSupport_Count AS Dosage
+	,CAST(EmpSupportDischargeDatePresent AS VARCHAR(5)) AS EmpSupportDischargeDatePresent
 
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(EmpAccess) as Access
+	--Access
+	,SUM(EmpAccess) AS Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
+	,SUM(AllFinishedTreatment) AS FinishedTreatment --Using Service Discharge Date as grouping by if Emp Supp Disch Date is present
 	
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) AS RecoveryFlag
+	,SUM(AllNotCaseness) AS NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) AS ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) AS ReliableDeteriorationFlag
 
 --INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, GenderDesc, EmploymentSupport_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
-------------------Provider, Gender, All
-	
+------------------Provider, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Gender' as Category
-	,GenderDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
-	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
---For Clinical Outcomes Calcs
-	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(AllNotCaseness) as NotCasenessFlag
-	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, GenderDesc, TreatmentCareContact_Count
-
-	------------------Provider, Problem Descriptor, Employment
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Problem Descriptor' as Category
-	,ProblemDescriptor as Variable
-	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,'Provider' AS [OrgType]
+	,ProviderName AS [OrgName]
+	,ProviderCode AS [OrgCode]
+	,RegionNameProv AS [Region]
+	,'Problem Descriptor' AS Category
+	,ProblemDescriptor AS Variable
+	,'Employment Support' AS AppointmentType
+	,AllEmploymentSupport_Count AS Dosage
+	,EmpSupportDischargeDatePresent
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
-	,SUM(EmpAccess) as Access
+	,SUM(EmpAccess) AS Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
+	,SUM(AllFinishedTreatment) AS FinishedTreatment
 
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, ProblemDescriptor, EmploymentSupport_Count
-
-------------------Provider, Problem Descriptor, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Problem Descriptor' as Category
-	,ProblemDescriptor as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
-	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
 --For Clinical Outcomes Calcs
-	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(AllNotCaseness) as NotCasenessFlag
-	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+	,SUM(AllCompTreatFlagRecFlag) AS RecoveryFlag
+	,SUM(AllNotCaseness) AS NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) AS ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) AS ReliableDeteriorationFlag
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, ProblemDescriptor, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, ProblemDescriptor,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 		------------------Provider, Ethnicity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
 	,'Ethnicity' as Category
 	,EthnicityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, EthnicityDesc, EmploymentSupport_Count
-
-------------------Provider, Ethnicity, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Ethnicity' as Category
-	,EthnicityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
 
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, EthnicityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EthnicityDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 			------------------Provider, Age, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
 	,'Age' as Category
 	,AgeGroups as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, AgeGroups, EmploymentSupport_Count
-
-------------------Provider, Age, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Age' as Category
-	,AgeGroups as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, AgeGroups, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, AgeGroups,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 				------------------Provider, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
 	,'Deprivation' as Category
 	,IMD_Decile as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, IMD_Decile, EmploymentSupport_Count
-
-------------------Provider, Deprivation, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Deprivation' as Category
-	,IMD_Decile as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
 
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, IMD_Decile, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, IMD_Decile,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 					------------------Provider, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
 	,'Gender Identity' as Category
 	,GenderIdentityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, GenderIdentityDesc, EmploymentSupport_Count
-
-------------------Provider, Gender Identity, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Gender Identity' as Category
-	,GenderIdentityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, GenderIdentityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderIdentityDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 					------------------Provider, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
 	,'Sexual Orientation' as Category
 	,SexualOrientationDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, SexualOrientationDesc, EmploymentSupport_Count
-
-------------------Provider, Sexual Orientation, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Provider' as [OrgType]
-	,Prov_Name as [OrgName]
-	,OrgID_Provider as [OrgCode]
-	,Prov_Region as [Region]
-	,'Sexual Orientation' as Category
-	,SexualOrientationDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, Prov_Name, OrgID_Provider, Prov_Region, SexualOrientationDesc, TreatmentCareContact_Count
 
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, SexualOrientationDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------------------------Sub-ICBs--------------------------------------------
 ------------------Sub-ICB, Gender, Employment
@@ -1240,229 +1241,104 @@ INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Gender' as Category
 	,GenderDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, GenderDesc, EmploymentSupport_Count
-
-------------------Sub-ICB, Gender, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
-	,'Gender' as Category
-	,GenderDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, GenderDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Problem Descriptor' as Category
 	,ProblemDescriptor as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, ProblemDescriptor, EmploymentSupport_Count
-
-------------------Sub-ICB, Problem Descriptor, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
-	,'Problem Descriptor' as Category
-	,ProblemDescriptor as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, ProblemDescriptor, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, ProblemDescriptor,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Ethnicity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Ethnicity' as Category
 	,EthnicityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, EthnicityDesc, EmploymentSupport_Count
-
-------------------Sub-ICB, Ethnicity, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
-	,'Ethnicity' as Category
-	,EthnicityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
@@ -1470,547 +1346,266 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, EthnicityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EthnicityDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Age, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Age' as Category
 	,AgeGroups as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, AgeGroups, EmploymentSupport_Count
-
-------------------Sub-ICB, Age, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
-	,'Age' as Category
-	,AgeGroups as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, AgeGroups, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, AgeGroups,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Deprivation' as Category
 	,IMD_Decile as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, IMD_Decile, EmploymentSupport_Count
-
-------------------Sub-ICB, Deprivation, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
-	,'Deprivation' as Category
-	,IMD_Decile as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, IMD_Decile, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, IMD_Decile,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Gender Identity' as Category
 	,GenderIdentityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, GenderIdentityDesc, EmploymentSupport_Count
-
-------------------Sub-ICB, Gender Identity, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
-	,'Gender Identity' as Category
-	,GenderIdentityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, GenderIdentityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderIdentityDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------Sub-ICB, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Sexual Orientation' as Category
 	,SexualOrientationDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, SexualOrientationDesc, EmploymentSupport_Count
-
-------------------Sub-ICB, Sexual Orientation, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'Sub-ICB' as [OrgType]
-	,SubICB_Name as [OrgName]
-	,OrgIDComm as [OrgCode]
-	,Comm_Region as [Region]
-	,'Sexual Orientation' as Category
-	,SexualOrientationDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SubICB_Name, OrgIDComm, Comm_Region, SexualOrientationDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, SexualOrientationDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
-
----------------------------------------------------ICBs----------------------------------
+--------------------------------------------------ICBs----------------------------------
 ------------------ICB, Gender, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Gender' as Category
 	,GenderDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, GenderDesc, EmploymentSupport_Count
-
-------------------ICB, Gender, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
-	,'Gender' as Category
-	,GenderDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, GenderDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Problem Descriptor' as Category
 	,ProblemDescriptor as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, ProblemDescriptor, EmploymentSupport_Count
-
-------------------ICB, Problem Descriptor, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
-	,'Problem Descriptor' as Category
-	,ProblemDescriptor as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, ProblemDescriptor, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, ProblemDescriptor,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Ethnicity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Ethnicity' as Category
 	,EthnicityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, EthnicityDesc, EmploymentSupport_Count
-
-------------------ICB, Ethnicity, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
-	,'Ethnicity' as Category
-	,EthnicityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
@@ -2018,319 +1613,161 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, EthnicityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, EthnicityDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Age, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Age' as Category
 	,AgeGroups as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, AgeGroups, EmploymentSupport_Count
-
-------------------ICB, Age, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
-	,'Age' as Category
-	,AgeGroups as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, AgeGroups, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, AgeGroups,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Deprivation' as Category
 	,IMD_Decile as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, IMD_Decile, EmploymentSupport_Count
-
-------------------ICB, Deprivation, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
-	,'Deprivation' as Category
-	,IMD_Decile as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, IMD_Decile, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, IMD_Decile,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Gender Identity' as Category
 	,GenderIdentityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, GenderIdentityDesc, EmploymentSupport_Count
-
-------------------ICB, Gender Identity, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
-	,'Gender Identity' as Category
-	,GenderIdentityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, GenderIdentityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderIdentityDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------ICB, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
 	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
 	,'Sexual Orientation' as Category
 	,SexualOrientationDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, SexualOrientationDesc, EmploymentSupport_Count
-
-------------------ICB, Sexual Orientation, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'ICB' as [OrgType]
-	,ICB_Name as [OrgName]
-	,ICB_Code as [OrgCode]
-	,Comm_Region as [Region]
-	,'Sexual Orientation' as Category
-	,SexualOrientationDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ICB_Name, ICB_Code, Comm_Region, SexualOrientationDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, SexualOrientationDesc,
+AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------------------------National--------------------------------------------------------------------------------
 ------------------National, Gender, Employment
@@ -2344,72 +1781,31 @@ SELECT
 	,'Gender' as Category
 	,GenderDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, GenderDesc, EmploymentSupport_Count
-
-------------------National, Gender, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'National' as [OrgType]
-	,'England' as [OrgName]
-	,'ENG' as [OrgCode]
-	,'All Regions' as [Region]
-	,'Gender' as Category
-	,GenderDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, GenderDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, GenderDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Problem Descriptor, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2422,72 +1818,32 @@ SELECT
 	,'Problem Descriptor' as Category
 	,ProblemDescriptor as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ProblemDescriptor, EmploymentSupport_Count
-
-------------------National, Problem Descriptor, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'National' as [OrgType]
-	,'England' as [OrgName]
-	,'ENG' as [OrgCode]
-	,'All Regions' as [Region]
-	,'Problem Descriptor' as Category
-	,ProblemDescriptor as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, ProblemDescriptor, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, ProblemDescriptor, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
+
 
 ------------------National, Ethnicity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2500,72 +1856,32 @@ SELECT
 	,'Ethnicity' as Category
 	,EthnicityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, EthnicityDesc, EmploymentSupport_Count
-
-------------------National, Ethnicity, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'National' as [OrgType]
-	,'England' as [OrgName]
-	,'ENG' as [OrgCode]
-	,'All Regions' as [Region]
-	,'Ethnicity' as Category
-	,EthnicityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, EthnicityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, EthnicityDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
+
 
 ------------------National, Age, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2578,72 +1894,31 @@ SELECT
 	,'Age' as Category
 	,AgeGroups as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-	FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-	GROUP BY Month,  AgeGroups, EmploymentSupport_Count
-
-------------------National, Age, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'National' as [OrgType]
-	,'England' as [OrgName]
-	,'ENG' as [OrgCode]
-	,'All Regions' as [Region]
-	,'Age' as Category
-	,AgeGroups as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  AgeGroups, TreatmentCareContact_Count
+
+	FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+	WHERE AllEmploymentSupport_Count>0
+	GROUP BY Month,  AgeGroups, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Deprivation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2656,72 +1931,31 @@ SELECT
 	,'Deprivation' as Category
 	,IMD_Decile as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  IMD_Decile, EmploymentSupport_Count
-
-------------------National, Deprivation, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'National' as [OrgType]
-	,'England' as [OrgName]
-	,'ENG' as [OrgCode]
-	,'All Regions' as [Region]
-	,'Deprivation' as Category
-	,IMD_Decile as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  IMD_Decile, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month,  IMD_Decile, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Gender Identity, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2734,72 +1968,31 @@ SELECT
 	,'Gender Identity' as Category
 	,GenderIdentityDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  GenderIdentityDesc, EmploymentSupport_Count
-
-------------------National, Gender Identity, All
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,'National' as [OrgType]
-	,'England' as [OrgName]
-	,'ENG' as [OrgCode]
-	,'All Regions' as [Region]
-	,'Gender Identity' as Category
-	,GenderIdentityDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
---Referrals
-	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
-
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
 	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
+
 --For Clinical Outcomes Calcs
 	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
 	,SUM(AllNotCaseness) as NotCasenessFlag
 	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
+
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  GenderIdentityDesc, TreatmentCareContact_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month,  GenderIdentityDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
 ------------------National, Sexual Orientation, Employment
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -2812,58 +2005,57 @@ SELECT
 	,'Sexual Orientation' as Category
 	,SexualOrientationDesc as Variable
 	,'Employment Support' as AppointmentType
-	,EmploymentSupport_Count as Dosage
-
+	,AllEmploymentSupport_Count as Dosage
+	,EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(EmpReferrals) AS Referrals
-	,SUM(EmpOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([EmpOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([EmpOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(EmpOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(EmpOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([EmpOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([EmpOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(EmpOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(EmpAccess) as Access
 
 --Finished Treatment
-	,SUM(EmpFinishedTreatment) as FinishedTreatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
 
---For Clinical Outcomes Calc
-	,SUM(EmpCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(EmpNotCaseness) as NotCasenessFlag
-	,SUM(EmpCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(EmpCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month, SexualOrientationDesc, EmploymentSupport_Count
+WHERE AllEmploymentSupport_Count>0
+GROUP BY Month, SexualOrientationDesc, AllEmploymentSupport_Count, EmpSupportDischargeDatePresent
 
-------------------National, Sexual Orientation, All
+
+
+
+--------------------------All Appointments
+------------------Provider, Gender, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 SELECT
 	Month
-	,'National' as [OrgType]
-	,'England' as [OrgName]
-	,'ENG' as [OrgCode]
-	,'All Regions' as [Region]
-	,'Sexual Orientation' as Category
-	,SexualOrientationDesc as Variable
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
 	,'Any Appointment Type' as AppointmentType
-	,TreatmentCareContact_Count as Dosage
-
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
 --Referrals
 	,SUM(AllReferrals) AS Referrals
-	,SUM(AllOpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
-	,SUM([AllOpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([AllOpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM(AllOpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
 
-	,SUM(AllOpenReferralLessThan61DaysReferraltoReportingPeriodEnd) AS OpenReferralLessThan61DaysReferraltoReportingPeriodEnd
-	,SUM([AllOpenReferral61-90DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral61-90DaysReferraltoReportingPeriodEnd'
-	,SUM([AllOpenReferral91-120DaysReferraltoReportingPeriodEnd]) AS 'OpenReferral91-120DaysReferraltoReportingPeriodEnd'
-	,SUM(AllOpenReferralOver120daysReferraltoReportingPeriodEnd) AS OpenReferralOver120daysReferraltoReportingPeriodEnd
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
 --Access
 	,SUM(AllAccess) as Access
 	
@@ -2877,14 +2069,2108 @@ SELECT
 	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
 	
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY Month,  SexualOrientationDesc, TreatmentCareContact_Count
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
+
+------------------Provider, Problem Descriptor, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, ProblemDescriptor,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Ethnicity, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EthnicityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Age, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, AgeGroups,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Deprivation, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, IMD_Decile,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Gender Identity, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderIdentityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Sexual Orientation, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, SexualOrientationDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Gender, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Problem Descriptor, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, ProblemDescriptor,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Sub-ICB, Ethnicity, All
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EthnicityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Sub-ICB, Age, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, AgeGroups,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Deprivation, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, IMD_Decile,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Sub-ICB, Gender Identity, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderIdentityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Sexual Orientation, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, SexualOrientationDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Gender, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Problem Descriptor, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, ProblemDescriptor,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Ethnicity, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, EthnicityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------ICB, Age, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, AgeGroups,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------ICB, Deprivation, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, IMD_Decile,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Gender Identity, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderIdentityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Sexual Orientation, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, SexualOrientationDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Gender, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, GenderDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Problem Descriptor, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, ProblemDescriptor, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------National, Ethnicity, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month, EthnicityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Age, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month,  AgeGroups, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Deprivation, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month,  IMD_Decile, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------National, Gender Identity, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month,  GenderIdentityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------National, Sexual Orientation, All
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+GROUP BY Month,  SexualOrientationDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+--------All Appointments except Employment Support
+
+------------------Provider, Gender, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Provider, Problem Descriptor, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, ProblemDescriptor,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Ethnicity, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, EthnicityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Age, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, AgeGroups,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Deprivation, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, IMD_Decile,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Gender Identity, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, GenderIdentityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Provider, Sexual Orientation, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Provider' as [OrgType]
+	,ProviderName as [OrgName]
+	,ProviderCode as [OrgCode]
+	,RegionNameProv as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProviderName, ProviderCode, RegionNameProv, SexualOrientationDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Gender, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Problem Descriptor, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, ProblemDescriptor,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Sub-ICB, Ethnicity, All except Emp Supp
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, EthnicityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Sub-ICB, Age, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, AgeGroups,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Deprivation, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, IMD_Decile,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------Sub-ICB, Gender Identity, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, GenderIdentityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------Sub-ICB, Sexual Orientation, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'Sub-ICB' as [OrgType]
+	,[Sub-ICBName] as [OrgName]
+	,[Sub-ICBCode] as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, [Sub-ICBName], [Sub-ICBCode], RegionNameComm, SexualOrientationDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Gender, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Problem Descriptor, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, ProblemDescriptor,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Ethnicity, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, EthnicityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------ICB, Age, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, AgeGroups,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------ICB, Deprivation, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, IMD_Decile,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Gender Identity, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, GenderIdentityDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------ICB, Sexual Orientation, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'ICB' as [OrgType]
+	,ICBName as [OrgName]
+	,ICBCode as [OrgCode]
+	,RegionNameComm as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ICBName, ICBCode, RegionNameComm, SexualOrientationDesc,
+AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Gender, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Gender' as Category
+	,GenderDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, GenderDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Problem Descriptor, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Problem Descriptor' as Category
+	,ProblemDescriptor as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, ProblemDescriptor, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------National, Ethnicity, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Ethnicity' as Category
+	,EthnicityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month, EthnicityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Age, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Age' as Category
+	,AgeGroups as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month,  AgeGroups, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+
+------------------National, Deprivation, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Deprivation' as Category
+	,IMD_Decile as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month,  IMD_Decile, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------National, Gender Identity, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Gender Identity' as Category
+	,GenderIdentityDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month,  GenderIdentityDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
+
+------------------National, Sexual Orientation, All except Emp Supp
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
+SELECT
+	Month
+	,'National' as [OrgType]
+	,'England' as [OrgName]
+	,'ENG' as [OrgCode]
+	,'All Regions' as [Region]
+	,'Sexual Orientation' as Category
+	,SexualOrientationDesc as Variable
+	,'Any Appointment Type except Employment Support' as AppointmentType
+	,AllTreatmentCareContact_Count as Dosage
+	,'NA' AS EmpSupportDischargeDatePresent
+	
+--Referrals
+	,SUM(AllReferrals) AS Referrals
+
+	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
+	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
+	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
+	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
+--Access
+	,SUM(AllAccess) as Access
+	
+--Finished Treatment
+	,SUM(AllFinishedTreatment) as FinishedTreatment
+	
+--For Clinical Outcomes Calcs
+	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
+	,SUM(AllNotCaseness) as NotCasenessFlag
+	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
+	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
+	
+FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
+WHERE AllEmploymentSupport_Count=0
+GROUP BY Month,  SexualOrientationDesc, AllTreatmentCareContact_Count, EmpSupportDischargeDatePresent
 
 --Drop temporary tables created to produce the final output tables
 -- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
 -- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
 -- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base2]
 -- DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-
-
-	
