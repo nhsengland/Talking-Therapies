@@ -48,7 +48,7 @@ INNER JOIN [mesh_IAPT].[IDS202CareActivity] a ON MinRecord = a.UniqueID_IDS202 A
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = -2
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -62,10 +62,14 @@ IF OBJECT_ID ('tempdb..#Finished') IS NOT NULL DROP TABLE #Finished
 SELECT DISTINCT 
 		
 		@MonthYear AS 'Month'
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'CCG Name' 
+		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
+		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
+		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub ICB Code'
+		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub ICB Name' 
 		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
-		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name' 
+		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
+		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICB Code'
+		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICB Name'
 		,r.PathwayID 
 		,r.AuditId 
 		,r.UniqueSubmissionID
@@ -81,11 +85,17 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------
 		LEFT JOIN [mesh_IAPT].[IDS201CareContact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId
 		---------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
+		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
+			AND ch.Effective_To IS NULL
+ 
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+			AND ph.Effective_To IS NULL	
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
 		AND CompletedTreatment_Flag = 'True'
 
@@ -124,8 +134,8 @@ IF OBJECT_ID ('tempdb..#Waits') IS NOT NULL DROP TABLE #Waits
 SELECT	a.[Month]
 		,a.[Provider Code]
 		,a.[Provider Name]
-		,a.[CCG Code]
-		,a.[CCG Name]
+		,a.[Sub ICB Code]
+		,a.[Sub ICB Name]
 		,a.ReferralRequestReceivedDate
 		,a.Assessment_FirstDate
 		,a.CareContactId
@@ -188,7 +198,7 @@ ORDER BY l.PathwayId, RowId
 IF OBJECT_ID ('tempdb..#StepUp2') IS NOT NULL DROP TABLE #StepUp2
 
 SELECT * INTO #StepUp2 FROM (
-SELECT a.[Month],a.[Provider Code],a.[Provider Name],a.[CCG Code],a.[CCG Name],a.ReferralRequestReceivedDate,a.CareContactId,a.CareContDate,a.CareContTime
+SELECT a.[Month],a.[Provider Code],a.[Provider Name],a.[Sub ICB Code],a.[Sub ICB Name],a.ReferralRequestReceivedDate,a.CareContactId,a.CareContDate,a.CareContTime
 ,a.PathwayID,a.ROWID,a.[HI/LI/ES],a.[Appointment Type],a.FirstHI, DATEDIFF(dd,b.CareContDate,a.CareContDate) AS date_Diff2
 FROM  #StepUp a LEFT JOIN #StepUp b ON a.[PathwayID] = b.[PathwayID] AND a.ROWID2 = (b.ROWID2 +1)
 )_ WHERE RowID = FirstHI ORDER BY PathwayID, CareContDate
@@ -234,7 +244,7 @@ ORDER BY l.PathwayId, RowId
 IF OBJECT_ID ('tempdb..#Stepdown2') IS NOT NULL DROP TABLE #Stepdown2
 
 SELECT * INTO #Stepdown2 FROM (
-SELECT a.[Month],a.[Provider Code],a.[Provider Name],a.[CCG Code],a.[CCG Name],a.ReferralRequestReceivedDate,a.CareContactId,a.CareContDate,a.CareContTime
+SELECT a.[Month],a.[Provider Code],a.[Provider Name],a.[Sub ICB Code],a.[Sub ICB Name],a.ReferralRequestReceivedDate,a.CareContactId,a.CareContDate,a.CareContTime
 ,a.PathwayID,a.ROWID,a.[HI/LI/ES],a.[Appointment Type],a.FirstLI, DATEDIFF(dd,b.CareContDate,a.CareContDate) AS date_Diff2
 FROM  #Stepdown a LEFT JOIN #Stepdown b ON a.[PathwayID] = b.[PathwayID] AND a.ROWID2 = (b.ROWID2 +1)
 )_ WHERE RowID = FirstLI ORDER BY PathwayID, CareContDate
@@ -243,7 +253,7 @@ FROM  #Stepdown a LEFT JOIN #Stepdown b ON a.[PathwayID] = b.[PathwayID] AND a.R
 IF OBJECT_ID ('tempdb..#WaitFirstHI') IS NOT NULL DROP TABLE #WaitFirstHI
 
 SELECT * INTO #WaitFirstHI FROM (
-SELECT w.[Month], w.[Provider Code], w.[Provider Name], w.[CCG Code], w.[CCG Name], w.ReferralRequestReceivedDate, w.CareContactId, w.CareContDate, w.CareContTime
+SELECT w.[Month], w.[Provider Code], w.[Provider Name], w.[Sub ICB Code], w.[Sub ICB Name], w.ReferralRequestReceivedDate, w.CareContactId, w.CareContDate, w.CareContTime
 , w.PathwayID, w.ROWID, w.[HI/LI/ES], w.[Appointment Type], FirstHI, DATEDIFF(dd,Assessment_FirstDate,CareContDate) AS date_Diff2
 FROM #Waits w INNER JOIN #NoLIbeforeHI n ON w.PathwayID = n.PathwayID
 INNER JOIN #FirstHI f ON w.PathwayID = f.PathwayID AND FirstHI = RowID
@@ -255,7 +265,7 @@ SELECT * FROM #StepUp2 )_
 IF OBJECT_ID ('tempdb..#WaitFirstLI') IS NOT NULL DROP TABLE #WaitFirstLI
 
 SELECT * INTO #WaitFirstLI FROM (
-SELECT w.[Month], w.[Provider Code], w.[Provider Name], w.[CCG Code], w.[CCG Name], w.ReferralRequestReceivedDate, w.CareContactId, w.CareContDate, w.CareContTime
+SELECT w.[Month], w.[Provider Code], w.[Provider Name],  w.[Sub ICB Code], w.[Sub ICB Name], w.ReferralRequestReceivedDate, w.CareContactId, w.CareContDate, w.CareContTime
 , w.PathwayID, w.ROWID, w.[HI/LI/ES], w.[Appointment Type], FirstLI, DATEDIFF(dd,Assessment_FirstDate,CareContDate) AS date_Diff2
 FROM #Waits w INNER JOIN #NoHIbeforeLI n ON w.PathwayID = n.PathwayID
 INNER JOIN #FirstLI f ON w.PathwayID = f.PathwayID AND FirstLI = RowID
@@ -272,10 +282,10 @@ IF OBJECT_ID ('tempdb..#NationalMedianRefToFirstLI') IS NOT NULL DROP TABLE #Nat
 IF OBJECT_ID ('tempdb..#NationalMedianRefToFirstHI') IS NOT NULL DROP TABLE #NationalMedianRefToFirstHI
 IF OBJECT_ID ('tempdb..#NationalMeanRefToFirstLI') IS NOT NULL DROP TABLE #NationalMeanRefToFirstLI
 IF OBJECT_ID ('tempdb..#NationalMeanRefToFirstHI') IS NOT NULL DROP TABLE #NationalMeanRefToFirstHI
-IF OBJECT_ID ('tempdb..#CCGMedianRefToFirstLI') IS NOT NULL DROP TABLE #CCGMedianRefToFirstLI
-IF OBJECT_ID ('tempdb..#CCGMedianRefToFirstHI') IS NOT NULL DROP TABLE #CCGMedianRefToFirstHI
-IF OBJECT_ID ('tempdb..#CCGMeanRefToFirstLI') IS NOT NULL DROP TABLE #CCGMeanRefToFirstLI
-IF OBJECT_ID ('tempdb..#CCGMeanRefToFirstHI') IS NOT NULL DROP TABLE #CCGMeanRefToFirstHI
+IF OBJECT_ID ('tempdb..#SubICBMedianRefToFirstLI') IS NOT NULL DROP TABLE #SubICBMedianRefToFirstLI
+IF OBJECT_ID ('tempdb..#SubICBMedianRefToFirstHI') IS NOT NULL DROP TABLE #SubICBMedianRefToFirstHI
+IF OBJECT_ID ('tempdb..#SubICBMeanRefToFirstLI') IS NOT NULL DROP TABLE #SubICBMeanRefToFirstLI
+IF OBJECT_ID ('tempdb..#SubICBMeanRefToFirstHI') IS NOT NULL DROP TABLE #SubICBMeanRefToFirstHI
 IF OBJECT_ID ('tempdb..#ProviderMedianRefToFirstLI') IS NOT NULL DROP TABLE #ProviderMedianRefToFirstLI
 IF OBJECT_ID ('tempdb..#ProviderMedianRefToFirstHI') IS NOT NULL DROP TABLE #ProviderMedianRefToFirstHI
 IF OBJECT_ID ('tempdb..#ProviderMeanRefToFirstLI') IS NOT NULL DROP TABLE #ProviderMeanRefToFirstLI
@@ -283,55 +293,55 @@ IF OBJECT_ID ('tempdb..#ProviderMeanRefToFirstHI') IS NOT NULL DROP TABLE #Provi
 
 -- National ---------------------------------------------------------------------------------------
 
-SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
+SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
 ,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER() AS MedianRefToFirstLI
 INTO #NationalMedianRefToFirstLI FROM #WaitFirstLI
 
-SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code' ,'All Providers' AS 'Provider Name'
+SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code' ,'All Providers' AS 'Provider Name'
 ,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER() AS MedianRefToFirstHI
 INTO #NationalMedianRefToFirstHI FROM #WaitFirstHI
 
-SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
+SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
 ,AVG(date_Diff2) AS MeanRefToFirstLI
 INTO #NationalMeanRefToFirstLI FROM #WaitFirstLI GROUP BY [Month]
 
-SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code' ,'All Providers' AS 'Provider Name'
+SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code' ,'All Providers' AS 'Provider Name'
 ,AVG(date_Diff2) AS MeanRefToFirstHI
 INTO #NationalMeanRefToFirstHI FROM #WaitFirstHI GROUP BY [Month]
 
--- CCG ---------------------------------------------------------------------------------------
+-- Sub-ICB ---------------------------------------------------------------------------------------
 
-SELECT DISTINCT [Month], 'CCG' AS 'Level', 'Refresh' AS DataSource, [CCG Code] AS 'CCG Code' ,[CCG Name] AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
-,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER(PARTITION BY [CCG Code]) AS MedianRefToFirstLI
-INTO #CCGMedianRefToFirstLI FROM #WaitFirstLI
+SELECT DISTINCT [Month], 'Sub-ICB' AS 'Level', 'Refresh' AS DataSource, [Sub ICB Code] AS 'Sub ICB Code' ,[Sub ICB Name] AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
+,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER(PARTITION BY [Sub ICB Code]) AS MedianRefToFirstLI
+INTO #SubICBMedianRefToFirstLI FROM #WaitFirstLI
 
-SELECT DISTINCT [Month], 'CCG' AS 'Level', 'Refresh' AS DataSource, [CCG Code] AS 'CCG Code' ,[CCG Name] AS 'CCG Name' ,'All Providers' AS 'Provider Code' ,'All Providers' AS 'Provider Name'
-,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER(PARTITION BY[CCG Code]) AS MedianRefToFirstHI
-INTO #CCGMedianRefToFirstHI FROM #WaitFirstHI
+SELECT DISTINCT [Month], 'Sub-ICB' AS 'Level', 'Refresh' AS DataSource, [Sub ICB Code] AS 'Sub ICB Code' ,[Sub ICB Name] AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code' ,'All Providers' AS 'Provider Name'
+,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER(PARTITION BY[Sub ICB Code]) AS MedianRefToFirstHI
+INTO #SubICBMedianRefToFirstHI FROM #WaitFirstHI
 
-SELECT DISTINCT [Month],'CCG' AS 'Level','Refresh' AS DataSource, [CCG Code] AS 'CCG Code',[CCG Name] AS 'CCG Name','All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
+SELECT DISTINCT [Month],'Sub-ICB' AS 'Level','Refresh' AS DataSource, [Sub ICB Code] AS 'Sub ICB Code',[Sub ICB Name] AS 'Sub ICB Name','All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
 ,AVG(date_Diff2) AS MeanRefToFirstLI
-INTO #CCGMeanRefToFirstLI FROM #WaitFirstLI GROUP BY [Month], [CCG Code], [CCG Name]
+INTO #SubICBMeanRefToFirstLI FROM #WaitFirstLI GROUP BY [Month], [Sub ICB Code], [Sub ICB Name]
 
-SELECT DISTINCT [Month], 'CCG' AS 'Level', 'Refresh' AS DataSource,[CCG Code] AS 'CCG Code',[CCG Name] AS 'CCG Name','All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
+SELECT DISTINCT [Month], 'Sub-ICB' AS 'Level', 'Refresh' AS DataSource,[Sub ICB Code] AS 'Sub ICB Code',[Sub ICB Name] AS 'Sub ICB Name','All Providers' AS 'Provider Code','All Providers' AS 'Provider Name'
 ,AVG(date_Diff2) AS MeanRefToFirstHI
-INTO #CCGMeanRefToFirstHI FROM #WaitFirstHI GROUP BY [Month], [CCG Code], [CCG Name]
+INTO #SubICBMeanRefToFirstHI FROM #WaitFirstHI GROUP BY [Month], [Sub ICB Code], [Sub ICB Name]
 
 -- Provider ---------------------------------------------------------------------------------------
 
-SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All CCGs' AS 'CCG Code','All CCGs' AS 'CCG Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
+SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All Sub-ICBs' AS 'Sub ICB Code','All Sub-ICBs' AS 'Sub ICB Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
 ,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER(PARTITION BY[Provider Code]) AS MedianRefToFirstLI
 INTO #ProviderMedianRefToFirstLI FROM #WaitFirstLI
 
-SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All CCGs' AS 'CCG Code','All CCGs' AS 'CCG Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
+SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All Sub-ICBs' AS 'Sub ICB Code','All Sub-ICBs' AS 'Sub ICB Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
 ,PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_Diff2) OVER(PARTITION BY[Provider Code]) AS MedianRefToFirstHI
 INTO #ProviderMedianRefToFirstHI FROM #WaitFirstHI
 
-SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All CCGs' AS 'CCG Code','All CCGs' AS 'CCG Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
+SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All Sub-ICBs' AS 'Sub ICB Code','All Sub-ICBs' AS 'Sub ICB Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
 ,AVG(date_Diff2) AS MeanRefToFirstLI
 INTO #ProviderMeanRefToFirstLI FROM #WaitFirstLI GROUP BY [Month], [Provider Code], [Provider Name]
 
-SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All CCGs' AS 'CCG Code','All CCGs' AS 'CCG Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
+SELECT DISTINCT [Month],'Provider' AS 'Level','Refresh' AS DataSource,'All Sub-ICBs' AS 'Sub ICB Code','All Sub-ICBs' AS 'Sub ICB Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name'
 ,AVG(date_Diff2) AS MeanRefToFirstHI
 INTO #ProviderMeanRefToFirstHI FROM #WaitFirstHI GROUP BY [Month], [Provider Code], [Provider Name]
 
@@ -344,27 +354,27 @@ SELECT * FROM
 
 (
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MedianRefToFirstLI AS MedianAssessToFirstLI, MedianRefToFirstHI AS MedianAssessToFirstHI, MeanRefToFirstLI AS MeanAssessToFirstLI, MeanRefToFirstHI AS MeanAssessToFirstHI
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MedianRefToFirstLI AS MedianAssessToFirstLI, MedianRefToFirstHI AS MedianAssessToFirstHI, MeanRefToFirstLI AS MeanAssessToFirstLI, MeanRefToFirstHI AS MeanAssessToFirstHI
 FROM  #NationalMedianRefToFirstLI a
-LEFT JOIN #NationalMedianRefToFirstHI b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
-LEFT JOIN #NationalMeanRefToFirstLI c ON a.Level = c.Level AND a.[Month] = c.[Month] AND a.[CCG Code] = c.[CCG Code] AND a.[Provider Code] = c.[Provider Code] 
-LEFT JOIN #NationalMeanRefToFirstHI d ON a.Level = d.Level AND a.[Month] = d.[Month] AND a.[CCG Code] = d.[CCG Code] AND a.[Provider Code] = d.[Provider Code]
+LEFT JOIN #NationalMedianRefToFirstHI b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
+LEFT JOIN #NationalMeanRefToFirstLI c ON a.Level = c.Level AND a.[Month] = c.[Month] AND a.[Sub ICB Code] = c.[Sub ICB Code] AND a.[Provider Code] = c.[Provider Code] 
+LEFT JOIN #NationalMeanRefToFirstHI d ON a.Level = d.Level AND a.[Month] = d.[Month] AND a.[Sub ICB Code] = d.[Sub ICB Code] AND a.[Provider Code] = d.[Provider Code]
 
 UNION
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MedianRefToFirstLI, MedianRefToFirstHI, MeanRefToFirstLI, MeanRefToFirstHI 
-FROM  #CCGMedianRefToFirstLI a
-LEFT JOIN #CCGMedianRefToFirstHI b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
-LEFT JOIN #CCGMeanRefToFirstLI c ON a.Level = c.Level AND a.[Month] = c.[Month] AND a.[CCG Code] = c.[CCG Code] AND a.[Provider Code] = c.[Provider Code] 
-LEFT JOIN #CCGMeanRefToFirstHI d ON a.Level = d.Level AND a.[Month] = d.[Month] AND a.[CCG Code] = d.[CCG Code] AND a.[Provider Code] = d.[Provider Code]
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MedianRefToFirstLI, MedianRefToFirstHI, MeanRefToFirstLI, MeanRefToFirstHI 
+FROM  #SubICBMedianRefToFirstLI a
+LEFT JOIN #SubICBMedianRefToFirstHI b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
+LEFT JOIN #SubICBMeanRefToFirstLI c ON a.Level = c.Level AND a.[Month] = c.[Month] AND a.[Sub ICB Code] = c.[Sub ICB Code] AND a.[Provider Code] = c.[Provider Code] 
+LEFT JOIN #SubICBMeanRefToFirstHI d ON a.Level = d.Level AND a.[Month] = d.[Month] AND a.[Sub ICB Code] = d.[Sub ICB Code] AND a.[Provider Code] = d.[Provider Code]
 
 UNION
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MedianRefToFirstLI, MedianRefToFirstHI, MeanRefToFirstLI, MeanRefToFirstHI 
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MedianRefToFirstLI, MedianRefToFirstHI, MeanRefToFirstLI, MeanRefToFirstHI 
 FROM  #ProviderMedianRefToFirstLI a
-LEFT JOIN #ProviderMedianRefToFirstHI b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
-LEFT JOIN #ProviderMeanRefToFirstLI c ON a.Level = c.Level AND a.[Month] = c.[Month] AND a.[CCG Code] = c.[CCG Code] AND a.[Provider Code] = c.[Provider Code] 
-LEFT JOIN #ProviderMeanRefToFirstHI d ON a.Level = d.Level AND a.[Month] = d.[Month] AND a.[CCG Code] = d.[CCG Code] AND a.[Provider Code] = d.[Provider Code] 
+LEFT JOIN #ProviderMedianRefToFirstHI b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
+LEFT JOIN #ProviderMeanRefToFirstLI c ON a.Level = c.Level AND a.[Month] = c.[Month] AND a.[Sub ICB Code] = c.[Sub ICB Code] AND a.[Provider Code] = c.[Provider Code] 
+LEFT JOIN #ProviderMeanRefToFirstHI d ON a.Level = d.Level AND a.[Month] = d.[Month] AND a.[Sub ICB Code] = d.[Sub ICB Code] AND a.[Provider Code] = d.[Provider Code] 
 
 )_
 
@@ -384,44 +394,44 @@ GROUP BY PathwayId
 -- Base Table of Max Waits
 IF OBJECT_ID ('tempdb..#MaxWaits') IS NOT NULL DROP TABLE #MaxWaits
 
-SELECT a.[Month],a.[Provider Code],a.[Provider Name],a.[CCG Code],a.[CCG Name],a.PathwayID, MAX(date_Diff) AS MaxWait INTO #MaxWaits
+SELECT a.[Month],a.[Provider Code],a.[Provider Name],a.[Sub ICB Code],a.[Sub ICB Name],a.PathwayID, MAX(date_Diff) AS MaxWait INTO #MaxWaits
 FROM #Waits a INNER JOIN #TreatmentCount2 t ON a.PathwayID = t.PathwayID
-WHERE ROWID <> 1 AND CountTreatmentApts >= 2 GROUP BY  a.[Month],a.[Provider Code],a.[Provider Name],a.[CCG Code],a.[CCG Name],a.PathwayID
+WHERE ROWID <> 1 AND CountTreatmentApts >= 2 GROUP BY  a.[Month],a.[Provider Code],a.[Provider Name],a.[Sub ICB Code],a.[Sub ICB Name],a.PathwayID
 
 -- Temp tables ----------------------------------------------------------------------------------------------
 
 IF OBJECT_ID ('tempdb..#NationalMeanMaxWait') IS NOT NULL DROP TABLE #NationalMeanMaxWait
 IF OBJECT_ID ('tempdb..#NationalMedianMaxWait') IS NOT NULL DROP TABLE #NationalMedianMaxWait
-IF OBJECT_ID ('tempdb..#CCGMeanMaxWait') IS NOT NULL DROP TABLE #CCGMeanMaxWait
-IF OBJECT_ID ('tempdb..#CCGMedianMaxWait') IS NOT NULL DROP TABLE #CCGMedianMaxWait
+IF OBJECT_ID ('tempdb..#SubICBMeanMaxWait') IS NOT NULL DROP TABLE #SubICBMeanMaxWait
+IF OBJECT_ID ('tempdb..#SubICBMedianMaxWait') IS NOT NULL DROP TABLE #SubICBMedianMaxWait
 IF OBJECT_ID ('tempdb..#ProviderMeanMaxWait') IS NOT NULL DROP TABLE #ProviderMeanMaxWait
 IF OBJECT_ID ('tempdb..#ProviderMedianMaxWait') IS NOT NULL DROP TABLE #ProviderMedianMaxWait
 
 -- National ---------------------------------------------------------------------------------------------------
 
-SELECT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
+SELECT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
 AVG(MaxWait) AS MeanMaxWait INTO #NationalMeanMaxWait FROM #MaxWaits
 GROUP BY [Month]
 
-SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',  
+SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',  
 PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY MaxWait) OVER() AS MedianMaxWait INTO #NationalMedianMaxWait FROM #MaxWaits
 
--- CCG ---------------------------------------------------------------------------------------------------
+-- Sub-ICB ---------------------------------------------------------------------------------------------------
 
-SELECT [Month], 'CCG' AS 'Level', 'Refresh' AS DataSource, [CCG Code] AS 'CCG Code' ,[CCG Name] AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
-AVG(MaxWait) AS MeanMaxWait INTO #CCGMeanMaxWait FROM #MaxWaits
-GROUP BY [Month], [CCG Code], [CCG Name]
+SELECT [Month], 'Sub-ICB' AS 'Level', 'Refresh' AS DataSource, [Sub ICB Code] AS 'Sub ICB Code' ,[Sub ICB Name] AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
+AVG(MaxWait) AS MeanMaxWait INTO #SubICBMeanMaxWait FROM #MaxWaits
+GROUP BY [Month], [Sub ICB Code], [Sub ICB Name]
 
-SELECT DISTINCT [Month], 'CCG' AS 'Level', 'Refresh' AS DataSource, [CCG Code] AS 'CCG Code' ,[CCG Name] AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',  
-PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY MaxWait) OVER(PARTITION BY [CCG Code]) AS MedianMaxWait INTO #CCGMedianMaxWait FROM #MaxWaits
+SELECT DISTINCT [Month], 'Sub-ICB' AS 'Level', 'Refresh' AS DataSource, [Sub ICB Code] AS 'Sub ICB Code' ,[Sub ICB Name] AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',  
+PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY MaxWait) OVER(PARTITION BY [Sub ICB Code]) AS MedianMaxWait INTO #SubICBMedianMaxWait FROM #MaxWaits
 
 -- PROVIDER ---------------------------------------------------------------------------------------------------
 		
-SELECT [Month], 'Provider' AS 'Level','Refresh' AS DataSource,'All CCGs' AS 'CCG Code','All CCGs' AS 'CCG Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',
+SELECT [Month], 'Provider' AS 'Level','Refresh' AS DataSource,'All Sub-ICBs' AS 'Sub ICB Code','All Sub-ICBs' AS 'Sub ICB Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',
 AVG(MaxWait) AS MeanMaxWait INTO #ProviderMeanMaxWait FROM #MaxWaits
 GROUP BY [Month], [Provider Code], [Provider Name]
 
-SELECT DISTINCT [Month], 'Provider' AS 'Level','Refresh' AS DataSource,'All CCGs' AS 'CCG Code','All CCGs' AS 'CCG Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',  
+SELECT DISTINCT [Month], 'Provider' AS 'Level','Refresh' AS DataSource,'All Sub-ICBs' AS 'Sub ICB Code','All Sub-ICBs' AS 'Sub ICB Name',[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',  
 PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY MaxWait) OVER(PARTITION BY [Provider Code]) AS MedianMaxWait INTO #ProviderMedianMaxWait FROM #MaxWaits
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -433,21 +443,21 @@ SELECT * FROM
 
 (
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MeanMaxWait, MedianMaxWait 
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MeanMaxWait, MedianMaxWait 
 FROM  #NationalMeanMaxWait a
-LEFT JOIN #NationalMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
+LEFT JOIN #NationalMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
 
 UNION
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MeanMaxWait, MedianMaxWait 
-FROM  #CCGMeanMaxWait a
-LEFT JOIN #CCGMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MeanMaxWait, MedianMaxWait 
+FROM  #SubICBMeanMaxWait a
+LEFT JOIN #SubICBMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
 
 UNION
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MeanMaxWait, MedianMaxWait 
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MeanMaxWait, MedianMaxWait 
 FROM  #ProviderMeanMaxWait a
-LEFT JOIN #ProviderMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
+LEFT JOIN #ProviderMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
 
 )_
 
@@ -458,8 +468,8 @@ PRINT 'Updated - [MHDInternal].[IAPT_Avg_Max_Wait]'
 
 IF OBJECT_ID ('tempdb..#MeanWaitsNational') IS NOT NULL DROP TABLE #MeanWaitsNational
 IF OBJECT_ID ('tempdb..#MedianWaitsNational') IS NOT NULL DROP TABLE #MedianWaitsNational
-IF OBJECT_ID ('tempdb..#MeanWaitsCCG') IS NOT NULL DROP TABLE #MeanWaitsCCG
-IF OBJECT_ID ('tempdb..#MedianWaitsCCG') IS NOT NULL DROP TABLE #MedianWaitsCCG
+IF OBJECT_ID ('tempdb..#MeanWaitsSubICB') IS NOT NULL DROP TABLE #MeanWaitsSubICB
+IF OBJECT_ID ('tempdb..#MedianWaitsSubICB') IS NOT NULL DROP TABLE #MedianWaitsSubICB
 IF OBJECT_ID ('tempdb..#MeanWaitsProvider') IS NOT NULL DROP TABLE #MeanWaitsProvider
 IF OBJECT_ID ('tempdb..#MedianWaitsProvider') IS NOT NULL DROP TABLE #MedianWaitsProvider
 
@@ -470,33 +480,33 @@ WHERE CountTreatmentApts >= 2
 
 -- NATIONAL ---------------------------------------------------------------------------------------------------
 
-SELECT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name', AVG(date_diff) AS MeanWait
+SELECT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name', AVG(date_diff) AS MeanWait
 INTO #MeanWaitsNational FROM #Waits2
 WHERE ROWID > 1 GROUP BY [Month]
 
-SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
+SELECT DISTINCT [Month], 'National' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
 PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_diff) OVER() AS MedianWait
 INTO #MedianWaitsNational FROM #Waits2 WHERE ROWID > 1
 
--- CCG ---------------------------------------------------------------------------------------------------
+-- Sub-ICB ---------------------------------------------------------------------------------------------------
 
-SELECT [Month], 'CCG' AS 'Level', 'Refresh' AS DataSource, [CCG Code] AS 'CCG Code' ,[CCG Name] AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
+SELECT [Month], 'Sub-ICB' AS 'Level', 'Refresh' AS DataSource, [Sub ICB Code] AS 'Sub ICB Code' ,[Sub ICB Name] AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
  AVG(date_diff) AS MeanWait
-INTO #MeanWaitsCCG FROM #Waits2
-WHERE ROWID > 1 GROUP BY [Month], [CCG Code], [CCG Name]
+INTO #MeanWaitsSubICB FROM #Waits2
+WHERE ROWID > 1 GROUP BY [Month], [Sub ICB Code], [Sub ICB Name]
 
-SELECT [Month], 'CCG' AS 'Level', 'Refresh' AS DataSource, [CCG Code] AS 'CCG Code' ,[CCG Name] AS 'CCG Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
- PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_diff) OVER(PARTITION BY [CCG Code]) AS MedianWait
-INTO #MedianWaitsCCG FROM #Waits2 WHERE ROWID > 1
+SELECT [Month], 'Sub-ICB' AS 'Level', 'Refresh' AS DataSource, [Sub ICB Code] AS 'Sub ICB Code' ,[Sub ICB Name] AS 'Sub ICB Name' ,'All Providers' AS 'Provider Code','All Providers' AS 'Provider Name',
+ PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_diff) OVER(PARTITION BY [Sub ICB Code]) AS MedianWait
+INTO #MedianWaitsSubICB FROM #Waits2 WHERE ROWID > 1
 
 -- PROVIDER ---------------------------------------------------------------------------------------------------
 
-SELECT [Month], 'Provider' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',
+SELECT [Month], 'Provider' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',
  AVG(date_diff) AS MeanWait
 INTO #MeanWaitsProvider FROM #Waits2
 WHERE ROWID > 1 GROUP BY [Month], [Provider Code], [Provider Name]
 
-SELECT DISTINCT [Month], 'Provider' AS 'Level', 'Refresh' AS DataSource, 'All CCGs' AS 'CCG Code' ,'All CCGs' AS 'CCG Name' ,[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',
+SELECT DISTINCT [Month], 'Provider' AS 'Level', 'Refresh' AS DataSource, 'All Sub-ICBs' AS 'Sub ICB Code' ,'All Sub-ICBs' AS 'Sub ICB Name' ,[Provider Code] AS 'Provider Code',[Provider Name] AS 'Provider Name',
  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY date_diff) OVER(PARTITION BY [Provider Code]) AS MedianWait
 INTO #MedianWaitsProvider FROM #Waits2 WHERE ROWID > 1
 
@@ -509,22 +519,22 @@ SELECT * FROM
 
 (
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name],  MeanWait, MedianWait 
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name],  MeanWait, MedianWait 
 FROM  #MeanWaitsNational a
-LEFT JOIN #MedianWaitsNational b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
+LEFT JOIN #MedianWaitsNational b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
 
 UNION
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MeanWait, MedianWait 
-FROM  #MeanWaitsCCG a
-LEFT JOIN #MedianWaitsCCG b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MeanWait, MedianWait 
+FROM  #MeanWaitsSubICB a
+LEFT JOIN #MedianWaitsSubICB b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
 
 UNION
 
-SELECT a.[Month],a.Level,a.DataSource,a.[CCG Code],a.[CCG Name],a.[Provider Code],a.[Provider Name], MeanWait, MedianWait 
+SELECT a.[Month],a.Level,a.DataSource,a.[Sub ICB Code],a.[Sub ICB Name],a.[Provider Code],a.[Provider Name], MeanWait, MedianWait 
 FROM  #MeanWaitsProvider a
-LEFT JOIN #MedianWaitsProvider b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[CCG Code] = b.[CCG Code] AND a.[Provider Code] = b.[Provider Code]
+LEFT JOIN #MedianWaitsProvider b ON a.Level = b.Level AND a.[Month] = b.[Month] AND a.[Sub ICB Code] = b.[Sub ICB Code] AND a.[Provider Code] = b.[Provider Code]
 
 )_
 
-PRINT 'Updated - [MHDInternal].[IAPT_Avg_Wait_Between_Apts]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Wait_Between_Apts]'
