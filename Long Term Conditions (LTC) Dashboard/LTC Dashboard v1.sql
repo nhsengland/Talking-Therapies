@@ -8,8 +8,8 @@ SET DATEFIRST 1
 PRINT @Period_Start
 PRINT @Period_End
 
---IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+--INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
 SELECT 
 			CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS Month
 			,'Refresh' AS DataSource
@@ -58,87 +58,87 @@ SELECT
 			AS 'NotCaseness'
 		
 		-- Referral Types
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'A1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'A1' OR r.SourceOfReferralIAPT = 'A1') THEN r.PathwayID ELSE NULL END)
 			AS	'Primary Health Care: General Medical Practitioner Practice'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'A2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'A2' OR r.SourceOfReferralIAPT = 'A2') THEN r.PathwayID ELSE NULL END)
 			AS	'Primary Health Care: Health Visitor'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'A3' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'A3' OR r.SourceOfReferralIAPT = 'A3') THEN r.PathwayID ELSE NULL END)
 			AS	'Other Primary Health Care'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'A4' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'A4' OR r.SourceOfReferralIAPT = 'A4') THEN r.PathwayID ELSE NULL END)
 			AS	'Primary Health Care: Maternity Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'B1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'B1' OR r.SourceOfReferralIAPT = 'B1') THEN r.PathwayID ELSE NULL END)
 			AS	'Self Referral: Self'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'B2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'B2' OR r.SourceOfReferralIAPT = 'B2') THEN r.PathwayID ELSE NULL END)
 			AS	'Self Referral: Carer/Relative'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'C1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'C1' OR r.SourceOfReferralIAPT = 'C1') THEN r.PathwayID ELSE NULL END)
 			AS	'Local Authority and Other Public Services: Social Services'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'C2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'C2' OR r.SourceOfReferralIAPT = 'C2') THEN r.PathwayID ELSE NULL END)
 			AS	'Local Authority and Other Public Services: Education Service / Educational Establishment'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'C3' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'C3' OR r.SourceOfReferralIAPT = 'C3') THEN r.PathwayID ELSE NULL END)
 			AS	'Local Authority and Other Public Services: Housing Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'D1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'D1' OR r.SourceOfReferralIAPT = 'D1') THEN r.PathwayID ELSE NULL END)
 			AS	'Employer'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'D2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'D2' OR r.SourceOfReferralIAPT = 'D2') THEN r.PathwayID ELSE NULL END)
 			AS	'Employer: Occupational Health'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'E1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'E1' OR r.SourceOfReferralIAPT = 'E1') THEN r.PathwayID ELSE NULL END)
 			AS	'Justice System: Police'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'E2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'E2' OR r.SourceOfReferralIAPT = 'E2') THEN r.PathwayID ELSE NULL END)
 			AS	'Justice System: Courts'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'E3' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'E3' OR r.SourceOfReferralIAPT = 'E3') THEN r.PathwayID ELSE NULL END)
 			AS	'Justice System: Probation Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'E4' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'E4' OR r.SourceOfReferralIAPT = 'E4') THEN r.PathwayID ELSE NULL END)
 			AS	'Justice System: Prison'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'E5' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'E5' OR r.SourceOfReferralIAPT = 'E5') THEN r.PathwayID ELSE NULL END)
 			AS	'Justice System: Court Liaison and Diversion Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'E6' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'E6' OR r.SourceOfReferralIAPT = 'E6') THEN r.PathwayID ELSE NULL END)
 			AS	'Justice System: Youth Offending Team'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'F1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'F1' OR r.SourceOfReferralIAPT = 'F1') THEN r.PathwayID ELSE NULL END)
 			AS	'Child Health: School Nurse'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'F2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'F2' OR r.SourceOfReferralIAPT = 'F2') THEN r.PathwayID ELSE NULL END)
 			AS	'Child Health: Hospital-based Paediatrics'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'F3' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'F3' OR r.SourceOfReferralIAPT = 'F3') THEN r.PathwayID ELSE NULL END)
 			AS	'Child Health: Community-based Paediatrics'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'G1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'G1' OR r.SourceOfReferralIAPT = 'G1') THEN r.PathwayID ELSE NULL END)
 			AS	'Independent sector - Medium Secure Inpatients'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'G2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'G2' OR r.SourceOfReferralIAPT = 'G2') THEN r.PathwayID ELSE NULL END)
 			AS	'Independent Sector - Low Secure Inpatients'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'G3' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'G3' OR r.SourceOfReferralIAPT = 'G3') THEN r.PathwayID ELSE NULL END)
 			AS	'Other Independent Sector Mental Health Services'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'G4' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'G4' OR r.SourceOfReferralIAPT = 'G4') THEN r.PathwayID ELSE NULL END)
 			AS	'Voluntary Sector'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'H1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'H1' OR r.SourceOfReferralIAPT = 'H1') THEN r.PathwayID ELSE NULL END)
 			AS	'Acute Secondary Care: Emergency Care Department'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'H2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'H2' OR r.SourceOfReferralIAPT = 'H2') THEN r.PathwayID ELSE NULL END)
 			AS	'Other secondary care specialty'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'I1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'I1' OR r.SourceOfReferralIAPT = 'I1') THEN r.PathwayID ELSE NULL END)
 			AS	'Temporary transfer from another Mental Health NHS Trust'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'I2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'I2' OR r.SourceOfReferralIAPT = 'I2') THEN r.PathwayID ELSE NULL END)
 			AS	'Permanent transfer from another Mental Health NHS Trust'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M1' OR r.SourceOfReferralIAPT = 'M1') THEN r.PathwayID ELSE NULL END)
 			AS	'Other: Asylum Services'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M2' OR r.SourceOfReferralIAPT = 'M2') THEN r.PathwayID ELSE NULL END)
 			AS	'Other: Telephone or Electronic Access Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M3' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M3' OR r.SourceOfReferralIAPT = 'M3') THEN r.PathwayID ELSE NULL END)
 			AS	'Other: Out of Area Agency'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M4' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M4' OR r.SourceOfReferralIAPT = 'M4') THEN r.PathwayID ELSE NULL END)
 			AS	'Other: Drug Action Team / Drug Misuse Agency'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M5' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M5' OR r.SourceOfReferralIAPT = 'M5') THEN r.PathwayID ELSE NULL END)
 			AS	'Other: Jobcentre Plus'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M6' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M6' OR r.SourceOfReferralIAPT = 'M6') THEN r.PathwayID ELSE NULL END)
 			AS	'Other SERVICE or agency'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M7' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M7' OR r.SourceOfReferralIAPT = 'M7') THEN r.PathwayID ELSE NULL END)
 			AS	'Other: Single Point of Access Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'M8' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'M8' OR r.SourceOfReferralIAPT = 'M8') THEN r.PathwayID ELSE NULL END)
 			AS	'Debt agency'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'N1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'N1' OR r.SourceOfReferralIAPT = 'N1') THEN r.PathwayID ELSE NULL END)
 			AS	'Stepped up from low intensity Improving Access to Psychological Therapies Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'N2' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'N2' OR r.SourceOfReferralIAPT = 'N2') THEN r.PathwayID ELSE NULL END)
 			AS	'Stepped down from high intensity Improving Access to Psychological Therapies Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'N4' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'N4' OR r.SourceOfReferralIAPT = 'N4') THEN r.PathwayID ELSE NULL END)
 			AS	'Other Improving Access to Psychological Therapies Service'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'P1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'P1' OR r.SourceOfReferralIAPT = 'P1') THEN r.PathwayID ELSE NULL END)
 			AS	'Internal Referral'
-			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.SourceOfReferralMH = 'Q1' THEN r.PathwayID ELSE NULL END)
+			,COUNT( DISTINCT CASE WHEN r.ReferralRequestReceivedDate  BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND (r.SourceOfReferralMH = 'Q1' OR r.SourceOfReferralIAPT = 'Q1') THEN r.PathwayID ELSE NULL END)
 			AS	'Mental Health Drop In Service'
 
 		-- Waits
@@ -170,7 +170,7 @@ SELECT
 			AS 'Did not attend, no advance warning given'
 			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '4' THEN cc.CareContactId ELSE NULL END)
 			AS 'Appointment cancelled or postponed by the health care provider'
---INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
@@ -188,7 +188,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId 
 
 WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -36, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
 		AND l.IsLatest = 1
 GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE)
 		,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END
