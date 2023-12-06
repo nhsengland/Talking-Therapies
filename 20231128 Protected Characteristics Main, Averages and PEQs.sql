@@ -1250,7 +1250,7 @@ GO
 ---------------------------------------------------------------------------------------------------------------------
 -----------PEQs
 ------------------------------------------------------------------------------------------------------------------------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = -2
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
@@ -1362,7 +1362,7 @@ SELECT DISTINCT
 		WHEN csa.[CodedAssToolType] IN ('747901000000107','747911000000109','747921000000103','747931000000101','747941000000105','747951000000108') AND csa.[PersScore] IN ('2') THEN 'Sometimes'
 		WHEN csa.[CodedAssToolType] IN ('747901000000107','747911000000109','747921000000103','747931000000101','747941000000105','747951000000108') AND csa.[PersScore] IN ('3') THEN 'Most of the time'
 		WHEN csa.[CodedAssToolType] IN ('747901000000107','747911000000109','747921000000103','747931000000101','747941000000105','747951000000108') AND csa.[PersScore] IN ('4') THEN 'All of the time'
-		WHEN csa.[CodedAssToolType] IN ('747901000000107','747911000000109','747921000000103','747931000000101','747941000000105','747951000000108') AND csa.[PersScore] IN ('NA') THEN 'Not applicable'
+		WHEN csa.[CodedAssToolType] IN ('747901000000107','747911000000109','747921000000103','747931000000101','747941000000105','747951000000108') AND csa.[PersScore] IN ('NA', '99') THEN 'Not applicable/Not stated'
 		--Assessment
 		WHEN csa.[CodedAssToolType] IN('747861000000100','747871000000107','747881000000109','904691000000103') AND csa.[PersScore] IN ('Y') THEN 'Yes'
 		WHEN csa.[CodedAssToolType] IN('747861000000100','747871000000107','747881000000109','904691000000103') AND csa.[PersScore] IN ('N') THEN 'No'
