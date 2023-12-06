@@ -9,17 +9,20 @@ Adapted by Sarah Blincko 12 2023
 --Trust sites have more than one postcode so these are ranked alphabetically so only one postcode is used
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]
 SELECT	
-    [SiteCode]
-    ,[Postcode1]
-    ,[Grid Reference]
-    ,[X (easting)]
-    ,[Y (northing)]
-    ,[Latitude]
-    ,[Longitude]
-    ,[Address4]
-    ,ROW_NUMBER() OVER(PARTITION BY SiteCode ORDER BY Postcode1 ASC) AS PostcodeRank
+    [Code] AS SiteCode
+	,[Name]
+    ,[Postcode_single_space_e_Gif] AS Postcode
+    ,[Latitude_1m] AS Latitude
+    ,[Longitude_1m] AS Longitude
+    ,ROW_NUMBER() OVER(PARTITION BY Code ORDER BY [Effective_From] DESC,[Postcode_single_space_e_Gif] ASC) AS PostcodeRank
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]
-FROM [MHDInternal].[REFERENCE_ODS_All_Sites]
+FROM [UKHD_ODS].[Postcode_Grid_Refs_Eng_Wal_Sco_And_NI_SCD] a
+	INNER JOIN [UKHD_ODS].[All_Codes] b ON a.[Postcode_single_space_e_Gif] = b.Postcode AND Is_Latest = 1 AND Effective_To IS NULL
+
+
+
+
+
 
 ---------------------------------------------------------------------------------------------------------------------------------
 /* Setting parameters for rolling 12 months */
@@ -41,13 +44,9 @@ SELECT DISTINCT
 	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS ProviderName
 	,CASE WHEN ph.Region_Name IS NOT NULL THEN ph.Region_Name ELSE 'Other' END AS Region
 
-    ,pc.[Postcode1] AS 'Postcode'
-    ,pc.[Grid Reference] AS 'GridRef'
-    ,pc.[X (easting)] AS 'Eastings'
-    ,pc.[Y (northing)] AS 'Northings'
+    ,pc.[Postcode] AS 'Postcode'
     ,pc.[Latitude] AS 'Lat'
     ,pc.[Longitude] AS 'Long'
-    ,pc.[Address4] AS 'City'
 
 -- Ethnicity - Broad		
 	,CASE WHEN Validated_EthnicCategory IN ('A') THEN 'White British'
@@ -105,18 +104,6 @@ SELECT DISTINCT
 	,CASE WHEN r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.CompletedTreatment_Flag='True' AND r.NotCaseness_Flag='True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
 	AS NotCaseness
 
-	-- ,CASE WHEN mpi.Validated_EthnicCategory IN ('A') AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.CompletedTreatment_Flag='True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
-	-- AS WBFinishedTreatment
-
-	-- ,CASE WHEN mpi.Validated_EthnicCategory IN ('A') AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.CompletedTreatment_Flag='True' AND r.Recovery_Flag='True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
-	-- AS WBRecovery
-
-	-- ,CASE WHEN mpi.Validated_EthnicCategory IN ('A') AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.CompletedTreatment_Flag='True' AND r.ReliableImprovement_Flag='True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
-	-- AS WBReliableImprovement
-
-	-- ,CASE WHEN mpi.Validated_EthnicCategory IN ('A') AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.CompletedTreatment_Flag='True' AND r.NotCaseness_Flag='True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
-	-- AS WBNotCaseness
-
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapBase]
 FROM	[mesh_IAPT].[IDS101referral] r
 		-----------------------------------------------
@@ -126,7 +113,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes] pc ON ph.[Organisation_Code]= pc.[SiteCode] AND PostcodeRank=1
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes] pc ON r.OrgID_Provider = pc.[SiteCode] AND PostcodeRank=1
 
 WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 GO
@@ -175,12 +162,12 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	,[GridRef]
-	,[Eastings]
-	,[Northings]
+	--,[GridRef]
+	--,[Eastings]
+	--,[Northings]
 	,[Lat]
 	,[Long]
-	,[City]
+	--,[City]
 	,CAST('Ethnicity - Broad' AS VARCHAR(100)) AS Category
 	,CAST([Ethnicity - Broad] AS VARCHAR(255)) AS Ethnicity
 
@@ -235,12 +222,12 @@ GROUP BY
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	,[GridRef]
-	,[Eastings]
-	,[Northings]
+	--,[GridRef]
+	--,[Eastings]
+	--,[Northings]
 	,[Lat]
 	,[Long]
-	,[City]
+	--,[City]
 	,[Ethnicity - Broad]
 GO
 
@@ -253,12 +240,12 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	,[GridRef]
-	,[Eastings]
-	,[Northings]
+	--,[GridRef]
+	--,[Eastings]
+	--,[Northings]
 	,[Lat]
 	,[Long]
-	,[City]
+	--,[City]
 	,'Ethnicity - High-Level' AS Category
 	,[Ethnicity - High-Level] AS Ethnicity
 
@@ -312,12 +299,12 @@ GROUP BY
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	,[GridRef]
-	,[Eastings]
-	,[Northings]
+	--,[GridRef]
+	--,[Eastings]
+	--,[Northings]
 	,[Lat]
 	,[Long]
-	,[City]
+	--,[City]
 	,[Ethnicity - High-Level]
 
 --Ethnicity - Detailed
@@ -329,12 +316,12 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	,[GridRef]
-	,[Eastings]
-	,[Northings]
+	--,[GridRef]
+	--,[Eastings]
+	--,[Northings]
 	,[Lat]
 	,[Long]
-	,[City]
+	--,[City]
 	,'Ethnicity - Detailed' AS Category
 	,[Ethnicity - Detailed] AS Ethnicity
 
@@ -388,12 +375,12 @@ GROUP BY
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	,[GridRef]
-	,[Eastings]
-	,[Northings]
+	--,[GridRef]
+	--,[Eastings]
+	--,[Northings]
 	,[Lat]
 	,[Long]
-	,[City]
+	--,[City]
 	,[Ethnicity - Detailed]
 
 
@@ -502,12 +489,12 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	,[GridRef]
-	,[Eastings]
-	,[Northings]
+	--,[GridRef]
+	--,[Eastings]
+	--,[Northings]
 	,[Lat]
 	,[Long]
-	,[City]
+	--,[City]
 	,[Category]
 	,[Ethnicity]
 
