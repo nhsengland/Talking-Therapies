@@ -278,14 +278,14 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
-	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -35, @PeriodStart) AND @PeriodStart -- For monthly refresh the offset uses a value of '0'
+	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart -- For monthly refresh the offset uses a value of '0'
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Aggregate output for dashboard table ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Ethnicity - Broad
-IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
+--IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
 SELECT 
       [Month]
       ,[Region Code]
@@ -313,7 +313,7 @@ SELECT
       ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
       ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
       ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
-INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 GROUP BY 
       [Month]
@@ -326,7 +326,6 @@ GROUP BY
       ,[ICB Code]
       ,[ICB Name]
       ,[Ethnicity - Broad]
-GO
 
 ---------------------------------------------------------------------------------------
 --Ethnicity - High-level
@@ -593,8 +592,8 @@ GO
 ------------------------------Averages
 --------------------------------------------------------------------------------------------------------
 -- National, Ethnicity - Broad
-IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
+--IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
 SELECT 
       [Month]
       ,CAST('National' AS VARCHAR(255)) AS OrganisationType
@@ -609,12 +608,12 @@ SELECT
       ,ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) AS MeanFirstPHQ9Finished
       ,ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) AS MeanFirstGAD7Finished
       ,ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) AS Mean_FirstWSASW
-INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 GROUP BY 
       [Month]
       ,[Ethnicity - Broad]
-GO
+
 -- Region, Ethnicity - Broad
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages] 
 SELECT 
@@ -1250,7 +1249,7 @@ GO
 ---------------------------------------------------------------------------------------------------------------------
 -----------PEQs
 ------------------------------------------------------------------------------------------------------------------------------
-DECLARE @Offset INT = -2
+DECLARE @Offset INT = -1
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
@@ -1391,7 +1390,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 WHERE	r.UsePathway_Flag = 'True' AND IsLatest = 1
 		AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate
 		AND r.CompletedTreatment_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -35, @PeriodStart) AND @PeriodStart
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart
 		AND csa.[CodedAssToolType] IN
 		('747901000000107','747911000000109','747921000000103','747931000000101'
 		,'747941000000105','747951000000108','747891000000106','747861000000100'
@@ -1400,8 +1399,8 @@ WHERE	r.UsePathway_Flag = 'True' AND IsLatest = 1
 --Final Aggregated PEQ Table		
 
 --Ethnicity - Broad
-IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
+--IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
 SELECT
       Month 
       ,CAST('Ethnicity - Broad' AS VARCHAR(255)) AS Category
@@ -1409,7 +1408,7 @@ SELECT
       ,Question
       ,Answer
       ,COUNT(PathwayID) AS Count
-INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
+--INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_PEQBase]
 GROUP BY
       [Month]
@@ -1514,6 +1513,6 @@ GROUP BY
       ,Answer
 
 --Drop Temporary Tables
---DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
---DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Base]
---DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PEQBase]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Base]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PEQBase]
