@@ -1,5 +1,10 @@
-
 SET NOCOUNT ON
+	
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities])
 
 -- Refresh updates for : [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] -------------------------------
 
@@ -371,13 +376,6 @@ WHERE	r.UsePathway_Flag = 'True'
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 		AND l.IsLatest = 1
 GO
-
---------------------------------------------------------------------------------------------
--- DELETE MAX(Month) -----------------------------------------------------------------------
-
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] 
-
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities])
 
 -- INSERT ----------------------------------------------------------------------------------
 
