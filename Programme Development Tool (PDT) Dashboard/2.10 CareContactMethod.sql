@@ -2,9 +2,17 @@ SET ANSI_WARNINGS ON
 SET DATEFIRST 1
 SET NOCOUNT ON
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- DELETE MAX(Month) ------------------------------------------------------------------------------------------------------------------------------------------
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly])
+
 -----------------------------------------------------------------------------------------------------
 --This table counts the number of appointments per PathwayID and Referral Request Date and then filters the PathwayID and Referral Request Date based on the number of appointments
 --This produces a table with PathwayIDs and the referral request received date with the most appointments associated with it
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps]
 
 SELECT * INTO [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps] FROM
@@ -106,13 +114,6 @@ WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		AND r.CompletedTreatment_Flag = 'TRUE' 
 		AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart -- @Offset of 0 combined with -1 will return the required time period
-
----------------------------------------------------------------------------------------------------------------------------------------------------------------
--- DELETE MAX(Month) ------------------------------------------------------------------------------------------------------------------------------------------
-
-DECLARE @MaxMonth AS DATE = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly])
-
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly] WHERE [Month] = @MaxMonth
 	
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- INSERT ----------------------------------------------------------------------------------------------------------------------------------------------------- 
