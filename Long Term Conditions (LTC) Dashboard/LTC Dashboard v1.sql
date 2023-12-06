@@ -8,8 +8,8 @@ SET DATEFIRST 1
 PRINT @Period_Start
 PRINT @Period_End
 
-IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+--IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
 SELECT 
 			CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS Month
 			,'Refresh' AS DataSource
@@ -170,7 +170,7 @@ SELECT
 			AS 'Did not attend, no advance warning given'
 			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '4' THEN cc.CareContactId ELSE NULL END)
 			AS 'Appointment cancelled or postponed by the health care provider'
-INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+--INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
@@ -188,7 +188,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId 
 
 WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -36, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
 		AND l.IsLatest = 1
 GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE)
 		,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END
@@ -207,11 +207,11 @@ GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yy
 ---Employment Support Appointment Count
 --There is currently an issue with EmploymentSupport_Count field in IDS101referral table so we are calculating the number of employment support appointments in this table
 --This is based on the criteria specified for this field in the Technical Output Specification
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]
 SELECT  
     r.PathwayID
 	,COUNT(DISTINCT CASE WHEN c.CareContDate BETWEEN l.ReportingPeriodStartDate and l.ReportingPeriodEndDate THEN c.CareContactID ELSE NULL END) AS Count_EmpSupp
-INTO [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]
+INTO [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]
 FROM [mesh_IAPT].IDS101referral r
 INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
 LEFT JOIN [mesh_IAPT].[IDS201carecontact] c ON c.RecordNumber=r.RecordNumber AND r.[UniqueSubmissionID] = c.[UniqueSubmissionID] AND r.[AuditId] = c.[AuditId]
@@ -312,7 +312,7 @@ FROM	[mesh_IAPT].[IDS101Referral] r
 		---------------------------
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId
 
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
 		---------------------------
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cd ON r.OrgIDComm = cd.Org_Code COLLATE database_default
         LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
@@ -930,4 +930,4 @@ GROUP BY
 
 --Drop Temporary Table
 DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
-DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount]
+DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]
