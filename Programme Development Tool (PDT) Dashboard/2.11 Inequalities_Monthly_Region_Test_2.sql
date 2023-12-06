@@ -3,7 +3,7 @@ SET NOCOUNT ON
 
 -- Refresh updates for : [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] -------------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -95,6 +95,7 @@ WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','4203500
 
 -----------------------------------Inequalities Base Table---------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
+
 SELECT DISTINCT
 		CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS [Month]
 		,r.PathwayID
@@ -342,7 +343,9 @@ SELECT DISTINCT
 		AS 'ended Deceased (Seen AND taken on for a course of treatment)'
 		,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.EndCode = '96' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
 		AS 'ended Not Known (Seen AND taken on for a course of treatment)'
+
 INTO [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
+
 FROM [mesh_IAPT].[IDS101referral] r
 	---------------------------	
 	INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
@@ -365,15 +368,21 @@ FROM [mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_InequalitiesPresCompBase] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1
 
 WHERE	r.UsePathway_Flag = 'True' 
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 		AND l.IsLatest = 1
 GO
 
---------------------------------------------------
+--------------------------------------------------------------------------------------------
+-- DELETE MAX(Month) -----------------------------------------------------------------------
 
---Total
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities])
+
+-- INSERT ----------------------------------------------------------------------------------
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
+
 SELECT 
 	Month
 	,'Refresh' AS DataSource
@@ -1128,7 +1137,7 @@ GROUP BY
 
 ------------------------------------------------------------------
 --Drop temporary tables
-DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ADSM_BASE_TABLE]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_InequalitiesADSMBase]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_InequalitiesPresCompBase]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 ------------------------------------------------------------------------------------------------------------
