@@ -4,9 +4,16 @@
 -- [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages] 
 -- [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals]
 
----------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- DELETE MAX(Month)s -----------------------------------------------------------------------------------------------------------------------------------------
 
-DECLARE @@Offset INT = -1
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals])
+
+----------------------------------------------------------------------------------------------------------------------------
+
+DECLARE @@Offset INT = 0
 
 DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -90,7 +97,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 		
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -152,7 +159,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -212,7 +219,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -283,7 +290,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -353,7 +360,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 		
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -405,7 +412,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 		
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -455,7 +462,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.[LSOA] = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 		
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 	
@@ -487,7 +494,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 		
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
@@ -521,7 +528,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
  WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 		
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
@@ -556,7 +563,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code]
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -24, @Period_Start) AND @Period_Start
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start
 		
 GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingPeriodStartDate) AS varchar)
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END 
@@ -564,10 +571,9 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
 )_
 
---------------------------------------------------------------------------------------------------------------------------------------
---Drop Temporary Tables
+-- Drop Temporary Table --------------------------------------
+
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_CareContactBase]
 
-
-
+----------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages]'
