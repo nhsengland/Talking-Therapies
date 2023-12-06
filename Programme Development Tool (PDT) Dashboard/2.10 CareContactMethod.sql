@@ -105,8 +105,15 @@ FROM	[mesh_IAPT].[IDS101referral] r
 WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		AND r.CompletedTreatment_Flag = 'TRUE' 
 		AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart 
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart -- @Offset of 0 combined with -1 will return the required time period
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- DELETE MAX(Month) ------------------------------------------------------------------------------------------------------------------------------------------
+
+DECLARE @MaxMonth AS DATE = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly] WHERE [Month] = @MaxMonth
+	
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- INSERT ----------------------------------------------------------------------------------------------------------------------------------------------------- 
 
