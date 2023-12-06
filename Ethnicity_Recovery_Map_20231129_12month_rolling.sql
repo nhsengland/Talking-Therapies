@@ -6,7 +6,7 @@ Adapted by Sarah Blincko 12 2023
 */
 
 -- Postcode Ranking -----------------------------
---Trust sites have more than one postcode so these are ranked alphabetically so only one postcode is used
+--Trust sites have more than one postcode so these are ranked by effective from date and then alphabetically so only one postcode is used
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]
 SELECT	
     [Code] AS SiteCode
@@ -19,11 +19,6 @@ INTO [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]
 FROM [UKHD_ODS].[Postcode_Grid_Refs_Eng_Wal_Sco_And_NI_SCD] a
 	INNER JOIN [UKHD_ODS].[All_Codes] b ON a.[Postcode_single_space_e_Gif] = b.Postcode AND Is_Latest = 1 AND Effective_To IS NULL
 
-
-
-
-
-
 ---------------------------------------------------------------------------------------------------------------------------------
 /* Setting parameters for rolling 12 months */
 
@@ -35,6 +30,7 @@ DECLARE @PeriodStart DATE = (SELECT DATEADD(DAY,1, EOMONTH(DATEADD(MONTH,-12,@Pe
 PRINT @PeriodEnd
 PRINT @PeriodStart
 
+--Base Table
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapBase]
 SELECT DISTINCT
 	@PeriodStart AS PeriodStart
@@ -118,41 +114,9 @@ FROM	[mesh_IAPT].[IDS101referral] r
 WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 GO
 
----------------This doesn't seem to fix the issue of missing postcodes:
--- -- Updating where sites are missing - where it is a site code rather than a full provider code.
--- IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_Postcodes2]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes2]
-
--- SELECT	prov.[Organisation_Code]
--- 		,prov.[PostCode]
--- 		,post.[Grid_Ref_Easting]
--- 		,post.[Grid_Ref_Northing]
--- 		,post.[Latitude_1m]
--- 		,post.[Longitude_1m]
--- 		,prov.[Address_Line_4]
-
--- INTO [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes2]
-
--- FROM	[UKHD_ODS].[Care_Trust_Sites_SCD] prov
--- LEFT JOIN [UKHD_ODS].[Postcode_Grid_Refs_Eng_Wal_Sco_And_NI_SCD] post ON prov.[PostCode] = post.Postcode_8_chars
-
--- /*Update the base table where the postcode information is missing*/
--- UPDATE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapBase]
-
--- SET		Postcode = b.[PostCode],
--- 		Eastings = b.[Grid_Ref_Easting],
--- 		Northings = b.[Grid_Ref_Northing],
--- 		Lat = b.[Latitude_1m],
--- 		Long = b.[Longitude_1m],
--- 		City = b.[Address_Line_4]
-
--- FROM	[MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapBase] a
--- LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes2] b ON a.[ProviderCode]= b.[Organisation_Code]
-
--- WHERE a.Postcode IS NULL
-
 --------------------------------------
---Aggregate
-
+--Aggregate Table
+--This has columns set to NULL which are updated with values later in the query
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
 --Ethnicity - Broad
 SELECT
@@ -162,12 +126,8 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	--,[GridRef]
-	--,[Eastings]
-	--,[Northings]
 	,[Lat]
 	,[Long]
-	--,[City]
 	,CAST('Ethnicity - Broad' AS VARCHAR(100)) AS Category
 	,CAST([Ethnicity - Broad] AS VARCHAR(255)) AS Ethnicity
 
@@ -200,16 +160,8 @@ SELECT
 --% of access in a provider that have no ethnicity stated
 	,CAST(NULL AS DECIMAL(10,2)) AS '% access no ethnicity'
 
-	-- ,SUM(WBFinishedTreatment) AS WBFinishedTreatment
-	-- ,SUM(WBNotCaseness) AS WBNotCaseness
-
-	-- ,CASE WHEN SUM(WBRecovery)>0 AND (SUM(WBFinishedTreatment)-SUM(WBNotCaseness))>0 THEN CAST(CAST(SUM(WBRecovery) AS FLOAT)/(SUM(WBFinishedTreatment)-SUM(WBNotCaseness)) AS DECIMAL(10,2)) ELSE NULL END
-	-- AS WhiteBRecoveryRate
-	-- ,CASE WHEN SUM([WBReliableImprovement])>0 AND SUM([WBFinishedTreatment])>0 THEN CAST(CAST(SUM([WBReliableImprovement]) AS FLOAT)/(SUM([WBFinishedTreatment])) AS DECIMAL(10,2)) ELSE NULL END
-	-- AS WhiteBReliableRate
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBRecoveryRate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBReliableRate'
-
 
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Recover diff'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Reliable diff'
@@ -222,12 +174,8 @@ GROUP BY
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	--,[GridRef]
-	--,[Eastings]
-	--,[Northings]
 	,[Lat]
 	,[Long]
-	--,[City]
 	,[Ethnicity - Broad]
 GO
 
@@ -240,12 +188,8 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	--,[GridRef]
-	--,[Eastings]
-	--,[Northings]
 	,[Lat]
 	,[Long]
-	--,[City]
 	,'Ethnicity - High-Level' AS Category
 	,[Ethnicity - High-Level] AS Ethnicity
 
@@ -278,13 +222,6 @@ SELECT
 --% of access in a provider that have no ethnicity stated
 	,CAST(NULL AS DECIMAL(10,2)) AS '% access no ethnicity'
 
-	-- ,SUM(WBFinishedTreatment) AS WBFinishedTreatment
-	-- ,SUM(WBNotCaseness) AS WBNotCaseness
-
-	-- ,CASE WHEN SUM(WBRecovery)>0 AND (SUM(WBFinishedTreatment)-SUM(WBNotCaseness))>0 THEN CAST(CAST(SUM(WBRecovery) AS FLOAT)/(SUM(WBFinishedTreatment)-SUM(WBNotCaseness)) AS DECIMAL(10,2)) ELSE NULL END
-	-- AS WhiteBRecoveryRate
-	-- ,CASE WHEN SUM([WBReliableImprovement])>0 AND SUM([WBFinishedTreatment])>0 THEN CAST(CAST(SUM([WBReliableImprovement]) AS FLOAT)/(SUM([WBFinishedTreatment])) AS DECIMAL(10,2)) ELSE NULL END
-	-- AS WhiteBReliableRate
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBRecoveryRate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBReliableRate'
 
@@ -299,12 +236,8 @@ GROUP BY
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	--,[GridRef]
-	--,[Eastings]
-	--,[Northings]
 	,[Lat]
 	,[Long]
-	--,[City]
 	,[Ethnicity - High-Level]
 
 --Ethnicity - Detailed
@@ -316,12 +249,8 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	--,[GridRef]
-	--,[Eastings]
-	--,[Northings]
 	,[Lat]
 	,[Long]
-	--,[City]
 	,'Ethnicity - Detailed' AS Category
 	,[Ethnicity - Detailed] AS Ethnicity
 
@@ -354,13 +283,6 @@ SELECT
 --% of access in a provider that have no ethnicity stated
 	,CAST(NULL AS DECIMAL(10,2)) AS '% access no ethnicity'
 
-	-- ,SUM(WBFinishedTreatment) AS WBFinishedTreatment
-	-- ,SUM(WBNotCaseness) AS WBNotCaseness
-
-	-- ,CASE WHEN SUM(WBRecovery)>0 AND (SUM(WBFinishedTreatment)-SUM(WBNotCaseness))>0 THEN CAST(CAST(SUM(WBRecovery) AS FLOAT)/(SUM(WBFinishedTreatment)-SUM(WBNotCaseness)) AS DECIMAL(10,2)) ELSE NULL END
-	-- AS WhiteBRecoveryRate
-	-- ,CASE WHEN SUM([WBReliableImprovement])>0 AND SUM([WBFinishedTreatment])>0 THEN CAST(CAST(SUM([WBReliableImprovement]) AS FLOAT)/(SUM([WBFinishedTreatment])) AS DECIMAL(10,2)) ELSE NULL END
-	-- AS WhiteBReliableRate
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBRecoveryRate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBReliableRate'
 
@@ -375,15 +297,9 @@ GROUP BY
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	--,[GridRef]
-	--,[Eastings]
-	--,[Northings]
 	,[Lat]
 	,[Long]
-	--,[City]
 	,[Ethnicity - Detailed]
-
-
 
 --Aggregating Referrals, Access, Recovery Rate and Reliable Improvement Rate at Provider Code level only
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Org]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Org]
@@ -429,7 +345,10 @@ SELECT
 
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Prop]
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
-GROUP BY ProviderCode,Category,Ethnicity
+GROUP BY 
+	ProviderCode
+	,Category
+	,Ethnicity
 
 --Updating Aggregate Table for Referral and Access Proportions
 UPDATE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
@@ -466,7 +385,6 @@ INTO [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_RecRel]
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
 WHERE Ethnicity IN ('White','White British')
 
-
 --WB Recovery and Reliable Rates
 UPDATE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
 
@@ -476,7 +394,6 @@ SET
 	
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate] a
 LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_RecRel] b ON a.[ProviderCode]= b.[ProviderCode]
-
 
 
 -- Rounding of variables ---------------------------------------------------------------
@@ -489,12 +406,8 @@ SELECT
 	,[ProviderName]
 	,[Region]
 	,[Postcode]
-	--,[GridRef]
-	--,[Eastings]
-	--,[Northings]
 	,[Lat]
 	,[Long]
-	--,[City]
 	,[Category]
 	,[Ethnicity]
 
@@ -504,14 +417,6 @@ SELECT
 	AS [Access]
 	,CASE WHEN [FinishedTreatment] < 5 THEN '*' ELSE ISNULL(CAST(CAST(ROUND(([FinishedTreatment]+2) /5,0)*5 AS INT) AS VARCHAR), '*') END
 	AS [Finished Treatment]
-
---Checking in tableau but pretty sure these aren't needed in tableau:
-	-- ,CASE WHEN [Recovery] < 5 THEN '*' ELSE ISNULL(CAST(CAST(ROUND(([Recovery]+2) /5,0)*5 AS INT) AS VARCHAR), '*') END
-	-- AS [Recovery]
-	-- ,CASE WHEN [ReliableImprovement] < 5 THEN '*' ELSE ISNULL(CAST(CAST(ROUND(([ReliableImprovement]+2) /5,0)*5 AS INT) AS VARCHAR), '*') END
-	-- AS [Reliable Improvement]
-	-- ,CASE WHEN [NotCaseness] < 5 THEN '*' ELSE ISNULL(CAST(CAST(ROUND(([NotCaseness]+2) /5,0)*5 AS INT) AS VARCHAR), '*') END
-	-- AS [NotCaseness]
 
 	,CASE WHEN (FinishedTreatment-NotCaseness) < 5 THEN NULL ELSE [Recovery rate] END
 	AS [Recovery rate]
@@ -540,7 +445,6 @@ SELECT
 	,WhiteBRecoveryRate --Already had suppression rules applied
 	,WhiteBReliableRate --Already had suppression rules applied
 
---not sure if these are right:
 	,CASE WHEN (FinishedTreatment-NotCaseness) < 5 THEN NULL ELSE [WhiteBRecoveryRate]-[Recovery rate] END
 	AS [Recover diff]
     ,CASE WHEN FinishedTreatment < 5 THEN NULL ELSE [WhiteBReliableRate]-[Reliable rate] END
@@ -548,3 +452,11 @@ SELECT
 
 INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Ethnicity_Map_Rounded]
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
+
+--Drop Temporary Tables:
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapBase]
+ DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
+ DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Org]
+ DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Prop]
+ DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_RecRel]
