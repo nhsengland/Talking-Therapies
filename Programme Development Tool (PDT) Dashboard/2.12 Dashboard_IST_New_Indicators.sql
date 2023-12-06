@@ -1,6 +1,12 @@
--- SET ANSI_WARNINGS OFF
--- SET NOCOUNT ON
 
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+
+DELETE FROM [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators])
+
+--------------------------------------------------------------------------------------------
+	
 -- Refresh updates for [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators] ------------------------
 
 DECLARE @Offset AS INT = 0
@@ -152,14 +158,6 @@ FROM	[mesh_IAPT].[IDS101referral] r
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
-
-
---------------------------------------------------------------------------------------------
--- DELETE MAX(Month) -----------------------------------------------------------------------
-
-DELETE FROM [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators] 
-
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators])
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
