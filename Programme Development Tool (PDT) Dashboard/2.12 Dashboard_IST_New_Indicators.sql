@@ -3,7 +3,7 @@
 
 -- Refresh updates for [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators] ------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -13,7 +13,9 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -------------------------------------------------------------------------
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_InequalitiesNewIndicators_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_InequalitiesNewIndicators_Base]
---First Part of the Base Table
+
+-- First Part of the Base Table
+
 SELECT DISTINCT
 	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
 
@@ -53,7 +55,9 @@ SELECT DISTINCT
 	,0 AS [FirstToSecond28Days]
 	,0 AS [FirstToSecond28To90Days]
 	,0 AS [FirstToSecondMoreThan90Days]
+
 INTO [MHDInternal].[TEMP_TTAD_PDT_InequalitiesNewIndicators_Base]
+
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
@@ -70,10 +74,13 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refresh, the offset should be 0 to get the latest month
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 		AND a.Unique_CareContactID IS NOT NULL
---Second Part of the Base Table
+
+-- Second Part of the Base Table
+
 INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_InequalitiesNewIndicators_Base]
+
 SELECT DISTINCT
 	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
 
@@ -144,12 +151,19 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refresh, the offset should be 0 to get the latest month
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 
+
+--------------------------------------------------------------------------------------------
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+
+DELETE FROM [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators])
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
-IF OBJECT_ID('[MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators]') IS NOT NULL DROP TABLE [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators]
---INSERT INTO [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators]
+
+INSERT INTO [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators]
 
 SELECT 
 	Month
@@ -186,8 +200,9 @@ SELECT
 	,SUM(FirstToSecond28Days) AS FirstToSecond28Days
 	,SUM(FirstToSecond28To90Days) AS FirstToSecond28To90Days
 	,SUM(FirstToSecondMoreThan90Days) AS FirstToSecondMoreThan90Days
-INTO [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators]
+
 FROM [MHDInternal].[TEMP_TTAD_PDT_InequalitiesNewIndicators_Base]
+
 GROUP BY 
 	Month
 	,[Region Code]
@@ -199,13 +214,8 @@ GROUP BY
 	,[STP Code]
 	,[STP Name]
 
-----------------------------------------------
---Drop Temporary Table
-DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_EthnicMinoritiesBase]
-
-----------------
+-- Drop Temporary Table ------------------------------------------------
+------------------------------------------------------------------------
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_InequalitiesNewIndicators_Base]
+----------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[STAGING_TTAD_PDT_InequalitiesNewIndicators]'
-------------
-
-
-
