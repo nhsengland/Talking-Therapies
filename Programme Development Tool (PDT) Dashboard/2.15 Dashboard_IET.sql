@@ -1,15 +1,18 @@
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
--- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] -----------------------------
+-- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] ----------------------------------------------------------
 
---------------------------
-DECLARE @Offset INT = -1
---------------------------
---DECLARE @Max_Offset INT = -1
----------------------------------------|
---WHILE (@Offset >= @Max_Offset) BEGIN --| <-- Start loop 
----------------------------------------|
+-------------------------------------------------------------------------------------------------------------------------
+-- DELETE MAX(Month) ----------------------------------------------------------------------------------------------------
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET])
+
+----------------------------------------------------------------------------------------------
+
+DECLARE @Offset INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -102,7 +105,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL	
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1 
-		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 
 ---- Create aggregate table: [MHDInternal].[TEMP_TTAD_PDT_IETAggregate] ----------------------------------------------------
 
@@ -150,11 +153,9 @@ GROUP BY [Month]
 
 ---- Insert into final sandbox table: [MHDInternal].[DASHBOARD_TTAD_PDT_IET] ----------------------------------------------------
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET] SELECT * FROM [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET] 
 
-------------------------------|
---SET @Offset = @Offset-1 END --| <-- End loop
-------------------------------|
+SELECT * FROM [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
 --------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]' + CHAR(10)
