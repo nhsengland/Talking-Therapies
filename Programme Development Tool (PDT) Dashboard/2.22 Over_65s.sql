@@ -5,14 +5,6 @@ SET NOCOUNT ON
 -- This script MUST be run AFTER script 2.11 which feeds [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] ------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
--- DELETE MAX(Month) -----------------------------------------------------------------------
- 
---DELETE FROM [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]
- 
---WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics])
-
---------------------------------------------------------------------------------------------
-
 DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -52,7 +44,7 @@ SELECT
 	WHERE 
 		Category = 'Age'
 		AND Variable = '65+' 
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
@@ -88,7 +80,7 @@ SELECT
 	WHERE 
 		Category = 'Age'
 		AND Variable = '65+'
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
@@ -126,7 +118,7 @@ SELECT
 	WHERE 
 		Category = 'Age' 
 		AND Variable = '65+' 
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
@@ -165,7 +157,7 @@ SELECT
 	WHERE 
 		Category = 'Age'
 		AND Variable = '65+'
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY 
 		[Month]
@@ -204,7 +196,7 @@ SELECT
 	WHERE 
 		Category = 'Age' 
 		AND Variable = '65+' 
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
