@@ -1,8 +1,15 @@
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
--- Rounding scripts (Main table, Primary Loop & New Indicators) -----------------------------------------------------------------------
+-- Rounding scripts for: [DASHBOARD_TTAD_PDT_InequalitiesRounded] & [DASHBOARD_TTAD_PDT_InequalitiesNewIndicatorsRounded] ------------------------------------------
 
+-- DELETE MAX(Month)s -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesRounded] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesRounded])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesNewIndicatorsRounded] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesNewIndicatorsRounded])
+	
+-------------------------------------------------------------------------------------------
+	
 DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -11,9 +18,8 @@ DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPAR
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesRounded] ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesRounded] ------------------------------------------------------------------------------------------------------------
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_InequalitiesRounded]
 
