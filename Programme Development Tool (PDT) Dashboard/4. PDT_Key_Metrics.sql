@@ -1,6 +1,12 @@
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_KeyMetrics]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_KeyMetrics])
+
 -- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_PDT_KeyMetrics] -----------------------------
 
 DECLARE @Offset AS INT = 0
