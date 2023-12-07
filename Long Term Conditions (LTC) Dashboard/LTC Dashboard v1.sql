@@ -8,8 +8,8 @@ SET DATEFIRST 1
 PRINT @Period_Start
 PRINT @Period_End
 
-IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+--IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
 SELECT 
 			CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS Month
 			,'Refresh' AS DataSource
@@ -171,7 +171,7 @@ SELECT
 			AS 'Did not attend, no advance warning given'
 			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '4' THEN cc.CareContactId ELSE NULL END)
 			AS 'Appointment cancelled or postponed by the health care provider'
-INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+--INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
