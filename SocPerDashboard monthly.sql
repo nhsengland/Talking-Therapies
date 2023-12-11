@@ -1,74 +1,41 @@
+/*					SOCIAL PERSONAL CIRCUMSTANCE DASHBOARD						*/
+
+--------Early stage metrics for selected Social Personal Circumstance to flow to the policy team-------------
+
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance])
+GO
+
 --------------------
 SET DATEFIRST 1
 SET NOCOUNT ON
 --------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0
 -------------------------
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
-
-DECLARE @PeriodStart2 DATE = (SELECT DATEADD(MONTH,(@Offset +1),MAX(@PeriodStart)) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @PeriodEnd2 DATE = (SELECT eomonth(DATEADD(MONTH,(@Offset +1),MAX(@PeriodEnd))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50))
-
-
+PRINT @PeriodStart
 
 ----------------------------------------------------------------------------------------------------------------------------------------
 
----- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
+---- Base Table ------------------------------------------------------------------------------------------------------------------
 
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PresCompADSM]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PresCompADSM]
-
-SELECT * INTO [MHDInternal].[TEMP_TTAD_PresCompADSM] FROM 
-
-(SELECT pc.* 
-	FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
-		AND pc.AuditId = l.AuditId 
-		AND pc.Unique_MonthID = l.Unique_MonthID
-	WHERE IsLatest = 1 AND [ReportingPeriodStartDate] <= @PeriodEnd
-
-UNION -------------------------------------------------------------------------------
-
-SELECT pc.* 
-FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
-		AND pc.AuditId = l.AuditId 
-		AND pc.Unique_MonthID = l.Unique_MonthID
-	WHERE File_Type = 'Primary' AND [ReportingPeriodStartDate] BETWEEN @PeriodStart2 AND @PeriodEnd2
-)_
-
--- Presenting Complaints -----------------------------------------------------------------------------------------------------------------------
-
-IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PresComp]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PresComp]
-
-SELECT DISTINCT pc.PathwayID
-				,Validated_PresentingComplaint
-				,row_number() OVER(PARTITION BY pc.PathwayID ORDER BY CASE WHEN Validated_PresentingComplaint IS NULL THEN 2 ELSE 1 END
-				,PresCompCodSig
-				,PresCompDate DESC, UniqueID_IDS603 DESC) AS rank
-
-INTO	[MHDInternal].[TEMP_TTAD_PresComp]
-
-FROM	[MHDInternal].[TEMP_TTAD_PresCompADSM] pc 
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID]l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId AND pc.Unique_MonthID = l.Unique_MonthID
-
-
-
---------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
---There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate
---so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce
---[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base] table
+----------------Social Personal Circumstance Ranked Table------------------------------------
+----There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate
+----so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce
+----[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base] table
 
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]
 SELECT *
 ,ROW_NUMBER() OVER(PARTITION BY Person_ID,TermGroup ORDER BY [SocPerCircumstanceRecDate] desc--, SocPerCircumstanceRank asc
 ) as SocPerCircumstanceLatest
---ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
+--ranks each SocPerCircumstance with the same Person_ID and TermGroup by the date so that the latest record is labelled as 1
 INTO [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]
 FROM(
 SELECT DISTINCT
@@ -126,36 +93,15 @@ FROM [mesh_IAPT].[IDS011socpercircumstances] sp
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON sp.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND sp.AuditId = i.AuditId AND IsLatest = 1 AND SocPerCircumstanceRecDate IS NOT NULL AND Person_ID IS NOT NULL
 
 )_
-GO
 
 
 
+-- SocPerCircumstance Dashboard Output----------------------------------------------------------------------------------------------------------------------------------------
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
 
---------------------
-SET DATEFIRST 1
-SET NOCOUNT ON
---------------
-DECLARE @Offset INT = -1
--------------------------
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
 
-DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-
-DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
-
-DECLARE @PeriodStart2 DATE = (SELECT DATEADD(MONTH,(@Offset +1),MAX(@PeriodStart)) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @PeriodEnd2 DATE = (SELECT eomonth(DATEADD(MONTH,(@Offset +1),MAX(@PeriodEnd))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50))
-
-
--- SocPerCircumstance ----------------------------------------------------------------------------------------------------------------------------------------
-
---IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PresCompADSM]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PresCompADSM]
-
-INSERT INTO [MHDInternal].[TEMP_TTAD_PresCompADSM]
-
-SELECT  @MonthYear AS 'Month'
+SELECT  i.ReportingPeriodStartDate AS 'Month'
 		,'Refresh' AS DataSource
 		,'England' AS 'GroupType'
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
@@ -205,41 +151,16 @@ SELECT  @MonthYear AS 'Month'
 		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND  ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Deterioration'
 		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND  ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Improvement'
 		,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'NotCaseness'
-		,COUNT(DISTINCT CASE WHEN ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND CompletedTreatment_Flag = 'True' AND
-					(pc.Validated_PresentingComplaint = 'F400' OR 
-					pc.Validated_PresentingComplaint = 'F401' OR 
-					pc.Validated_PresentingComplaint = 'F410' OR 
-					pc.Validated_PresentingComplaint LIKE 'F42%' OR 
-					pc.Validated_PresentingComplaint = 'F431' OR 
-					pc.Validated_PresentingComplaint = 'F452' OR 
-					pc.Validated_PresentingComplaint = '83482000' OR 
-					pc.Validated_PresentingComplaint LIKE 'G933%' OR 
-					pc.Validated_PresentingComplaint LIKE 'K58%' OR 
-					pc.Validated_PresentingComplaint = '723916001'  
-					)
-					THEN r.PathwayID ELSE NULL END) AS ADSMFinishedTreatment
-		,COUNT(DISTINCT CASE WHEN ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND CompletedTreatment_Flag = 'True'
-					AND (([Validated_PresentingComplaint] = 'F400' AND ADSM = 'AgoraAlone')
-					or ([Validated_PresentingComplaint] = 'F401' AND ADSM = 'SocialPhobia')
-					or ([Validated_PresentingComplaint] = 'F410' AND ADSM = 'PanicDisorder')
-					or ([Validated_PresentingComplaint] LIKE 'F42%' AND ADSM = 'OCD')
-					or ([Validated_PresentingComplaint] = 'F431' AND ADSM = 'PTSD')
-					or ([Validated_PresentingComplaint] = 'F452' AND ADSM = 'AnxietyInventory')
-					or (Validated_PresentingComplaint = '83482000' and ADSM = 'BIQ')
-					or (Validated_PresentingComplaint LIKE 'G933%' and ADSM = 'CFQ')
-					or (Validated_PresentingComplaint LIKE 'K58%' and ADSM = 'IBS')
-					or (Validated_PresentingComplaint = '723916001' and ADSM = 'MUS')
-					) THEN r.PathwayID ELSE NULL END) AS CountAppropriatePairedADSM
-		,COUNT( DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND SourceOfReferralIAPT = 'B1' THEN r.PathwayID ELSE NULL END) AS SelfReferral
-		,COUNT( DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND SourceOfReferralIAPT = 'A1' THEN r.PathwayID ELSE NULL END) AS GPReferral
-		,COUNT( DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND SourceOfReferralIAPT NOT IN ('B1','A1') THEN r.PathwayID ELSE NULL END) AS OtherReferral
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) <=28
+		,COUNT(DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND SourceOfReferralIAPT = 'B1' THEN r.PathwayID ELSE NULL END) AS SelfReferral
+		,COUNT(DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND SourceOfReferralIAPT = 'A1' THEN r.PathwayID ELSE NULL END) AS GPReferral
+		,COUNT(DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND SourceOfReferralIAPT NOT IN ('B1','A1') THEN r.PathwayID ELSE NULL END) AS OtherReferral
+		,COUNT(DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) <=28
 					THEN r.PathwayID ELSE NULL END) AS FirstToSecond28Days
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 29 AND 56
+		,COUNT(DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 29 AND 56
 					THEN r.PathwayID ELSE NULL END) AS FirstToSecond28To56Days
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 57 AND 90
+		,COUNT(DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 57 AND 90
 					THEN r.PathwayID ELSE NULL END) AS FirstToSecond57To90Days
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) > 90
+		,COUNT(DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) > 90
 					THEN r.PathwayID ELSE NULL END) AS FirstToSecondMoreThan90Days
 		,COUNT(distinct(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '50' then r.PathwayID END)) as 'Ended Not Assessed'
 		,COUNT(distinct(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '16' then r.PathwayID END)) as 'Ended Incomplete Assessment'
@@ -255,15 +176,13 @@ SELECT  @MonthYear AS 'Month'
 			WHEN  GENDER = '2' THEN	'Female'
 			WHEN  GENDER = '9' THEN	'Indeterminate (unable to be classified as either male or female)'
 			WHEN  GENDER = 'X' THEN 'Not Known (PERSON STATED GENDER CODE not recorded)' ELSE 'Other' END AS PCVariable
---INTO [MHDInternal].[TEMP_TTAD_PresCompADSM]
+--INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
 FROM	[mesh_IAPT].[IDS101referral] r
 		--------------------------
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON r.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND r.AuditId = i.AuditId AND IsLatest = 1
 		--------------------------
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank] spc ON mpi.Person_ID = spc.Person_ID AND spc.SocPerCircumstanceLatest = 1 AND r.OrgID_Provider = spc.OrgID_Provider
-
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_PresComp] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
 		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 
 		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
@@ -276,10 +195,10 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL	
 
 WHERE	UsePathway_Flag = 'True'
-		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart
+		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -12, @PeriodStart) AND @PeriodStart
 	
 
-GROUP BY CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
+GROUP BY i.ReportingPeriodStartDate,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
 			,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END
 			,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END
 			,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
@@ -289,15 +208,20 @@ GROUP BY CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code
 			,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
 			,[Term]
 			,TermGroup
-			,CASE WHEN Gender = '1' THEN	'Male' 
+			,CASE WHEN GENDER = '1' THEN 'Male' 
 				WHEN  GENDER = '2' THEN	'Female'
 				WHEN  GENDER = '9' THEN	'Indeterminate (unable to be classified as either male or female)'
 				WHEN  GENDER = 'X' THEN 'Not Known (PERSON STATED GENDER CODE not recorded)' ELSE 'Other' END
 
 GO
 
+-------Delete Temporary Table for Soc/Personal Rank
+
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]
+
 ----------------------------------------------------------------------------------------------------------------------------------
-Print CHAR(10) + 'Updated - [MHDInternal].[TEMP_TTAD_PresCompADSM]'
+Print CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
+
 
 
 
