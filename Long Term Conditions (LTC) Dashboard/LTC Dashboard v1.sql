@@ -1,14 +1,28 @@
+--------Early stage metrics for selected Long Term Conditions split by Integrated Pathways to flow to the policy team-------------
+
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly])
+GO
+
+--------Declare Offset----------------------------------------------------------------------
+
 DECLARE @Period_Start DATE
 DECLARE @Period_End DATE 
 
-SET @Period_Start = (SELECT DATEADD(MONTH,-1,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-SET @Period_End = (SELECT eomonth(DATEADD(MONTH,-1,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+SET @Period_Start = (SELECT DATEADD(MONTH,0,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+SET @Period_End = (SELECT eomonth(DATEADD(MONTH,0,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 SET DATEFIRST 1
 
 PRINT @Period_Start
 PRINT @Period_End
 
---IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+----Main Dashboard Counts By Provider, Sub-ICB, ICB, Region and National Geographies
+	---All Terms for Long Term Conditions
+	---Split by Integrated and Non-Integrated Pathways
+	
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
 SELECT 
 			CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS Month
@@ -171,7 +185,7 @@ SELECT
 			AS 'Did not attend, no advance warning given'
 			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '4' THEN cc.CareContactId ELSE NULL END)
 			AS 'Appointment cancelled or postponed by the health care provider'
---INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
@@ -189,7 +203,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId 
 
 WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
 		AND l.IsLatest = 1
 GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE)
 		,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END
@@ -322,7 +336,13 @@ OR
 )
 GROUP BY r.PathwayID
 
---Averages Base
+----------------------------------------------Averages Base Table--------------------------------------------------------
+	--WSAS measures
+	--DDS, BPI and CAT inventory Scores
+	--Average appointment counts for Treatment Care Contacts and Employment Advisors
+	--Waiting times to Appointments
+	
+	
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
 SELECT DISTINCT
 	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS Month
@@ -405,7 +425,7 @@ FROM	[mesh_IAPT].[IDS101Referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
 		AND l.IsLatest = 1
 
 ----------------------
