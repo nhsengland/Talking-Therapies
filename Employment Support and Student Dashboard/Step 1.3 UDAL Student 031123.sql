@@ -1,6 +1,13 @@
 --Prior to November 2023, this script produced the output table used in the Student Dashboard.
 --From November 2023, the Student Dashboard was added into the Employment Support Dashboard.
 
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+--Delete the latest month from the following table so that the refreshed version of that month can be added.
+--Only one table in this script requires this.
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Student]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Student])
+
 -- Postcode Ranking -----------------------------
 --Trust sites have more than one postcode so these are ranked alphabetically so only one postcode is used
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes]
@@ -32,7 +39,7 @@ GO
 ---------------------------------------------------------
 --Base Table
 --This produces a table with one PathwayID per month per row
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -73,21 +80,21 @@ SELECT DISTINCT
     ,pc.[Longitude] AS 'Long'
     ,pc.[Address4] AS 'City'
 
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'RecoveredTotal'
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.TreatmentCareContact_Count >= 2 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'FinishingTreatmentTotal'
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and r.TreatmentCareContact_Count >= 2 AND r.NotCaseness_Flag = 'true' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and r.CompletedTreatment_Flag='True' AND r.NotCaseness_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'NotCasenessTotal'
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.TreatmentCareContact_Count >= 2 AND e.EmployStatus = '03' AND r.Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND e.EmployStatus = '03' AND r.Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'RecoveredStudent'
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.TreatmentCareContact_Count >= 2 AND e.EmployStatus = '03' AND r.CompletedTreatment_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND e.EmployStatus = '03' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'FinishingTreatmentStudent'
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and r.TreatmentCareContact_Count >= 2 AND r.NotCaseness_Flag = 'True' AND e.EmployStatus = '03' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate and r.CompletedTreatment_Flag='True' AND r.NotCaseness_Flag = 'True' AND e.EmployStatus = '03' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'NotCasenessStudent'
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.TreatmentCareContact_Count >= 2 AND r.ReliableImprovement_Flag = 'True' AND e.EmployStatus = '03' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.ReliableImprovement_Flag = 'True' AND e.EmployStatus = '03' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'Reliable Improvement STUDENT'
-    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.TreatmentCareContact_Count >= 2 AND r.ReliableImprovement_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+    ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.ReliableImprovement_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'Reliable Improvement'
 
 INTO [MHDInternal].[TEMP_TTAD_EmpSupp_StudentBase]
@@ -104,7 +111,7 @@ FROM    [mesh_IAPT].[IDS101referral] r
 
         LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes] pc ON ph.[Organisation_Code]= pc.[SiteCode] AND PostcodeRank=1
 WHERE 
-    l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh, the offset should be set to 0 to get the latest month
+    l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart ---for monthly refresh the offset should be -1 as we want the data for the latest 2 months month (i.e. to refresh the previous month's primary data)
     AND r.UsePathway_Flag = 'True' 
     AND l.IsLatest = 1
 
