@@ -471,7 +471,7 @@ LEFT JOIN #ProviderMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month
 
 )_
 
-PRINT 'Updated - [MHDInternal].[IAPT_Avg_Max_Wait]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Max_Wait]'
 
 -------------------------------------------------------------------------------------------------------------------------------
  -- Average Wait Per Person ---------------------------------------------------------------------------------------------------
