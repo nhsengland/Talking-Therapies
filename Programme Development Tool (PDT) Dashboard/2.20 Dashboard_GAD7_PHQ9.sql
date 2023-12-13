@@ -91,7 +91,9 @@ GROUP BY
 	,[STP Name]
 	,PHQ9_FirstScore
 GO
-
+	
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7]
+	
 SELECT
 	Month
 	,'Refresh' AS 'DataSource'
