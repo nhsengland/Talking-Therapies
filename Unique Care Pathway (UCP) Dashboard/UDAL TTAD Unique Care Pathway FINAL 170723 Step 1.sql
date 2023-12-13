@@ -2,6 +2,11 @@
 
 /****** Script for Unique Care Pathways Dashboard to produce the base table for the box plots ******/
 
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+--Delete the latest month from the following table so that the refreshed version of that month can be added.
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_UCP_Base]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_UCP_Base])
 ------------------------------------------------------------------------------------------------------------------------
 --------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
 --There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate 
@@ -46,11 +51,11 @@ WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','4203500
 --This table is used as the base of the aggregated table called [MHDInternal].[DASHBOARD_TTAD_UCP_Aggregated]
 
 DECLARE @PeriodStart DATE
-DECLARE @PeriodEnd DATE 
+DECLARE @PeriodEnd DATE
 
 -- Set the start and end dates of the reporting period based on the latest submission ID
-SET @PeriodStart = (SELECT DATEADD(MONTH,-1,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-SET @PeriodEnd = (SELECT EOMONTH(DATEADD(MONTH,-1,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+SET @PeriodStart = (SELECT DATEADD(MONTH,0,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+SET @PeriodEnd = (SELECT EOMONTH(DATEADD(MONTH,0,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 -- Set the first day of the week as Monday
 SET DATEFIRST 1
@@ -746,7 +751,7 @@ UsePathway_Flag = 'True'
 AND IsLatest = 1
 
 --Defines the full time period included in the table
-AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For superstats monthly refresh, the offset should be set to 0 to just get the latest month
+AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --for monthly refresh the offset should be -1 as we want the data for the latest 2 months month (i.e. to refresh the previous month's primary data)
 	
 --Filters for at least 1 treatment session
 AND TreatmentCareContact_Count>0
