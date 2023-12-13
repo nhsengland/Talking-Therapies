@@ -361,7 +361,7 @@ GO
 
 ---- Repeat referrals Insert table -------------------------------------------------------------------------
 
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
+DELETE FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]
 
 DECLARE @Offset INT = 0
 
@@ -375,7 +375,7 @@ DECLARE @Period_end AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriod
 PRINT @Period_Start
 PRINT @Period_End
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
+INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]
 
 SELECT DATENAME(m, @Period_Start) + ' ' + CAST(DATEPART(yyyy, @Period_Start) AS VARCHAR) AS 'Month'
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
@@ -415,7 +415,7 @@ END
 UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = NULL
 UPDATE [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] SET [RepeatReferrals2] = b.[Repeat Referrals]
 
-FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert] b
+FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert] b
 
 INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[Month] 
 			AND a.[Region Code] = b.[Region Code] 
@@ -427,4 +427,4 @@ INNER JOIN [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] a ON a.[Month] = b.[M
 
 PRINT CHAR(10)
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]'
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]'
+PRINT 'Updated - [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]'
