@@ -7,9 +7,9 @@ SET NOCOUNT ON
 
 -- DELETE MAX(Month) -----------------------------------------------------------------------
  
-DELETE FROM [MHDInternal].[MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]
+DELETE FROM [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]
  
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[MHDInternal].[STAGING_TTAD_PDT_Over65Metrics])
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics])
 
 --------------------------------------------------------------------------------------------
 	
