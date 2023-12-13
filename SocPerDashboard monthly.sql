@@ -43,8 +43,8 @@ SocPerCircumstance
 ,SocPerCircumstanceRecDate
 ,Person_ID
 ,OrgID_Provider
-
-,CASE WHEN SocPerCircumstance IN ('15167005','66590003','1129201000000100')
+,Term
+,CASE WHEN SocPerCircumstance IN ('15167005','66590003','1129201000000100','1129201000000100','1129201000000101')
 			 THEN 'Addiction - Alcohol'
 
 		WHEN SocPerCircumstance IN ('191816009','112891000000107','228367002','26416006')
@@ -64,13 +64,14 @@ SocPerCircumstance
 		WHEN SocPerCircumstance IN ('390790000','728611000000100','728621000000106','729851000000109','728631000000108','446654005','748241000000103')
 			 THEN 'Asylum / Refugee'
 
-		WHEN SocPerCircumstance IN ('1322631000000100','1322381000000100','1322581000000100','1322621000000100','1322641000000100','1322601000000100','1322591000000100','1322571000000100')
+		WHEN SocPerCircumstance IN ('1322631000000100','1322381000000100','1322581000000100','1322621000000100','1322641000000100','1322601000000100','1322591000000100','1322571000000100',
+					'1322631000000106','1322381000000103','1322581000000109','1322621000000109','1322641000000102','1322591000000106','1322571000000107'	)
 			 THEN 'Occupational Exposure to COVID'
 
-		WHEN SocPerCircumstance IN ('224123004','1128911000000100','224122009','1127321000000100','704502000','77386006')
+		WHEN SocPerCircumstance IN ('224123004','1128911000000100','224122009','1127321000000100','704502000','77386006','1127321000000100','1127321000000108')
 			 THEN 'Perinatal'
 
-		WHEN SocPerCircumstance IN ('42035005','89217008','20430005','699042003','38628009','76102007','766822004','440583007','765288000','1064711000000100')
+		WHEN SocPerCircumstance IN ('42035005','89217008','20430005','699042003','38628009','76102007','766822004','440583007','765288000','1064711000000100','1064711000000108')
 			THEN 'Sexual Orientation'
 
 		WHEN SocPerCircumstance IN ('160539008','427963008','368001000000101','160567004','428815009','271448006','373831000000102','367831000000100','444870008','298025008',
@@ -91,13 +92,14 @@ SocPerCircumstance
 
 FROM [mesh_IAPT].[IDS011socpercircumstances] sp
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON sp.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND sp.AuditId = i.AuditId AND IsLatest = 1 AND SocPerCircumstanceRecDate IS NOT NULL AND Person_ID IS NOT NULL
-
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 )_
 
 
 
+
 -- SocPerCircumstance Dashboard Output----------------------------------------------------------------------------------------------------------------------------------------
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
 
@@ -176,14 +178,13 @@ SELECT  i.ReportingPeriodStartDate AS 'Month'
 			WHEN  GENDER = '2' THEN	'Female'
 			WHEN  GENDER = '9' THEN	'Indeterminate (unable to be classified as either male or female)'
 			WHEN  GENDER = 'X' THEN 'Not Known (PERSON STATED GENDER CODE not recorded)' ELSE 'Other' END AS PCVariable
---INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+
 FROM	[mesh_IAPT].[IDS101referral] r
 		--------------------------
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON r.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND r.AuditId = i.AuditId AND IsLatest = 1
 		--------------------------
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank] spc ON mpi.Person_ID = spc.Person_ID AND spc.SocPerCircumstanceLatest = 1 AND r.OrgID_Provider = spc.OrgID_Provider
-		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 
 		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
@@ -221,6 +222,7 @@ IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]') IS NOT NULL DROP TA
 
 ----------------------------------------------------------------------------------------------------------------------------------
 Print CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
+
 
 
 
