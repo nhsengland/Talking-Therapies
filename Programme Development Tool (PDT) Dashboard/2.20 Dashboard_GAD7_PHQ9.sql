@@ -9,7 +9,7 @@ WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD
 
 -- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_PHQ9_GAD7] -----------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
