@@ -196,7 +196,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL	
 
 WHERE	UsePathway_Flag = 'True'
-		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -12, @PeriodStart) AND @PeriodStart
+		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 	
 
 GROUP BY i.ReportingPeriodStartDate,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
