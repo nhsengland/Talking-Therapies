@@ -299,7 +299,7 @@ INNER JOIN #Record2 m ON m.[IC_PATHWAY_ID] = [PreviousID] AND m.[REFERRAL_ID] = 
 
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]
 
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0
 
 WHILE @Offset > -33
 
@@ -363,7 +363,7 @@ GO
 
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals_Insert]
 
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0
 
 WHILE @Offset > -36
 
