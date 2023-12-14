@@ -3,8 +3,10 @@
 -- DELETE MAX(Month) -----------------------------------------------------------------------
  
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
- 
 WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages])
 GO
 
 --------Declare Offset----------------------------------------------------------------------
@@ -203,7 +205,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId 
 
 WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be -1
 		AND l.IsLatest = 1
 GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE)
 		,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END
@@ -425,7 +427,7 @@ FROM	[mesh_IAPT].[IDS101Referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be 0 to get the latest month only
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be -1
 		AND l.IsLatest = 1
 
 ----------------------
