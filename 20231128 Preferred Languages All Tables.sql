@@ -1,7 +1,26 @@
--------------------------------------
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_AvgWaits]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_AvgWaits])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_InterpreterPresent]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_InterpreterPresent])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_DischargeCodes]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_DischargeCodes])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes])
+
+GO
+
+-----------------------------------
 --Preferred Language Top 20 List
 -----------------------------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -36,7 +55,7 @@ FROM    [mesh_IAPT].[IDS101referral] r
 
 WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to 0 to get the latest month only
+		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to -1
 
 --Aggregate and Rank
 --Aggregates the number of referrals, accessing, finishing treatment, recovering and not caseness nationally
@@ -234,10 +253,10 @@ FROM (
 WHERE countAppts = 2
 
 -- Calculate Averages------------------------------------------------------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0 --For monthly refresh this should be set to 0.
 
-DECLARE @OffsetFilter INT = 0 --This is the Offset used in the filtering of each average calculation table so that more than one month can be run at once. 
---For monthly refresh this should be set to 0 to get the latest month only.
+DECLARE @OffsetFilter INT = -1 --This is the Offset used in the filtering of each average calculation table so that more than one month can be run at once. 
+--For monthly refresh this should be set to -1.
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -326,7 +345,7 @@ GO
 ---------------------------------
 --Interpreter Present
 ---------------------------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0 --For monthly refresh this should be set to 0.
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -367,7 +386,7 @@ FROM    [mesh_IAPT].[IDS101referral] r
 
 WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to 0 to get the latest month only
+		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to -1.
 		AND cc.CareContDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate
 		AND cc.AttendOrDNACode IN ('5','05','6','06')
 		AND cc.AppType IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5')
@@ -444,7 +463,7 @@ FROM(
 --This table has one PathwayID per row and only looks at PathwayIDs finishing a course of treatment in the period 
 --and who have at least one care contact with a valid treatment language 
 --and who have a valid preferred language
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0 --For monthly refresh this should be set to 0.
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -490,7 +509,7 @@ FROM    [mesh_IAPT].[IDS101referral] r
 
 WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		-------------------------------------------
-		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh, this offset should be set to 0 to get the latest month only
+		AND l.ReportingPeriodStartDate BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refresh, this offset should be set to -1.
 		AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate
 		AND r.CompletedTreatment_Flag = 'TRUE'
 		AND r.EndCode IN ('10','11','12','13','14','16','17','46','47','48','49','50','96','40','42','43','44') 
@@ -527,7 +546,7 @@ GO
 
 --Outcomes Base
 --This table has one PathwayID per row
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0 --For monthly refresh this should be set to 0.
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -563,7 +582,7 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		----------------------------------------
 		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.[PathwayID] = cc.[PathwayID] AND cc.[AuditId] = l.[AuditId]
 
-WHERE	l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to 0 to get the latest month only
+WHERE	l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be set to -1.
 		AND r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
 		AND l.IsLatest = '1' 
 		AND r.UsePathway_Flag = 'True'
