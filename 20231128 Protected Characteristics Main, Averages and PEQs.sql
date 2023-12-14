@@ -1,5 +1,16 @@
 
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable])
 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs])
+
+GO
 --------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
 
 /* There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each 
@@ -44,7 +55,7 @@ FROM (
       WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004') --Filters for codes relevant to sexual orientation
 )_
 
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0
 --------------------
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -278,7 +289,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
-	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart -- For monthly refresh the offset uses a value of '0'
+	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart -- For monthly refresh the offset uses a value of '-1'
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Aggregate output for dashboard table ----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1249,7 +1260,7 @@ GO
 ---------------------------------------------------------------------------------------------------------------------
 -----------PEQs
 ------------------------------------------------------------------------------------------------------------------------------
-DECLARE @Offset INT = -1
+DECLARE @Offset INT = 0
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
@@ -1390,7 +1401,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 WHERE	r.UsePathway_Flag = 'True' AND IsLatest = 1
 		AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate
 		AND r.CompletedTreatment_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 		AND csa.[CodedAssToolType] IN
 		('747901000000107','747911000000109','747921000000103','747931000000101'
 		,'747941000000105','747951000000108','747891000000106','747861000000100'
@@ -1511,6 +1522,8 @@ GROUP BY
       ,[Sexual Orientation]
       ,Question
       ,Answer
+
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]' + CHAR(10)
 
 --Drop Temporary Tables
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]

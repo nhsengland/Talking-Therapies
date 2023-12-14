@@ -22,7 +22,7 @@ FROM [UKHD_ODS].[Postcode_Grid_Refs_Eng_Wal_Sco_And_NI_SCD] a
 ---------------------------------------------------------------------------------------------------------------------------------
 /* Setting parameters for rolling 12 months */
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodStart DATE = (SELECT DATEADD(DAY,1, EOMONTH(DATEADD(MONTH,-12,@PeriodEnd))))
@@ -456,7 +456,7 @@ FROM [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
 --Drop Temporary Tables:
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes]
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapBase]
- DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
- DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Org]
- DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Prop]
- DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_RecRel]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Org]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Prop]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_RecRel]
