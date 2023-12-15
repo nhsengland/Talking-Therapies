@@ -1,9 +1,20 @@
+
+-- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] -----------------------------
+
+-- DELETE MAX(Month) -----------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_Averages]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_Averages])
+
+--------------------------------------------------------------------------------------
+
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
 -- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_Averages] -----------------------------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -145,7 +156,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = '1'
 		AND r.TreatmentCareContact_Count > 1 
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
 
 ----------------------------------------------------------------------------------------------------------
@@ -182,7 +193,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = '1'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND r.[TherapySession_FirstDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
 GO
 
@@ -726,6 +737,7 @@ GROUP BY
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ICB -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- ICB Median Apps ----------------------------------------------------------------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianApps]
 SELECT DISTINCT 
@@ -949,9 +961,12 @@ GROUP BY
 	,[SexualOrientation]
 	,[STP Code]
 	,[STP Name]
+
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- ICB Median Wait ---------------------------------------------------------------------
+-- ICB Median Wait -------------------------------------------------------------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianWait]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianWait]
+
 SELECT DISTINCT 
 	Month
 	,'STP' AS 'Level'
@@ -998,8 +1013,11 @@ GROUP BY
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Sub-ICB -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- Sub-ICB Median Appointments ---------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianApps]
+
 SELECT DISTINCT 
 	Month
 	,'CCG' AS 'Level'
@@ -1020,6 +1038,7 @@ FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GO
 -- Sub-ICB Mean Appointments ------------------------------------------------------------------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps]
+
 --Sub-ICB, Total
 SELECT DISTINCT 
 	Month
@@ -1225,7 +1244,9 @@ GROUP BY
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Sub-ICB Median Wait -----------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianWait]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianWait]
+
 SELECT DISTINCT 
 	Month
 	,'CCG' AS 'Level'
@@ -1274,8 +1295,11 @@ GROUP BY
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Provider --------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- Provider Median Apps --------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps]
+
 SELECT DISTINCT 
 	Month
 	,'Provider' AS 'Level'
@@ -1501,7 +1525,9 @@ GROUP BY
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Provider Median Wait --------------------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait]
+
 SELECT DISTINCT 
 	Month
 	,'Provider' AS 'Level'
@@ -1548,7 +1574,9 @@ GROUP BY
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Unsuppressed Final Table -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
+
 --National
 SELECT DISTINCT	
 		a.[Month]
@@ -1581,6 +1609,7 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanWait] b ON a.[Level]
 LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianWait] c ON a.[Level] = c.[Level] AND a.[Month] = c.[Month] AND a.[CCG Code] = c.[CCG Code] AND a.[Provider Code] = c.[Provider Code] AND a.[Region Code] = c.[Region Code] AND a.[STP Code] = c.[STP Code] AND a.[Category] = c.[Category] AND a.[Variable] = c.[Variable]
 LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianApps] d ON a.[Level] = d.[Level] AND a.[Month] = d.[Month] AND a.[CCG Code] = d.[CCG Code] AND a.[Provider Code] = d.[Provider Code] AND a.[Region Code] = d.[Region Code] AND a.[STP Code] = d.[STP Code] AND a.[Category] = d.[Category] AND a.[Variable] = d.[Variable]
 GO
+
 --Region
 INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 SELECT DISTINCT	
@@ -1711,8 +1740,9 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps] d ON a.[Leve
 
 -------------------------------------------------------------------------------------------------
 -- Rounding & Supression ------------------------------------------------------------------------
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_Averages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_Averages]
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
+
 SELECT 
 	[Month]
 	,[Level]
@@ -1772,8 +1802,8 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 WHERE Level<>'National'
 
--------------------------------------------------
---Drop Temporary Tables
+--Drop Temporary Tables -------------------------------------------------
+
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
@@ -1805,4 +1835,5 @@ DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanWait]
 
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 -------------------------------------------------------------------------------------
+
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_Averages]'

@@ -2,9 +2,17 @@ SET ANSI_WARNINGS ON
 SET DATEFIRST 1
 SET NOCOUNT ON
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- DELETE MAX(Month) ------------------------------------------------------------------------------------------------------------------------------------------
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly])
+
 -----------------------------------------------------------------------------------------------------
 --This table counts the number of appointments per PathwayID and Referral Request Date and then filters the PathwayID and Referral Request Date based on the number of appointments
 --This produces a table with PathwayIDs and the referral request received date with the most appointments associated with it
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps]
 
 SELECT * INTO [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps] FROM
@@ -48,7 +56,8 @@ WHERE RowID = 1
 --This produces a base table with one PathwayID per row along with columns for the month, geography, therapy mode, outcome flags, first treatment wait and number of appointments
 --This table only includes PathwayIDs that have a service discharge date within the reporting period and have completed treatment
 --This table is used for producing the aggregated table used in the dashboard below ([MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly])
-DECLARE @Offset AS INT = -1
+
+DECLARE @Offset AS INT = 0 -- Include the most recent month
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -71,7 +80,7 @@ SELECT DISTINCT
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
 		,'Total' AS 'Category'
 		,'Total' AS 'Variable'
-		,'Refresh' AS DataSource
+		,'Refresh' AS DataSource -- Is it stil appropriate to include this?
 		,a.[Care Contact Patient Therapy Mode]
 		,r.PathwayID
 		,r.ReferralRequestReceivedDate
@@ -101,18 +110,18 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
 			AND ph.Effective_To IS NULL
 
-WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
+WHERE	r.UsePathway_Flag = 'TRUE' AND l.IsLatest = 1
 		AND r.CompletedTreatment_Flag = 'TRUE' 
 		AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart	
-
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart -- @Offset of 0 combined with -1 will return the required time period
+	
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- INSERT ----------------------------------------------------------------------------------------------------------------------------------------------------- 
---This table aggregates the base table above ([MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]) at different geography levels (CCG, STP, Region, National)
---This table is used in the dashboard
 
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
+--This table aggregates the base table above ([MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]) at different geography levels (CCG, STP, Region, National)
+
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
+
 SELECT  Month
 		,CAST('CCG' AS VARCHAR(255)) AS OrgType
 		,[CCG Code] AS OrgCode
@@ -133,7 +142,7 @@ SELECT  Month
 		
 		,TRY_CAST(AVG(Apts) AS DECIMAL(5, 2)) AS 'AvgApts'
 		,TRY_CAST(AVG(FirstTreatmentWait) AS DECIMAL(5, 2)) AS 'AvgWait'
-INTO [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]
+
 FROM [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]
 
 GROUP BY Month
@@ -234,12 +243,9 @@ FROM [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]
 GROUP BY Month
 		,[Care Contact Patient Therapy Mode]
 
-
---------------------------------------------------------------------------------
---Drop temporary tables
+-- Drop temporary tables -------------------------------------------------------
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_RankedApps]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_CareContactMethod_Base]
+--------------------------------------------------------------------------------
 
-
--- -----------------------------------------------------------------------------
- PRINT CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]'
+PRINT CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_CareContactMode_Apts_Monthly]'

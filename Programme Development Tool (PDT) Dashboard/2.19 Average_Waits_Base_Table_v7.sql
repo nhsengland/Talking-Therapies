@@ -1,6 +1,16 @@
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
+-- DELETE MAX(Month)s ------------------------------------------------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_AssessToFirstLIHI] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_AssessToFirstLIHI])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Max_Wait] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Max_Wait])
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Wait_Between_Apts] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Wait_Between_Apts])
+
+----------------------------------------------------------------------------------------------------------------------------------
+
 -- Selects Max CareContact Record (subquery due to selection of multiple records for some carecontactIds where there are different recordings of time/apptype - still an issue with some carecontactIds having multiple dates - check with kaz) keep in for now
 
 IF OBJECT_ID ('[MHDInternal].[TEMP_IAPT_AvgWaits_CareContact]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_IAPT_AvgWaits_CareContact]
@@ -48,7 +58,7 @@ INNER JOIN [mesh_IAPT].[IDS202CareActivity] a ON MinRecord = a.UniqueID_IDS202 A
 ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-DECLARE @Offset AS INT = -2
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodendDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -95,7 +105,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL	
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
 		AND CompletedTreatment_Flag = 'True'
 
@@ -461,7 +471,7 @@ LEFT JOIN #ProviderMedianMaxWait b ON a.Level = b.Level AND a.[Month] = b.[Month
 
 )_
 
-PRINT 'Updated - [MHDInternal].[IAPT_Avg_Max_Wait]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_Avg_Max_Wait]'
 
 -------------------------------------------------------------------------------------------------------------------------------
  -- Average Wait Per Person ---------------------------------------------------------------------------------------------------

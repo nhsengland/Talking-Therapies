@@ -1,9 +1,15 @@
-SET ANSI_WARNINGS OFF
-SET NOCOUNT ON
 
 -- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] -----------------------------
 
-DECLARE @Offset AS INT = -1
+-- DELETE MAX(Month) -----------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity])
+
+--------------------------------------------------------------------------------------
+
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -11,9 +17,12 @@ DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPAR
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
---Base Table
+-- Base Table ----------------------------------------------------------------------------------------------------------------
+
 --This table has one Unique_CareContactID per row and is used to produce [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] 
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]
+
 SELECT DISTINCT
 	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS [Month]
 	,a.Unique_CareContactID
@@ -93,6 +102,7 @@ SELECT DISTINCT
 	END AS 'Chat Room (Synchronous)' --in just v2.1
 
 INTO [MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]
+
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
@@ -110,13 +120,13 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL
 		
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh this should be 0 so only the latest month is added
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 
---Final Aggregated Table
+-- Final Aggregated Table --------------------------------------------------------------------------------------------------------------------------
 --This table aggregates the base table created above ([MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]) to produce the final table used in the dashboard
 
---IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]
+
 SELECT  
 	Month
 	,'England' AS 'GroupType'
@@ -145,8 +155,9 @@ SELECT
 	,SUM([Video consultation]) AS 'Video consultation'
 	,SUM([Message Board (Asynchronous)]) AS 'Message Board (Asynchronous)'
 	,SUM([Chat Room (Synchronous)]) AS 'Chat Room (Synchronous)'
---INTO [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]
+
 FROM [MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]
+
 GROUP BY
 	Month
 	,[Region Code]
@@ -159,8 +170,10 @@ GROUP BY
 	,[STP Name]
 	,[Ethnicity] 
 	,[Attendence Type]
--------------------------------------------------------------------------------------------------------------
---Drop Temporary Table
+
+--Drop Temporary Table -------------------------------
+
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]
-----------------------------------
+
+---------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]'

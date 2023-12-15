@@ -1,9 +1,15 @@
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
--- Refresh updates for [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities] -----------------------------
+-- DELETE MAX(Month) ---------------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities])
 
-DECLARE @Offset AS INT = -1
+-- Refresh updates for [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities] -----------------------
+
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -13,6 +19,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Create base table ------------------------------------------------------------------------------------------------------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_EthnicMinoritiesBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_EthnicMinoritiesBase]
+
 SELECT DISTINCT
 	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
 	,r.PathwayID
@@ -55,17 +62,16 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
 			AND ph.Effective_To IS NULL
 
-WHERE	l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh, the offset should be 0 to get the latest month
+WHERE	l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart 
 		AND r.UsePathway_Flag = 'TRUE'  AND l.IsLatest = 1
 
 
 --- ROUNDING AND PROPORTIONS ----------------------------------------------------------------------------
 
---IF OBJECT_ID ('[MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities]') IS NOT NULL DROP TABLE [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities]
 INSERT INTO [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities]
-SELECT * 
---INTO [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities]
-FROM(
+
+SELECT * FROM (
+
 --National
 SELECT	
 	[Month] 
@@ -250,10 +256,9 @@ GROUP BY
 
 )_
 
------------------------------------------------
---Drop Temporary Table
+-- Drop Temporary Table -----------------------------------------------
+
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_EthnicMinoritiesBase]
-------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[STAGING_TTAD_PDT_EthnicMinorities]'
-
-
