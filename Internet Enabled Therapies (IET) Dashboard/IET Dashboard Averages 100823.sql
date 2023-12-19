@@ -13,74 +13,77 @@
 IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 --National, IET 1+
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+	,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
-GROUP BY 
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
+GROUP BY
 	Quarter
 GO
 
 --National, No IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,'No IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+	,'No IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 
 --National, IET 2+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,'2+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
+
 	
 --Region, 1+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm AS OrgName
-,RegionCodeComm AS OrgCode
-,'1+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm AS OrgName
+	,RegionCodeComm AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -89,18 +92,20 @@ GROUP BY
 --Region, No IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'No IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'No IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -109,18 +114,20 @@ GROUP BY
 --Region, 2+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'2+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -129,18 +136,20 @@ GROUP BY
 --ICB, 1+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -150,18 +159,20 @@ GROUP BY
 --ICB, No IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -171,18 +182,20 @@ GROUP BY
 --ICB, 2+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -192,18 +205,20 @@ GROUP BY
 --Sub-ICB, 1+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -213,18 +228,20 @@ GROUP BY
 --Sub-ICB, No IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -234,18 +251,20 @@ GROUP BY
 --Sub-ICB, 2+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -255,18 +274,20 @@ GROUP BY
 --Provider, 1+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameProv
@@ -276,18 +297,20 @@ GROUP BY
 --Provider, No IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'No IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameProv
@@ -297,18 +320,20 @@ GROUP BY
 --Provider, 2+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
+	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
+	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameProv
@@ -323,84 +348,87 @@ GROUP BY
 --(1+ IET, 2+ IET and No IET), by IET Therapy Types and by Quarter.
 --The full table is re-run each month as the averages need recalculating for quarters
 
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 --National, IET 1+
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
-INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode	
+	,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
+INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,IntEnabledTherProg
 GO
 
 --National, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,IntEnabledTherProg
 
 --National, IET 2+
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,IntEnabledTherProg
 
 --Region, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm AS OrgName
-,RegionCodeComm AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm AS OrgName
+	,RegionCodeComm AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -408,21 +436,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -430,21 +460,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -452,21 +484,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -475,21 +509,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -498,21 +534,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -521,21 +559,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -544,21 +584,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -567,21 +609,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameComm
@@ -590,21 +634,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=1
+WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameProv
@@ -613,21 +659,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
+WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameProv
@@ -636,21 +684,23 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgApptsAndTimePerTreat]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
-WHERE InternetEnabledTherapy_Count>=2
+WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 	,RegionNameProv
@@ -663,7 +713,7 @@ GROUP BY
 
 ----Average IET Contacts:
 -------------------Base table for Average Therapist Time per IET contact---------------------------------------
---This creates a base table with one IET contact per row which is then aggregated to produce [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+--This creates a base table with one IET contact per row which is then aggregated to produce [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 SELECT DISTINCT
 	b.Month
@@ -694,9 +744,11 @@ SELECT DISTINCT
 	,b.ProviderCode
 	,b.ProviderName
 	,b.RegionNameProv
+	,b.RegionCodeProv
 INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 FROM [MHDInternal].[TEMP_TTAD_IET_Base] b
 LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_IETContacts] i ON i.PathwayID = b.PathwayID
+WHERE PathwayIDRank=1
 
 -----------------------------Aggregated Average IET Therapist Time per Contact-------------------------------------------
 --This table aggregates [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase] table to get the number of PathwayIDs with the completed treatment flag
@@ -705,19 +757,19 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_IETContacts] i ON i.PathwayID = b.Pathway
 --(1+ IET, 2+ IET and No IET), by IET Therapy Types and by Quarter.
 --The full table is re-run each month as the averages need recalculating for quarters
 
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 --National, IET 1+
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
-INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+	,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
+INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -726,17 +778,17 @@ GROUP BY
 GO
 
 --National, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'National' AS OrgType
-,'All Regions' AS Region
-,'England' AS OrgName
-,'ENG' AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'National' AS OrgType
+	,'All Regions' AS Region
+	,'England' AS OrgName
+	,'ENG' AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -744,17 +796,17 @@ GROUP BY
 	,IntEnabledTherProg
 
 --National, IET 2+
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'National' AS OrgType
-,'All Regions' AS Region
-,'England' AS OrgName
-,'ENG' AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'National' AS OrgType
+	,'All Regions' AS Region
+	,'England' AS OrgName
+	,'ENG' AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -762,17 +814,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm AS OrgName
-,RegionCodeComm AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm AS OrgName
+	,RegionCodeComm AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -782,17 +836,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -802,17 +858,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -822,17 +880,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -843,17 +903,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -864,17 +926,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -885,17 +949,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -906,17 +972,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -927,17 +995,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -948,17 +1018,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -969,17 +1041,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -990,17 +1064,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1035,7 +1111,7 @@ WHERE l.IsLatest = 1
 )_
 
 -------------------Base table for Average Therapist Time per Any contact---------------------------------------
---This creates a base table with one contact per row which is then aggregated to produce [MHDInternal].[DASHBOARD_TTAD_IET_AvgIETTherapistTime]
+--This creates a base table with one contact per row which is then aggregated to produce [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 SELECT DISTINCT
 	b.Month
@@ -1066,9 +1142,11 @@ SELECT DISTINCT
 	,b.ProviderCode
 	,b.ProviderName
 	,b.RegionNameProv
+	,b.RegionCodeProv
 INTO [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 FROM [MHDInternal].[TEMP_TTAD_IET_Base] b
 LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_AllContacts] ca ON ca.PathwayID=b.PathwayID
+WHERE PathwayIDRank=1
 
 -----------------------------Aggregated Average Any Therapist Time per Contact-------------------------------------------
 --This table aggregates [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase] table to get the number of PathwayIDs with the completed treatment flag
@@ -1077,19 +1155,19 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_AllContacts] ca ON ca.PathwayID=b.Pathway
 --(1+ IET, 2+ IET and No IET), by IET Therapy Types and by Quarter.
 --The full table is re-run each month as the averages need recalculating for quarters
 
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 --National, IET 1+
 SELECT 
-Quarter
-,CAST('National' AS VARCHAR(50)) AS OrgType
-,CAST('All Regions' AS VARCHAR(255)) AS Region
-,CAST('England' AS VARCHAR(255)) AS OrgName
-,CAST('ENG' AS VARCHAR(50)) AS OrgCode
-,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
-INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+	Quarter
+	,CAST('National' AS VARCHAR(50)) AS OrgType
+	,CAST('All Regions' AS VARCHAR(255)) AS Region
+	,CAST('England' AS VARCHAR(255)) AS OrgName
+	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+	,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
+INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1098,17 +1176,17 @@ GROUP BY
 GO
 
 --National, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'National' AS OrgType
-,'All Regions' AS Region
-,'England' AS OrgName
-,'ENG' AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'National' AS OrgType
+	,'All Regions' AS Region
+	,'England' AS OrgName
+	,'ENG' AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CAST( SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1116,17 +1194,17 @@ GROUP BY
 	,IntEnabledTherProg
 
 --National, IET 2+
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'National' AS OrgType
-,'All Regions' AS Region
-,'England' AS OrgName
-,'ENG' AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'National' AS OrgType
+	,'All Regions' AS Region
+	,'England' AS OrgName
+	,'ENG' AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1134,17 +1212,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm AS OrgName
-,RegionCodeComm AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm AS OrgName
+	,RegionCodeComm AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1154,17 +1234,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1174,17 +1256,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Region, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Region' AS OrgType
-,RegionNameComm AS Region
-,RegionNameComm  AS OrgName
-,RegionCodeComm  AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Region' AS OrgType
+	,RegionNameComm AS Region
+	,RegionNameComm  AS OrgName
+	,RegionCodeComm  AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1194,17 +1278,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1215,17 +1301,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1236,17 +1324,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --ICB, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'ICB' AS OrgType
-,RegionNameComm AS Region
-,[ICBName] AS OrgName
-,[ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[ICBName] AS OrgName
+	,[ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1257,17 +1347,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1278,17 +1370,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1299,17 +1393,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Sub-ICB, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Sub-ICB' AS OrgType
-,RegionNameComm AS Region
-,[Sub-ICBName] AS OrgName
-,[Sub-ICBCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Sub-ICB' AS OrgType
+	,RegionNameComm AS Region
+	,[Sub-ICBName] AS OrgName
+	,[Sub-ICBCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1320,17 +1416,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, 1+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'1+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'1+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1341,17 +1439,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, No IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'No IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'No IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1362,17 +1462,19 @@ GROUP BY
 	,IntEnabledTherProg
 
 --Provider, 2+ IET
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AvgAnyTherapistTime]
+INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
-Quarter
-,'Provider' AS OrgType
-,RegionNameProv AS Region
-,[ProviderName] AS OrgName
-,[ProviderCode] AS OrgCode
-,'2+ IET' AS AppointmentType
-,IntEnabledTherProg
-,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-,SUM(CompTreatFlag) AS CompTreatFlag
+	Quarter
+	,'Provider' AS OrgType
+	,RegionNameProv AS Region
+	,[ProviderName] AS OrgName
+	,[ProviderCode] AS OrgCode
+	,'2+ IET' AS AppointmentType
+	,IntEnabledTherProg
+	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
+		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
+	AS CompTreatFlag
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1381,15 +1483,47 @@ GROUP BY
 	,[ProviderName]
 	,[ProviderCode]
 	,IntEnabledTherProg
+
+---------------------------------Final Averages Table--------------------------
+--Combines into one averages table that is used in the dashboard
+--This table is re-run each month
+IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_Averages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_Averages]
+SELECT
+	a.[Quarter]
+	,a.OrgType
+	,a.Region
+	,a.OrgCode
+	,a.OrgName
+	,a.AppointmentType
+	,a.IntEnabledTherProg
+	,a.AverageNumberofIETAppointmentsPerTreatment
+
+	,a.AverageAnyTherapistTimePerTreatment
+	,a.AverageIETTherapistTimePerTreatment
+	,c.AvgAnyTherapistTime
+	,b.AvgIETTherapistTime
+
+	,a.CompTreatFlag as CompTreatFlag
+
+INTO [MHDInternal].[DASHBOARD_TTAD_IET_Averages]
+FROM [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat] a
+LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime] b on a.OrgType=b.OrgType AND a.OrgCode=b.OrgCode AND a.OrgName=b.OrgName AND a.Region=b.Region AND a.[Quarter]=b.[Quarter]
+	AND a.AppointmentType=b.AppointmentType AND a.IntEnabledTherProg=b.IntEnabledTherProg
+LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime] c on a.OrgType=c.OrgType AND a.OrgCode=c.OrgCode AND a.OrgName=c.OrgName AND a.Region=c.Region AND a.[Quarter]=c.[Quarter]
+	AND a.AppointmentType=c.AppointmentType AND a.IntEnabledTherProg=c.IntEnabledTherProg
+
 -----------------------------------------
 --Drop Temp Tables:
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_NoIETDuration]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_Base]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_PEQRank]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_BasePEQ]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_IETContacts]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_BaseAppts]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AllContacts]
--- DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_NoIETDuration]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_Base]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_PEQRank]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_BasePEQ]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_IETContacts]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_BaseAppts]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AllContacts]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
