@@ -1,350 +1,377 @@
-SET ANSI_WARNINGS OFF
+/*					SOCIAL PERSONAL CIRCUMSTANCE DASHBOARD						*/
+
+--------Early stage metrics for selected Social Personal Circumstance to flow to the policy team-------------
+
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance])
+GO
+
+--------------------
 SET DATEFIRST 1
 SET NOCOUNT ON
-
+--------------
+DECLARE @Offset INT = 0
 -------------------------
-DECLARE @Offset INT = -1
--------------------------
 
-DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
-DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
+PRINT @PeriodStart
 
-DECLARE @PeriodStart2 DATE = (SELECT DATEADD(MONTH,(@Offset +1),MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @PeriodEnd2 DATE = (SELECT eomonth(DATEADD(MONTH,(@Offset +1),MAX([ReportingPeriodStartDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+----------------------------------------------------------------------------------------------------------------------------------------
 
-PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
+---- Base Table ------------------------------------------------------------------------------------------------------------------
 
--- Base Table for Paired ADSM ------------------------------------------------------------------------------------------------------------------
+----------------Social Personal Circumstance Ranked Table------------------------------------
+----There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate
+----so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce
+----[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base] table
 
-IF OBJECT_ID ('[MHDInternal].[TTAD_ADSM_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_ADSM_BASE_TABLE]
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]
+SELECT *
+	,ROW_NUMBER() OVER(PARTITION BY Person_ID,TermGroup ORDER BY [SocPerCircumstanceRecDate] desc) as SocPerCircumstanceLatest
+	--ranks each SocPerCircumstance with the same Person_ID and TermGroup by the date so that the latest record is labelled as 1
+INTO [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]
+FROM(
+	SELECT DISTINCT
+		i.AuditID
+		,sp.SocPerCircumstance
+		,sp.SocPerCircumstanceRecDate
+		,sp.Person_ID
+		,sp.RecordNumber
+		,sp.UniqueID_IDS011
+		,sp.OrgID_Provider
+		,i.UniqueSubmissionID
+		,sp.Unique_MonthID
+		,s2.Term
+		,CASE WHEN SocPerCircumstance IN ('15167005','66590003','1129201000000100','1129201000000100','1129201000000101')
+					THEN 'Addiction - Alcohol'
 
-SELECT * INTO [MHDInternal].[TTAD_ADSM_BASE_TABLE] FROM 
+				WHEN SocPerCircumstance IN ('191816009','112891000000107','228367002','26416006')
+					THEN 'Addiction - Drugs'
 
-(SELECT pc.* 
-	FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
-		AND pc.AuditId = l.AuditId 
-		AND pc.Unique_MonthID = l.Unique_MonthID
-	WHERE IsLatest = 1 AND [ReportingPeriodStartDate] <= @PeriodEnd
+				WHEN SocPerCircumstance IN ('405746006','8517006','266919005','77176002')
+					THEN 'Addiction - Smoking'
 
-UNION -------------------------------------------------------------------------------
+				WHEN SocPerCircumstance = '18085000'
+					THEN 'Addiction - Gambling'
+				
+				WHEN SocPerCircumstance = '160933000'
+					THEN 'Debt'
 
-SELECT pc.* 
-FROM [mesh_IAPT].[IDS603presentingcomplaints] pc
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] 
-		AND pc.AuditId = l.AuditId 
-		AND pc.Unique_MonthID = l.Unique_MonthID
-	WHERE File_Type = 'Primary' AND [ReportingPeriodStartDate] BETWEEN @PeriodStart2 AND @PeriodEnd2
+				WHEN SocPerCircumstance IN ('405746006','77176002','225786009','138008005','138009002','8517006','160624000','266919005') THEN 'Addiction - Smoking'
+
+				WHEN SocPerCircumstance IN ('390790000','728611000000100','728621000000106','729851000000109','728631000000108','446654005','748241000000103')
+					THEN 'Asylum / Refugee'
+
+				WHEN SocPerCircumstance IN ('1322631000000100','1322381000000100','1322581000000100','1322621000000100','1322641000000100','1322601000000100','1322591000000100','1322571000000100',
+							'1322631000000106','1322381000000103','1322581000000109','1322621000000109','1322641000000102','1322591000000106','1322571000000107'	)
+					THEN 'Occupational Exposure to COVID'
+
+				WHEN SocPerCircumstance IN ('224123004','1128911000000100','224122009','1127321000000100','704502000','77386006','1127321000000100','1127321000000108')
+					THEN 'Perinatal'
+
+				WHEN SocPerCircumstance IN ('42035005','89217008','20430005','699042003','38628009','76102007','766822004','440583007','765288000','1064711000000100','1064711000000108')
+					THEN 'Sexual Orientation'
+
+				WHEN SocPerCircumstance IN ('160539008','427963008','368001000000101','160567004','428815009','271448006','373831000000102','367831000000100','444870008','298025008',
+				'344141000000104','81918007','428347009','367851000000107','81706006','160542002','429732005','160557009','367861000000105','367871000000103','373911000000103','33822009',
+				'309687009','368061000000102','429539003','276120001','368071000000109','368081000000106','368091000000108','367881000000101','368101000000100','160566008','368121000000109',
+				'160544001','160544001','428504005','160549006','368131000000106','309887007','368141000000102','13439009','160561003','344171000000105','367901000000103','38052003','427874000',
+				'428373004','368351000000102','428506007','368361000000104','428376007','368151000000104','427729003','368161000000101','344151000000101','344211000000108','344091000000105',
+				'344361000000101','373871000000100','368191000000107','429158002','62458008','304041000000105','160545000','303721000000103','373881000000103','373891000000101','368341000000100',
+				'271390004','428801007','429787006','80587008','160543007','368201000000109','367911000000101','427754003','367921000000107','427755002','368421000000104','160558004','160551005',
+				'344081000000108','309884000','368511000000109','367941000000100','429527006','428666001','276119007','160552003','367951000000102','368241000000107','298019009','428503004',
+				'429644000','55248004','205141000000101','368381000000108','298047008','205081000000105','160562005','160565007','344261000000105','160560002','298020003','309885004','309886003',
+				'248544006','429509008','368251000000105','763896000','312865007','312864006','429379008','366740002','160538000','160540005','368281000000104','429544005','160234004',
+				'367961000000104','344071000000106','371351000000101','373851000000109','344321000000109','298024007','428821008','298026009','28010004','429547003','298037005','1400009',
+				'205061000000101','429171004','298030007','64988008','429543004','428407001','428496003','368411000000105','429708003','368401000000108','429511004','368011000000104','298034003',
+				'428408006','368021000000105','427981006','429790000')
+				THEN 'Religion' ELSE 'Unknown/Not Stated' END AS TermGroup
+
+
+	FROM [mesh_IAPT].[IDS011socpercircumstances] sp
+			INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON sp.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND sp.AuditId = i.AuditId AND IsLatest = 1 AND SocPerCircumstanceRecDate IS NOT NULL AND Person_ID IS NOT NULL
+			LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 )_
 
--- Presenting Complaints -----------------------------------------------------------------------------------------------------------------------
+--Base Table
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_SocPerCirc_Base_Test]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCirc_Base_Test]
+SELECT DISTINCT
+		i.ReportingPeriodStartDate AS 'Month'
+        ,r.PathwayID
+		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
+		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
+		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
+		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'RegionCodeComm'
+		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
+		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
+		,TermGroup
+		,[Term]
 
-IF OBJECT_ID ('[MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]') IS NOT NULL DROP TABLE [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]
+		,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  <61 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS OpenReferralLessThan61DaysNoContact
+		,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  BETWEEN 61 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'OpenReferral61-90DaysNoContact'
+		,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  between 91 and 120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'OpenReferral91-120DaysNoContact'
+		,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  >120 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS OpenReferralOver120daysNoContact
+		,CASE WHEN r.ServDischDate IS NULL AND TherapySession_LastDate IS NOT NULL  AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS OpenReferral
 
-SELECT DISTINCT pc.PathwayID
-				,Validated_PresentingComplaint
-				,row_number() OVER(PARTITION BY pc.PathwayID ORDER BY CASE WHEN Validated_PresentingComplaint IS NULL THEN 2 ELSE 1 END
-				,PresCompCodSig
-				,PresCompDate DESC, UniqueID_IDS603 DESC) AS rank
+		,CASE WHEN ServDischDate IS NOT NULL AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS Discharges
+		,CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Finished Treatment - 2 or more Apps'
+		,CASE WHEN ReferralRequestReceivedDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Referrals'
+		,CASE WHEN TherapySession_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS EnteringTreatment
 
-INTO	[MHDInternal].[TTAD_PRES_COMP_BASE_TABLE]
+		,CASE WHEN Assessment_FirstDate IS NULL AND ServDischDate IS NULL AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Waiting for Assessment'
+		,CASE WHEN Assessment_FirstDate IS NULL AND ServDischDate IS NULL AND DATEDIFF(DD,ReferralRequestReceivedDate, i.[ReportingPeriodEndDate]) >90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'WaitingForAssessmentOver90days'
+		,CASE WHEN Assessment_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) < 29 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstAssessment28days'
+		,CASE WHEN Assessment_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) BETWEEN 29 AND 56 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstAssessment29to56days'
+		,CASE WHEN Assessment_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) BETWEEN 57 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstAssessment57to90days'
+		,CASE WHEN Assessment_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) > 90  AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstAssessmentOver90days'
 
-FROM	[MHDInternal].[TTAD_ADSM_BASE_TABLE] pc 
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId AND pc.Unique_MonthID = l.Unique_MonthID
+		,CASE WHEN TherapySession_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) < 29 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstTreatment28days'
+		,CASE WHEN TherapySession_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) BETWEEN 29 AND 56 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstTreatment29to56days'
+		,CASE WHEN TherapySession_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) BETWEEN 57 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstTreatment57to90days'
+		,CASE WHEN TherapySession_FirstDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) > 90  AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'FirstTreatmentOver90days'
 
--- SocPerCircumstance ----------------------------------------------------------------------------------------------------------------------------------------
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '10' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Not Suitable'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '11' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Signposted'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '12' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Mutual Agreement'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '13' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Referred Elsewhere'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '14' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Declined'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE is not null and ENDCODE not in ('10','11','12','13','14','50','16','17','95','46','47','48','49','96') AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Invalid'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE is null AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended No Reason Recorded'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Seen Not Treated' -- changed from is null to = 0 and <> 0
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and TreatmentCareContact_Count = 1 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Treated Once'
+		,(case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and CareContact_Count = 0 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END)
+		AS 'Ended Not Seen' -- changed from is null to = 0
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+		,CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND  Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Recovery'
+		,CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND  ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Reliable Recovery'
+		,CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND  NoChange_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'No Change'
+		,CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND  ReliableDeterioration_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Reliable Deterioration'
+		,CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND  ReliableImprovement_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Reliable Improvement'
+		,CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND NotCaseness_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'NotCaseness'
 
-SELECT  @MonthYear AS 'Month'
-		,'Refresh' AS 'DataSource'
-		,'England' AS 'GroupType'
-		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
-		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'CCG Name' 
-		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
-		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
-		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
-		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
-		,'Social Personal Circumstance' AS 'Category'
-		,[Term] AS 'Variable'
-		,COUNT( DISTINCT CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, @PeriodEnd)  <61 THEN r.PathwayID ELSE NULL END) AS 'OpenReferralLessThan61DaysNoContact'
-		,COUNT( DISTINCT CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, @PeriodEnd)  BETWEEN 61 AND 90 THEN r.PathwayID ELSE NULL END) AS 'OpenReferral61-90DaysNoContact'
-		,COUNT( DISTINCT CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, @PeriodEnd)  between 91 and 120 THEN r.PathwayID ELSE NULL END) AS 'OpenReferral91-120DaysNoContact'
-		,COUNT( DISTINCT CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, @PeriodEnd)  >120 THEN r.PathwayID ELSE NULL END) AS 'OpenReferralOver120daysNoContact'
-		,COUNT( DISTINCT CASE WHEN r.ServDischDate IS NULL AND TherapySession_LastDate IS NOT NULL  THEN r.PathwayID ELSE NULL END) AS 'OpenReferral'
-		,COUNT( DISTINCT CASE WHEN ServDischDate IS NOT NULL AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN r.PathwayID ELSE NULL END) AS 'Ended Treatment'
-		,COUNT( DISTINCT CASE WHEN ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd THEN r.PathwayID ELSE NULL END) AS 'Finished Treatment - 2 or more Apps'
-		,COUNT( DISTINCT CASE WHEN ReferralRequestReceivedDate BETWEEN @PeriodStart AND @PeriodEnd THEN r.PathwayID ELSE NULL END) AS 'Referrals'
-		,COUNT( DISTINCT CASE WHEN TherapySession_FirstDate BETWEEN @PeriodStart AND @PeriodEnd THEN r.PathwayID ELSE NULL END) AS 'EnteringTreatment'
-		,COUNT(DISTINCT CASE WHEN Assessment_FirstDate IS NULL AND ServDischDate IS NULL THEN r.PathwayID ELSE NULL END) AS 'Waiting for Assessment'
-		,COUNT(DISTINCT CASE WHEN Assessment_FirstDate IS NULL AND ServDischDate IS NULL AND DATEDIFF(DD,ReferralRequestReceivedDate, @PeriodEnd)  >90 THEN r.PathwayID ELSE NULL END) AS 'WaitingForAssessmentOver90days'
-		,COUNT(DISTINCT CASE WHEN Assessment_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) < 29 THEN r.PathwayID ELSE NULL END)  AS 'FirstAssessment28days'
-		,COUNT(DISTINCT CASE WHEN Assessment_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) BETWEEN 29 AND 56 THEN r.PathwayID ELSE NULL END) AS 'FirstAssessment29to56days'
-		,COUNT(DISTINCT CASE WHEN Assessment_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) BETWEEN 57 AND 90 THEN r.PathwayID ELSE NULL END)  AS 'FirstAssessment57to90days'
-		,COUNT(DISTINCT CASE WHEN Assessment_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,Assessment_FirstDate) > 90  THEN r.PathwayID ELSE NULL END) AS 'FirstAssessmentOver90days'
-		,COUNT(DISTINCT CASE WHEN TherapySession_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) < 29 THEN r.PathwayID ELSE NULL END)  AS 'FirstTreatment28days'
-		,COUNT(DISTINCT CASE WHEN TherapySession_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) BETWEEN 29 AND 56 THEN r.PathwayID ELSE NULL END) AS 'FirstTreatment29to56days'
-		,COUNT(DISTINCT CASE WHEN TherapySession_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) BETWEEN 57 AND 90 THEN r.PathwayID ELSE NULL END)  AS 'FirstTreatment57to90days'
-		,COUNT(DISTINCT CASE WHEN TherapySession_FirstDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,ReferralRequestReceivedDate,TherapySession_FirstDate) > 90  THEN r.PathwayID ELSE NULL END) AS 'FirstTreatmentOver90days'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd then r.PathwayID END)) as 'Ended Referral'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '10' then r.PathwayID END)) as 'Ended Not Suitable'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '11' then r.PathwayID END)) as 'Ended Signposted'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '12' then r.PathwayID END)) as 'Ended Mutual Agreement'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '13' then r.PathwayID END)) as 'Ended Referred Elsewhere'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '14' then r.PathwayID END)) as 'Ended Declined'
-		,NULL AS 'Ended Deceased Assessed Only'
-		,NULL AS 'Ended Unknown Assessed Only'
-		,NULL AS 'Ended Stepped Up'
-		,NULL AS 'Ended Stepped Down'
-		,NULL AS 'Ended Completed'
-		,NULL AS 'Ended Dropped Out'
-		,NULL AS 'Ended Referred Non IAPT'
-		,NULL AS 'Ended Deceased Treated'
-		,NULL AS 'Ended Unknown Treated'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE is not null and ENDCODE not in ('10','11','12','13','14','50','16','17','95','46','47','48','49','96') then r.PathwayID END)) as 'Ended Invalid'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE is null then r.PathwayID END)) as 'Ended No Reason Recorded'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and TreatmentCareContact_Count = 0 and CareContact_Count <> 0 then r.PathwayID END)) as 'Ended Seen Not Treated' -- changed from is null to = 0 and <> 0
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and TreatmentCareContact_Count = 1 then r.PathwayID END)) as 'Ended Treated Once'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and CareContact_Count = 0 then r.PathwayID END)) as 'Ended Not Seen' -- changed from is null to = 0
-		,COUNT(DISTINCT CASE WHEN  ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND  Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Recovery'
-		,COUNT(DISTINCT CASE WHEN  ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND  ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Recovery'
-		,COUNT(DISTINCT CASE WHEN  ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND  NoChange_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'No Change'
-		,COUNT(DISTINCT CASE WHEN  ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND  ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Deterioration'
-		,COUNT(DISTINCT CASE WHEN  ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND  ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Improvement'
-		,COUNT(DISTINCT CASE WHEN ServDischDate IS NOT NULL AND TreatmentCareContact_Count >= 2 AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'NotCaseness'
-		,COUNT(DISTINCT CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND CompletedTreatment_Flag = 'True' AND
-		(pc.Validated_PresentingComplaint = 'F400' or pc.Validated_PresentingComplaint = 'F401' or pc.Validated_PresentingComplaint = 'F410' or pc.Validated_PresentingComplaint like 'F42%'
-		or pc.Validated_PresentingComplaint = 'F431' or pc.Validated_PresentingComplaint = 'F452')
-		THEN r.PathwayID ELSE NULL END) AS 'ADSMFinishedTreatment'
-		,COUNT(DISTINCT CASE WHEN ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND CompletedTreatment_Flag = 'True'
-		AND (([Validated_PresentingComplaint] = 'F400' AND ADSM = 'AgoraAlone')
-		or ([Validated_PresentingComplaint] = 'F401' AND ADSM = 'SocialPhobia')
-		or ([Validated_PresentingComplaint] = 'F410' AND ADSM = 'PanicDisorder')
-		or ([Validated_PresentingComplaint] LIKE 'F42%' AND ADSM = 'OCD')
-		or ([Validated_PresentingComplaint] = 'F431' AND ADSM = 'PTSD')
-		or ([Validated_PresentingComplaint] = 'F452' AND ADSM = 'AnxietyInventory')) THEN r.PathwayID ELSE NULL END) AS 'CountAppropriatePairedADSM'
-		,COUNT( DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN @PeriodStart AND @PeriodEnd AND SourceOfReferralIAPT = 'B1' THEN r.PathwayID ELSE NULL END) AS 'SelfReferral'
-		,COUNT( DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN @PeriodStart AND @PeriodEnd AND SourceOfReferralIAPT = 'A1' THEN r.PathwayID ELSE NULL END) AS 'GPReferral'
-		,COUNT( DISTINCT CASE WHEN ReferralRequestReceivedDate  BETWEEN @PeriodStart AND @PeriodEnd AND SourceOfReferralIAPT NOT IN ('B1','A1') THEN r.PathwayID ELSE NULL END) AS 'OtherReferral'
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) <=28
-		THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond28Days'
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 29 AND 56
-		THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond28To56Days'
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 57 AND 90
-		THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond57To90Days'
-		,COUNT( DISTINCT CASE WHEN R.TherapySession_SecondDate BETWEEN @PeriodStart AND @PeriodEnd AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) > 90
-		THEN r.PathwayID ELSE NULL END) AS 'FirstToSecondMoreThan90Days'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '50' then r.PathwayID END)) as 'Ended Not Assessed'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '16' then r.PathwayID END)) as 'Ended Incomplete Assessment'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '17' then r.PathwayID END)) as 'Ended Deceased (Seen but not taken on for a course of treatment)'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '95' then r.PathwayID END)) as 'Ended Not Known (Seen but not taken on for a course of treatment)'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '46' then r.PathwayID END)) as 'Ended Mutually agreed completion of treatment'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '47' then r.PathwayID END)) as 'Ended Termination of treatment earlier than Care Professional planned'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '48' then r.PathwayID END)) as 'Ended Termination of treatment earlier than patient requested'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '49' then r.PathwayID END)) as 'Ended Deceased (Seen and taken on for a course of treatment)'
-		,COUNT(distinct(case when ServDischDate between @PeriodStart AND @PeriodEnd and ENDCODE = '96' then r.PathwayID END)) as 'Ended Not Known (Seen and taken on for a course of treatment)'
-		,NULL AS 'RepeatReferrals2'
-		,'Gender' AS 'PCCategory'
+		,CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND (SourceOfReferralMH = 'B1' OR SourceOfReferralIAPT = 'B1') AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS SelfReferral
+		,CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND (SourceOfReferralMH = 'A1' OR SourceOfReferralIAPT = 'A1') AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS GPReferral
+		,CASE WHEN ReferralRequestReceivedDate  BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND (SourceOfReferralMH NOT IN ('B1','A1') OR SourceOfReferralIAPT NOT IN ('B1','A1')) AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS OtherReferral
+
+		,CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) <=28
+					AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS FirstToSecond28Days
+		,CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 29 AND 56
+					AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS FirstToSecond28To56Days
+		,CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) BETWEEN 57 AND 90
+					AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS FirstToSecond57To90Days
+		,CASE WHEN R.TherapySession_SecondDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND DATEDIFF(DD,TherapySession_FirstDate,TherapySession_SecondDate) > 90
+					AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS FirstToSecondMoreThan90Days
+
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '50' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Not Assessed'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '16' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Incomplete Assessment'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '17' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Deceased (Seen but not taken on for a course of treatment)'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '95' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Not Known (Seen but not taken on for a course of treatment)'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '46' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Mutually agreed completion of treatment'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '47' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Termination of treatment earlier than Care Professional planned'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '48' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Termination of treatment earlier than patient requested'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '49' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Deceased (Seen and taken on for a course of treatment)'
+		,case when ServDischDate between i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] and ENDCODE = '96' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
+		AS 'Ended Not Known (Seen and taken on for a course of treatment)'
+
 		,CASE WHEN Gender = '1' THEN	'Male' 
 			WHEN  GENDER = '2' THEN	'Female'
 			WHEN  GENDER = '9' THEN	'Indeterminate (unable to be classified as either male or female)'
-			WHEN  GENDER = 'X' THEN 'Not Known (PERSON STATED GENDER CODE not recorded)' ELSE 'Other' END AS 'PCVariable'
-		,NULL AS 'Grouping'
-
-FROM    [mesh_IAPT].[IDS101referral] r
+			WHEN  GENDER = 'X' THEN 'Not Known (PERSON STATED GENDER CODE not recorded)' ELSE 'Other' END
+		AS Gender
+INTO [MHDInternal].[TEMP_TTAD_SocPerCirc_Base_Test]
+FROM [mesh_IAPT].[IDS101referral] r
+		--------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON r.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND r.AuditId = i.AuditId AND IsLatest = 1
+		--------------------------
+		---------------------------------
+		--Should it be this:
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank] spc ON r.RecordNumber = spc.RecordNumber AND r.AuditId=spc.AuditId AND r.UniqueSubmissionID=spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest = 1
+		--Or this:
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank] spc ON mpi.Person_ID= spc.Person_ID AND spc.SocPerCircumstanceLatest = 1 AND r.OrgID_Provider=spc.OrgID_Provider
+		--------------------------------
 		------------------------------
-		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.[RecordNumber] = mpi.[RecordNumber]
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
-		------------------------------
-		LEFT JOIN [mesh_IAPT].[IDS011socpercircumstances] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
-		------------------------------
-		LEFT JOIN [MHDInternal].[TTAD_PRES_COMP_BASE_TABLE] pc ON pc.PathwayID = r.PathwayID AND pc.rank = 1 
-		------------------------------
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON r.OrgIDComm = ch.Organisation_Code AND ch.Effective_To IS NULL
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON r.OrgID_Provider = ph.Organisation_Code AND ph.Effective_To IS NULL
-		------------------------------
-		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD_1] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
+			AND ch.Effective_To IS NULL
+ 
+		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
+			AND ph.Effective_To IS NULL	
 
-WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart AND @PeriodEnd
-	
+WHERE	UsePathway_Flag = 'True'
+		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 
-GROUP BY CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END 
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END  
-		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END 
-		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END 
-		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END 
-		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
-		,[Term]
-		,CASE WHEN Gender = '1' THEN	'Male' 
-				WHEN  GENDER = '2' THEN	'Female'
-				WHEN  GENDER = '9' THEN	'Indeterminate (unable to be classified as either male or female)'
-				WHEN  GENDER = 'X' THEN 'Not Known (PERSON STATED GENDER CODE not recorded)' ELSE 'Other' END
-			,DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS varchar)
-GO
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- SocPerCircumstance Dashboard Output----------------------------------------------------------------------------------------------------------------------------------------
 
-UPDATE [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
 
-SET Grouping = CASE WHEN Variable IN ('Family with child under one year (finding)',		
-'Family with child under two years (finding)',		
-'Family with children under one year (finding)',		
-'Family with children under two years (finding)',		
-'Partner pregnant (situation)',		
-'Pregnant (finding)',
-'Pregnancy (finding)') THEN 'Perinatal'
-		
-WHEN Variable IN ('Bisexual (finding)',		
-'Female homosexual (finding)',		
-'Heterosexual (finding)',		
-'History taking of sexual orientation declined (situation)',		
-'Homosexual (finding)',		
-'Male homosexual (finding)',		
-'Sexual orientation confusion (finding)',		
-'Sexual orientation unknown (finding)',		
-'Sexually attracted to neither male nor female sex (finding)',		
-'Undecided about sexual orientation (finding)') THEN 'Sexual Orientation'
-		
-WHEN Variable IN ('Recently worked in a community social care setting (event)',		
-'Recently worked in a healthcare setting (event)',		
-'Recently worked in a hospital emergency care setting (event)',		
-'Recently worked in a primary care setting (event)',		
-'Recently worked in a residential care setting (event)',		
-'Recently worked in an ambulance service care setting (event)',		
-'Recently worked in an inpatient care setting (event)',		
-'Recently worked in an intensive care setting (event)') THEN 'Occupational Exposure to COVID'
-		
-WHEN Variable IN ('Asylum seeker (person)',		
-'Asylum seeker awaiting decision on refugee status (person)',		
-'Asylum seeker with application for asylum refused (person)',		
-'Asylum seeker with discretionary leave to remain (person)',		
-'Asylum seeker with humanitarian protection status (person)',		
-'Refugee (person)',		
-'Unaccompanied child asylum seeker (person)') THEN 'Asylum / Refugee'
-		
-WHEN Variable IN ('Alcohol abuse (disorder)',		
-'Alcohol dependence (disorder)',		
-'Does not misuse alcohol (situation)') THEN 'Addiction - Alcohol'
-		
-WHEN Variable IN ('Does not misuse drugs (situation)',		
-'Drug abuse (disorder)',		
-'Drug dependence (disorder)') THEN 'Addiction - Drugs'
-		
-WHEN Variable = 'Compulsive gambling (disorder)' THEN 'Addiction - Gambling'
-		
-WHEN Variable IN ('Current non smoker but past smoking history unknown (finding)',		
-'Ex-smoker (finding)',		
-'Never smoked tobacco (finding)',		
-'Smoker (finding)') THEN 'Addiction - Smoking'
-		
-WHEN Variable = 'In debt (finding)' THEN 'Debt'
-		
-WHEN Variable IN ('(Church of England) or (Anglican) (person)',		
-'Agnostic (person)',		
-'Ahmadi, follower of religion (person)',		
-'Anglican, follower of religion (person)',		
-'Apostolic Pentecostalist, follower of religion (person)',		
-'Arminianism (religion/philosophy)',		
-'Atheist (person)',		
-'Bahai, follower of religion (person)',		
-'Baptist, follower of religion (person)',		
-'Buddhism (religion/philosophy)',		
-'Buddhist, follower of religion (person)',		
-'Calvinist, follower of religion (person)',		
-'Catholic religion (religion/philosophy)',		
-'Catholic: non Roman Catholic, follower of religion (person)',		
-'Celtic Christian, follower of religion (person)',		
-'Celtic pagan, follower of religion (person)',		
-'Christian Humanist, follower of religion (person)',		
-'Christian Spiritualist, follower of religion (person)',		
-'Christian, follower of religion (person)',		
-'Church of England (religion/philosophy)',		
-'Church of Ireland, follower of religion (person)',		
-'Church of Jesus Christ of Latter Day Saints (religion/philosophy)',		
-'Church of Scotland (religion/philosophy)',		
-'Church of Scotland, follower of religion (person)',		
-'Congregationalist, follower of religion (person)',		
-'Druid, follower of religion (person)',		
-'Evangelical Christian, follower of religion (person)',		
-'Follower of Church of England (person)',		
-'Follower of Free Christian Church (person)',		
-'Follower of United Reformed Church (person)',		
-'Greek Orthodox, follower of religion (person)',		
-'Has religious belief (finding)',		
-'Heathen, follower of religion (person)',		
-'Hindu, follower of religion (person)',		
-'Humanist (person)',		
-'Indian Orthodox, follower of religion (person)',		
-'Infinite way, follower of religion (person)',		
-'Islam (religion/philosophy)',		
-'Ismaili Muslim, follower of religion (person)',		
-'Jain, follower of religion (person)',		
-'Jehovahs Witness, follower of religion (person)',		
-'Jewish, follower of religion (person)',		
-'Judaic Christian, follower of religion (person)',		
-'Liberal Jew, follower of religion (person)',		
-'Lutheran, follower of religion (person)',		
-'Messianic Jew, follower of religion (person)',		
-'Methodist, follower of religion (person)',		
-'Mixed religion (religion/philosophy)',		
-'Mormon, follower of religion (person)',		
-'Muslim, follower of religion (person)',		
-'New age practitioner (person)',		
-'Nonconformist (person)',		
-'Not religious (finding)',		
-'Old Catholic, follower of religion (person)',		
-'Orthodox Christian religion (religion/philosophy)',		
-'Orthodox Christian, follower of religion (person)',		
-'Orthodox Jewish Faith (religion/philosophy)',		
-'Pagan, follower of religion (person)',		
-'Para-religious movement (religion/philosophy)',		
-'Patient religion unknown (finding)',		
-'Pentecostalist, follower of religion (person)',		
-'Plymouth Brethren religion (religion/philosophy)',		
-'Presbyterian, follower of religion (person)',		
-'Protestant religion (religion/philosophy)',		
-'Protestant, follower of religion (person)',		
-'Quaker, follower of religion (person)',		
-'Rastafarian, follower of religion (person)',		
-'Reform Jew, follower of religion (person)',		
-'Reformed Christian, follower of religion (person)',		
-'Refusal by patient to provide information about religion (situation)',		
-'Religion not given - patient refused (finding)',		
-'Religion not recorded (finding)',		
-'Religious affiliation (observable entity)',		
-'Roman Catholic, follower of religion (person)',		
-'Romanian Orthodox, follower of religion (person)',		
-'Russian Orthodox, follower of religion (person)',		
-'Salvation Army member (person)',		
-'Satanist (person)',		
-'Seventh Day Adventist, follower of religion (person)',		
-'Shiite muslim religion (religion/philosophy)',		
-'Shiite muslim, follower of religion (person)',		
-'Shinto, follower of religion (person)',		
-'Sikh, follower of religion (person)',		
-'Spiritual or religious belief (religion/philosophy)',		
-'Spiritualism (religion/philosophy)',		
-'Spiritualist, follower of religion (person)',		
-'Sunni muslim religion (religion/philosophy)',		
-'Sunni muslim, follower of religion (person)',		
-'Taoist, follower of religion (person)',		
-'Theravada Buddhist, follower of religion (person)',		
-'Tibetan Buddhist, follower of religion (person)',		
-'Unitarian Universalist, follower of religion (person)',		
-'Universalist, follower of religion (person)',		
-'Vodun, follower of religion (person)',		
-'Western buddhist religion (religion/philosophy)',		
-'Wiccan, follower of religion (person)',		
-'Zoroastrian, follower of religion (person)') THEN 'Religion' ELSE 'Unknown/Not Stated' END
+SELECT  
+	Month
 
-GO
+	,'Refresh' AS DataSource
+	,'England' AS GroupType
 
+	,[Sub-ICBCode]
+	,[Sub-ICBName]
+	,[ICBCode]
+	,[ICBName]
+	,[RegionNameComm]
+	,[RegionCodeComm]
+	,[ProviderCode]
+	,[ProviderName]
+
+	,'Social Personal Circumstance' AS Category
+	,TermGroup AS 'Grouping'
+	,Term AS Variable
+
+	,SUM(OpenReferralLessThan61DaysNoContact) AS OpenReferralLessThan61DaysNoContact
+	,SUM([OpenReferral61-90DaysNoContact]) AS 'OpenReferral61-90DaysNoContact'
+	,SUM([OpenReferral91-120DaysNoContact]) AS 'OpenReferral91-120DaysNoContact'
+	,SUM(OpenReferralOver120daysNoContact) AS OpenReferralOver120daysNoContact
+	,SUM(OpenReferral) AS OpenReferral
+
+	,SUM(Discharges) AS Discharges
+	,SUM([Finished Treatment - 2 or more Apps]) AS 'Finished Treatment - 2 or more Apps'
+	,SUM(Referrals) AS 'Referrals'
+	,SUM(EnteringTreatment) AS EnteringTreatment
+
+	,SUM([Waiting for Assessment]) AS 'Waiting for Assessment'
+	,SUM(WaitingForAssessmentOver90days) AS 'WaitingForAssessmentOver90days'
+	,SUM(FirstAssessment28days) AS 'FirstAssessment28days'
+	,SUM(FirstAssessment29to56days) AS 'FirstAssessment29to56days'
+	,SUM(FirstAssessment57to90days) AS 'FirstAssessment57to90days'
+	,SUM(FirstAssessmentOver90days) AS 'FirstAssessmentOver90days'
+
+	,SUM(FirstTreatment28days) AS 'FirstTreatment28days'
+	,SUM(FirstTreatment29to56days) AS 'FirstTreatment29to56days'
+	,SUM(FirstTreatment57to90days) AS 'FirstTreatment57to90days'
+	,SUM(FirstTreatmentOver90days) AS 'FirstTreatmentOver90days'
+
+	,SUM([Ended Not Suitable]) AS 'Ended Not Suitable'
+	,SUM([Ended Signposted]) AS 'Ended Signposted'
+	,SUM([Ended Mutual Agreement]) AS 'Ended Mutual Agreement'
+	,SUM([Ended Referred Elsewhere]) AS 'Ended Referred Elsewhere'
+	,SUM([Ended Declined]) AS 'Ended Declined'
+	,SUM([Ended Invalid]) AS 'Ended Invalid'
+	,SUM([Ended No ReASon Recorded]) AS 'Ended No Reason Recorded'
+	,SUM([Ended Seen Not Treated]) AS 'Ended Seen Not Treated'
+	,SUM([Ended Treated Once]) AS 'Ended Treated Once'
+	,SUM([Ended Not Seen]) AS 'Ended Not Seen'
+
+	,SUM(Recovery) AS 'Recovery'
+	,SUM([Reliable Recovery]) AS 'Reliable Recovery'
+	,SUM([No Change]) AS 'No Change'
+	,SUM([Reliable Deterioration]) AS 'Reliable Deterioration'
+	,SUM([Reliable Improvement]) AS 'Reliable Improvement'
+	,SUM(NotCaseness) AS 'NotCaseness'
+	,SUM(SelfReferral) AS SelfReferral
+	,SUM(GPReferral) AS GPReferral
+	,SUM(OtherReferral) AS OtherReferral
+	,SUM(FirstToSecond28Days) AS FirstToSecond28Days
+	,SUM(FirstToSecond28To56Days) AS FirstToSecond28To56Days
+	,SUM(FirstToSecond57To90Days) AS FirstToSecond57To90Days
+	,SUM(FirstToSecondMoreThan90Days) AS FirstToSecondMoreThan90Days
+	,SUM([Ended Not Assessed]) AS 'Ended Not Assessed'
+	,SUM([Ended Incomplete Assessment]) AS 'Ended Incomplete Assessment'
+	,SUM([Ended Deceased (Seen but not taken on for a course of treatment)]) AS 'Ended Deceased (Seen but not taken on for a course of treatment)'
+	,SUM([Ended Not Known (Seen but not taken on for a course of treatment)]) AS 'Ended Not Known (Seen but not taken on for a course of treatment)'
+	,SUM([Ended Mutually agreed completion of treatment]) AS 'Ended Mutually agreed completion of treatment'
+	,SUM([Ended Termination of treatment earlier than Care Professional planned]) AS 'Ended Termination of treatment earlier than Care Professional planned'
+	,SUM([Ended Termination of treatment earlier than patient requested]) AS 'Ended Termination of treatment earlier than patient requested'
+	,SUM([Ended Deceased (Seen and taken on for a course of treatment)]) AS 'Ended Deceased (Seen and taken on for a course of treatment)'
+	,SUM([Ended Not Known (Seen and taken on for a course of treatment)]) AS 'Ended Not Known (Seen and taken on for a course of treatment)'
+
+	,'Gender' AS PCCategory
+	,[Gender] AS PCVariable
+--INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+FROM [MHDInternal].[TEMP_TTAD_SocPerCirc_Base]
+GROUP BY 
+	[Month]
+	,RegionCodeComm
+	,RegionNameComm
+	,ICBCode
+	,ICBName
+	,[Sub-ICBCode]
+	,[Sub-ICBName]
+	,ProviderCode
+	,ProviderName
+	,Term
+	,TermGroup
+	,Gender
+
+-------Delete Temporary Table for Soc/Personal Rank
+DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]
+DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCirc_Base]
 ----------------------------------------------------------------------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
+Print CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
+
+
+
+
+
+
+
+
+
+
