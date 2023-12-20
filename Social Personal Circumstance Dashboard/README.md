@@ -1,4 +1,5 @@
-# NHS Talking Therapies for Anxiety and Depression
-## Social/Personal Circumstance Dashboard
+# Social/Personal Circumstance Dashboard
 
-- This dashboard is hosted on FutureNHS: https://future.nhs.uk/NHSTalkingTherapies/view?objectID=34899408
+This folder contains the SQL scripts used for the [Social/Personal Circumstance Dashboard](https://future.nhs.uk/NHSTalkingTherapies/view?objectID=34899408).
+
+Please note this information is experimental and it is only intended for use for management purposes.
