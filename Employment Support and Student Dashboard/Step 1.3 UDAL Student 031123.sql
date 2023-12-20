@@ -9,21 +9,18 @@ DELETE FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Student]
 WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupp_Student])
 
 -- Postcode Ranking -----------------------------
---Trust sites have more than one postcode so these are ranked alphabetically so only one postcode is used
+--Trust sites have more than one postcode so these are ranked by effective from date and then alphabetically so only one postcode is used
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes]
 SELECT	
-    [SiteCode]
-    ,[Postcode1]
-    ,[Grid Reference]
-    ,[X (easting)]
-    ,[Y (northing)]
-    ,[Latitude]
-    ,[Longitude]
-    ,[Address4]
-    ,ROW_NUMBER() OVER(PARTITION BY SiteCode ORDER BY Postcode1 ASC) AS PostcodeRank
+    [Code] AS SiteCode
+	,[Name]
+    ,[Postcode_single_space_e_Gif] AS Postcode
+    ,[Latitude_1m] AS Latitude
+    ,[Longitude_1m] AS Longitude
+    ,ROW_NUMBER() OVER(PARTITION BY Code ORDER BY [Effective_From] DESC,[Postcode_single_space_e_Gif] ASC) AS PostcodeRank
 INTO [MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes]
-FROM [MHDInternal].[REFERENCE_ODS_All_Sites]
-GO
+FROM [UKHD_ODS].[Postcode_Grid_Refs_Eng_Wal_Sco_And_NI_SCD] a
+	INNER JOIN [UKHD_ODS].[All_Codes] b ON a.[Postcode_single_space_e_Gif] = b.Postcode AND Is_Latest = 1 AND Effective_To IS NULL
 
 -----------------------------------
 --Employment Status Ranking
@@ -54,6 +51,8 @@ SELECT DISTINCT
 
     ,CASE WHEN ph.Organisation_Code IS NOT NULL THEN ph.Organisation_Code ELSE 'Other' END AS 'Provider Code'
     ,CASE WHEN ph.Organisation_Name IS NOT NULL THEN ph.Organisation_Name ELSE 'Other' END AS 'Provider Name'
+    ,CASE WHEN ph.Region_Code IS NOT NULL THEN ph.Region_Code ELSE 'Other' END AS 'Region Code'
+    ,CASE WHEN ph.Region_Name IS NOT NULL THEN ph.Region_Name ELSE 'Other' END AS 'Region Name'
 
     ,CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'TotalReferrals'
@@ -72,13 +71,9 @@ SELECT DISTINCT
     ,CASE WHEN r.TherapySession_FirstDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND e.EmployStatus = '03' AND mpi.Age_RP_EndDate > 25 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'StudentEnteringTreatment25Plus'
 
-    ,pc.[Postcode1] AS 'Postcode'
-    ,pc.[Grid Reference] AS 'GridRef'
-    ,pc.[X (easting)] AS 'Eastings'
-    ,pc.[Y (northing)] AS 'Northings'
+    ,pc.[Postcode] AS 'Postcode'
     ,pc.[Latitude] AS 'Lat'
     ,pc.[Longitude] AS 'Long'
-    ,pc.[Address4] AS 'City'
 
     ,CASE WHEN r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND r.CompletedTreatment_Flag='True' AND r.Recovery_Flag = 'True' AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END
     AS 'RecoveredTotal'
@@ -127,6 +122,8 @@ SELECT
     ,'England' AS 'GroupType'
     ,[Provider Code]
     ,[Provider Name]
+    ,[Region Code]
+    ,[Region Name]
 
     ,SUM(TotalReferrals) AS 'TotalReferrals'
     ,SUM(StudentReferralsTotal) AS 'StudentReferralsTotal'
@@ -138,12 +135,8 @@ SELECT
     ,SUM(StudentEnteringTreatment25Plus) AS 'StudentEnteringTreatment25Plus'
 
     ,Postcode
-    ,GridRef
-    ,Eastings
-    ,Northings
     ,Lat
     ,Long
-    ,City
 
     ,SUM(RecoveredTotal) AS 'RecoveredTotal'
     ,SUM(FinishingTreatmentTotal) AS 'FinishingTreatmentTotal'
@@ -160,13 +153,11 @@ GROUP BY
     Month
 	,[Provider Code]
 	,[Provider Name]
+    ,[Region Code]
+    ,[Region Name]
     ,Postcode
-    ,GridRef
-    ,Eastings
-    ,Northings
     ,Lat
     ,Long
-    ,City
 
 -- --Drop Temporary Tables
 DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes]
