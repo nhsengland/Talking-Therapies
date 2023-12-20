@@ -1,31 +1,23 @@
 /*					SOCIAL PERSONAL CIRCUMSTANCE DASHBOARD						*/
-
 --------Early stage metrics for selected Social Personal Circumstance to flow to the policy team-------------
-
 -- DELETE MAX(Month) -----------------------------------------------------------------------
  
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
  
 WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance])
 GO
-
 --------------------
 SET DATEFIRST 1
 SET NOCOUNT ON
 --------------
 DECLARE @Offset INT = 0
 -------------------------
-
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-
 DECLARE @MonthYear AS VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 PRINT @PeriodStart
-
 ----------------------------------------------------------------------------------------------------------------------------------------
-
 ---- Base Table ------------------------------------------------------------------------------------------------------------------
-
 ----------------Social Personal Circumstance Ranked Table------------------------------------
 ----There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate
 ----so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce
@@ -33,7 +25,7 @@ PRINT @PeriodStart
 
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]
 SELECT *
-	,ROW_NUMBER() OVER(PARTITION BY Person_ID,TermGroup ORDER BY [SocPerCircumstanceRecDate] desc) as SocPerCircumstanceLatest
+	,ROW_NUMBER() OVER(PARTITION BY Person_ID,TermGroup,PathwayID ORDER BY [SocPerCircumstanceRecDate] desc) as SocPerCircumstanceLatest
 	--ranks each SocPerCircumstance with the same Person_ID and TermGroup by the date so that the latest record is labelled as 1
 INTO [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]
 FROM(
@@ -42,6 +34,7 @@ FROM(
 		,sp.SocPerCircumstance
 		,sp.SocPerCircumstanceRecDate
 		,sp.Person_ID
+		,r.PathwayID
 		,sp.RecordNumber
 		,sp.UniqueID_IDS011
 		,sp.OrgID_Provider
@@ -59,7 +52,7 @@ FROM(
 
 				WHEN SocPerCircumstance = '18085000'
 					THEN 'Addiction - Gambling'
-				
+
 				WHEN SocPerCircumstance = '160933000'
 					THEN 'Debt'
 
@@ -94,22 +87,28 @@ FROM(
 				THEN 'Religion' ELSE 'Unknown/Not Stated' END AS TermGroup
 
 
-	FROM [mesh_IAPT].[IDS011socpercircumstances] sp
-			INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON sp.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND sp.AuditId = i.AuditId AND IsLatest = 1 AND SocPerCircumstanceRecDate IS NOT NULL AND Person_ID IS NOT NULL
-			LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+	FROM [mesh_IAPT].[IDS101referral] r
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
+		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] i ON r.[UniqueSubmissionID] = i.[UniqueSubmissionID] AND r.AuditId = i.AuditId AND IsLatest = 1 
+		-------------------------
+		INNER JOIN [mesh_IAPT].[IDS011socpercircumstances] sp ON r.recordnumber = sp.recordnumber AND r.AuditID = sp.AuditId AND r.UniqueSubmissionID = sp.UniqueSubmissionID AND SocPerCircumstanceRecDate IS NOT NULL AND sp.Person_ID IS NOT NULL
+		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 )_
 
+
+
 --Base Table
-IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_SocPerCirc_Base_Test]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCirc_Base_Test]
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_SocPerCirc_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCirc_Base]
 SELECT DISTINCT
 		i.ReportingPeriodStartDate AS 'Month'
         ,r.PathwayID
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
 		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
-		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
-		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
+		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.STP_Name ELSE 'Other' END AS 'ICBName'
 		,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'RegionCodeComm'
+		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'RegionNameComm'
 		,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
 		,TermGroup
@@ -235,7 +234,7 @@ SELECT DISTINCT
 			WHEN  GENDER = '9' THEN	'Indeterminate (unable to be classified as either male or female)'
 			WHEN  GENDER = 'X' THEN 'Not Known (PERSON STATED GENDER CODE not recorded)' ELSE 'Other' END
 		AS Gender
-INTO [MHDInternal].[TEMP_TTAD_SocPerCirc_Base_Test]
+INTO [MHDInternal].[TEMP_TTAD_SocPerCirc_Base]
 FROM [mesh_IAPT].[IDS101referral] r
 		--------------------------
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
@@ -243,27 +242,27 @@ FROM [mesh_IAPT].[IDS101referral] r
 		--------------------------
 		---------------------------------
 		--Should it be this:
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank] spc ON r.RecordNumber = spc.RecordNumber AND r.AuditId=spc.AuditId AND r.UniqueSubmissionID=spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest = 1
-		--Or this:
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank] spc ON mpi.Person_ID= spc.Person_ID AND spc.SocPerCircumstanceLatest = 1 AND r.OrgID_Provider=spc.OrgID_Provider
+		LEFT JOIN [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank] spc ON spc.PathwayID = r.PathwayID AND spc.SocPerCircumstanceLatest = 1
+
 		--------------------------------
 		------------------------------
-		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
+	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
+		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
 			AND ch.Effective_To IS NULL
- 
+
 		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-			AND ph.Effective_To IS NULL	
+			AND ph.Effective_To IS NULL
+
 
 WHERE	UsePathway_Flag = 'True'
 		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
-
+GO
 
 -- SocPerCircumstance Dashboard Output----------------------------------------------------------------------------------------------------------------------------------------
 
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
 
 SELECT  
@@ -314,7 +313,7 @@ SELECT
 	,SUM([Ended Referred Elsewhere]) AS 'Ended Referred Elsewhere'
 	,SUM([Ended Declined]) AS 'Ended Declined'
 	,SUM([Ended Invalid]) AS 'Ended Invalid'
-	,SUM([Ended No ReASon Recorded]) AS 'Ended No Reason Recorded'
+	,SUM([Ended No Reason Recorded]) AS 'Ended No Reason Recorded'
 	,SUM([Ended Seen Not Treated]) AS 'Ended Seen Not Treated'
 	,SUM([Ended Treated Once]) AS 'Ended Treated Once'
 	,SUM([Ended Not Seen]) AS 'Ended Not Seen'
@@ -344,8 +343,9 @@ SELECT
 
 	,'Gender' AS PCCategory
 	,[Gender] AS PCVariable
---INTO [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]
+
 FROM [MHDInternal].[TEMP_TTAD_SocPerCirc_Base]
+WHERE TermGroup IS NOT NULL
 GROUP BY 
 	[Month]
 	,RegionCodeComm
@@ -365,13 +365,5 @@ DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]
 DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCirc_Base]
 ----------------------------------------------------------------------------------------------------------------------------------
 Print CHAR(10) + 'Updated - [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance]'
-
-
-
-
-
-
-
-
 
 
