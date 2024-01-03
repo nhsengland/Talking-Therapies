@@ -1105,7 +1105,7 @@ SELECT DISTINCT
 	,c.Unique_MonthID
 FROM [mesh_IAPT].[IDS201carecontact] c
 INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON c.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND c.[AuditId] = l.[AuditId]
-LEFT JOIN [mesh_IAPT].[IDS202careactivity] ca ON ca.PathwayID=c.PathwayID AND ca.UniqueSubmissionID=c.UniqueSubmissionID
+LEFT JOIN [mesh_IAPT].[IDS202careactivity] ca ON ca.PathwayID=c.PathwayID AND ca.UniqueSubmissionID=c.UniqueSubmissionID AND ca.CareContactId=c.CareContactId
 AND ca.AuditId=c.AuditId
 WHERE l.IsLatest = 1
 )_
@@ -1514,6 +1514,7 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime] c on a.OrgType=c.Org
 
 -----------------------------------------
 --Drop Temp Tables:
+DROP TABLE [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration_Step1]
 DROP TABLE [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration]
 DROP TABLE [MHDInternal].[TEMP_TTAD_IET_NoIETDuration]
 DROP TABLE [MHDInternal].[TEMP_TTAD_IET_Base]

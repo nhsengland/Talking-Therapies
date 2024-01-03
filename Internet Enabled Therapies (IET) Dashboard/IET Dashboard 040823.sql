@@ -126,7 +126,7 @@ FROM(
 		,DATEDIFF(DD,r.TherapySession_FirstDate,r.TherapySession_SecondDate) AS WaitFirstTherapyToSecondTherapy
 			
 		--Number of Appointments
-		,r.InternetEnabledTherapy_Count AS OldIETCount
+		--,r.InternetEnabledTherapy_Count AS OldIETCount
 		,i.Count_IET AS InternetEnabledTherapy_Count
 		--Type of IET
 		,CASE WHEN i.IntEnabledTherProg IS NULL THEN 'No IET'
@@ -142,7 +142,7 @@ FROM(
 
 		--Reasons for Ending Treatment
 		,r.EndCode
-		,CASE WHEN r.EndCode='' THEN 'Referred but not seen/Seen but not taken on for a course of treatment/Seen and taken on for a course of treatment'
+		,CASE
 			WHEN r.EndCode='50' THEN 'Not assessed'	
 			WHEN r.EndCode='10' THEN 'Not suitable for IAPT service - no action taken or directed back to referrer'
 			WHEN r.EndCode='11'	THEN 'Not suitable for IAPT service - signposted elsewhere with mutual agreement of patient'
@@ -261,7 +261,7 @@ FROM(
 --This table aggregates [MHDInternal].[TEMP_TTAD_IET_Base] table to get the number of PathwayIDs with the recovery flag,
 -- not caseness flag, reliable improvement flag, completed treatment flag, and both the recovery and reliable improvement flag.
 --This is calculated at different Geography levels (National, Regional, ICB, Sub-ICB and Provider), by Appointment Types (1+ IET, 2+ IET and No IET),
---by IET Therapy Types, by Integration Engine Indicator, by End Codes, by Problem Descriptors, by severity scores,
+--by IET Therapy Types, by number of IET appts, by End Codes, by Problem Descriptors, by severity scores,
 -- by pathway type (unique or mixed IET pathway) and Month.
 --The full table is re-run each month as base table contains all months
 IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_Main]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_Main]
@@ -279,7 +279,7 @@ SELECT
 	,[RegionNameProv]
 	,[RegionCodeProv]
 	,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
-	,SUM(InternetEnabledTherapy_Count) AS InternetEnabledTherapy_Count
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,EndCode
 	,EndCodeDescription
@@ -307,6 +307,7 @@ GROUP BY
 	,[ProviderName]
 	,[RegionNameProv]
 	,[RegionCodeProv]
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,EndCode
 	,EndCodeDescription
@@ -331,7 +332,7 @@ SELECT
 	,[RegionNameProv]
 	,[RegionCodeProv]
 	,'No IET' AS AppointmentType
-	,SUM(InternetEnabledTherapy_Count) AS InternetEnabledTherapy_Count
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,EndCode
 	,EndCodeDescription
@@ -358,6 +359,7 @@ GROUP BY
 	,[ProviderName]
 	,[RegionNameProv]
 	,[RegionCodeProv]
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,EndCode
 	,EndCodeDescription
@@ -381,7 +383,7 @@ SELECT
 	,[RegionNameProv]
 	,[RegionCodeProv]
 	,'2+ IET' AS AppointmentType
-	,SUM(InternetEnabledTherapy_Count) AS InternetEnabledTherapy_Count
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,EndCode
 	,EndCodeDescription
@@ -408,6 +410,7 @@ GROUP BY
 	,[ProviderName]
 	,[RegionNameProv]
 	,[RegionCodeProv]
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,EndCode
 	,EndCodeDescription
@@ -493,7 +496,7 @@ SET @PeriodEnd = (SELECT EOMONTH(DATEADD(MONTH,0,MAX([ReportingPeriodEndDate])))
 
 --For monthly refresh the offset should be set to -1
 DECLARE @Offset int
-SET @Offset=-1
+SET @Offset=-37
 
 DECLARE @PeriodStart2 DATE
 SET @PeriodStart2= '2020-09-01'	 --This is for defining the period for referrals
@@ -587,8 +590,8 @@ WHERE l.IsLatest = 1	--To get the latest data
 --(1+ IET, 2+ IET and No IET), by IET Therapy Types, by PEQ Questions and Answers, and by Month.
 --Only the latest refreshed month is added each month
 
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_PEQ]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
+IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_PEQ]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
+--INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
 --IET 1+
 SELECT
 	Month
@@ -603,12 +606,12 @@ SELECT
 	,[RegionNameProv]
 	,[RegionCodeProv]
 	,CAST('1+ IET' AS VARCHAR(50)) AS AppointmentType
-	,SUM(InternetEnabledTherapy_Count) AS InternetEnabledTherapy_Count
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,Question
 	,Answer
 	,SUM(CompTreatFlag) AS CompTreatFlag
---INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
+INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
 FROM [MHDInternal].[TEMP_TTAD_IET_BasePEQ]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -623,6 +626,7 @@ GROUP BY
 	,[ProviderName]
 	,[RegionNameProv]
 	,[RegionCodeProv]
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,Question
 	,Answer
@@ -642,7 +646,7 @@ SELECT
 	,[RegionNameProv]
 	,[RegionCodeProv]
 	,'No IET' AS AppointmentType
-	,SUM(InternetEnabledTherapy_Count) AS InternetEnabledTherapy_Count
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,Question
 	,Answer
@@ -661,6 +665,7 @@ GROUP BY
 	,[ProviderName]
 	,[RegionNameProv]
 	,[RegionCodeProv]
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,Question
 	,Answer
@@ -680,7 +685,7 @@ SELECT
 	,[RegionNameProv]
 	,[RegionCodeProv]
 	,'2+ IET' AS AppointmentType
-	,SUM(InternetEnabledTherapy_Count) AS InternetEnabledTherapy_Count
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,Question
 	,Answer
@@ -699,6 +704,7 @@ GROUP BY
 	,[ProviderName]
 	,[RegionNameProv]
 	,[RegionCodeProv]
+	,InternetEnabledTherapy_Count
 	,IntEnabledTherProg
 	,Question
 	,Answer
@@ -738,7 +744,7 @@ FROM(
 ------------------------------------------Appts Base table-------------------------------------
 --This creates a base table with one record per row which is then aggregated to produce [MHDInternal].[DASHBOARD_TTAD_IET_IETTherapistTimeRecord]
 DECLARE @PeriodStart DATE
-DECLARE @PeriodEnd DATE 
+DECLARE @PeriodEnd DATE
 --For refreshing, the offset for getting the period start and end should be 0 to get the latest month
 SET @PeriodStart = (SELECT DATEADD(MONTH,0,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 SET @PeriodEnd = (SELECT EOMONTH(DATEADD(MONTH,0,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
