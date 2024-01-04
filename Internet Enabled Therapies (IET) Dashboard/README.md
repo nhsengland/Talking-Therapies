@@ -5,4 +5,4 @@ Please note this information is experimental and it is only intended for use for
 
 Data from September 2020 to the lastest available month is used.
 
-The history of these scripts prior to October 2023 can be found in an (older repository here)[https://github.com/NHSE-Talking-Therapies/Internet-Enabled-Therapies-Dashboard].
+The history of these scripts prior to October 2023 can be found in an [older repository here](https://github.com/NHSE-Talking-Therapies/Internet-Enabled-Therapies-Dashboard).
