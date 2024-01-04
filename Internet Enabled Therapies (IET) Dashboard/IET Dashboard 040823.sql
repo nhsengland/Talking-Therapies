@@ -102,7 +102,7 @@ IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_IET_Base]') IS NOT NULL DROP TABLE [MHDI
 SELECT
 	*
 	,ROW_NUMBER() OVER(PARTITION BY PathwayID, Month, IntEnabledTherProg ORDER BY IntegratedSoftwareInd) as PathwayIDRank
-	--Some pathwayIDs have more than one therapy type within a broader therpay type grouping (e.g. Silvercloud) and so have a record of both integrated and non-integrated software. 
+	--Some pathwayIDs have more than one therapy type within a broader therapy type grouping (e.g. Silvercloud) and so have a record of both integrated and non-integrated software. 
 	--The ranking allows only one PathwayID to be counted in the tables which don't use integrated software field
 INTO [MHDInternal].[TEMP_TTAD_IET_Base]
 FROM(
@@ -212,13 +212,13 @@ FROM(
 			WHEN r.PHQ9_FirstScore BETWEEN 20 AND 27 THEN 'Severe' 
 		END AS 'PHQ9 Cluster'
 
-		,CASE WHEN i.Count_IET=0 AND r.TreatmentCareContact_Count>0
+		,CASE WHEN (i.Count_IET=0 OR i.Count_IET IS NULL)
 			THEN 'No IET'
-			WHEN i.Count_IET>0 AND r.TreatmentCareContact_Count=i.Count_IET
+			WHEN i.Count_IET>0 AND (r.TreatmentCareContact_Count-r.InternetEnabledTherapy_Count)=0
 			THEN 'Only IET'
-			WHEN i.Count_IET>0 AND r.TreatmentCareContact_Count>i.Count_IET
+			WHEN i.Count_IET>0 AND r.TreatmentCareContact_Count>r.InternetEnabledTherapy_Count
 			THEN 'Mixed IET and No IET'
-		END AS UniqueMixedPathway
+		END AS UniqueMixedPathway	--This has been updated to align with the IET appointment count we have done ourselves in [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration]
 
 		--Geography
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
@@ -496,7 +496,7 @@ SET @PeriodEnd = (SELECT EOMONTH(DATEADD(MONTH,0,MAX([ReportingPeriodEndDate])))
 
 --For monthly refresh the offset should be set to -1
 DECLARE @Offset int
-SET @Offset=-37
+SET @Offset=-1
 
 DECLARE @PeriodStart2 DATE
 SET @PeriodStart2= '2020-09-01'	 --This is for defining the period for referrals
@@ -590,8 +590,8 @@ WHERE l.IsLatest = 1	--To get the latest data
 --(1+ IET, 2+ IET and No IET), by IET Therapy Types, by PEQ Questions and Answers, and by Month.
 --Only the latest refreshed month is added each month
 
-IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_PEQ]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
---INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
+--IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_PEQ]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
 --IET 1+
 SELECT
 	Month
@@ -611,7 +611,7 @@ SELECT
 	,Question
 	,Answer
 	,SUM(CompTreatFlag) AS CompTreatFlag
-INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
+--INTO [MHDInternal].[DASHBOARD_TTAD_IET_PEQ]
 FROM [MHDInternal].[TEMP_TTAD_IET_BasePEQ]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
