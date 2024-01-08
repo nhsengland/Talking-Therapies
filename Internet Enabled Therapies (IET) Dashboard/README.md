@@ -4,3 +4,5 @@ This folder contains the SQL scripts used for the [Internet Enabled Therapies in
 Please note this information is experimental and it is only intended for use for management purposes.
 
 Data from September 2020 to the lastest available month is used.
+
+The history of these scripts prior to November 2023 can be found in an [older repository here](https://github.com/NHSE-Talking-Therapies/Internet-Enabled-Therapies-Dashboard).
