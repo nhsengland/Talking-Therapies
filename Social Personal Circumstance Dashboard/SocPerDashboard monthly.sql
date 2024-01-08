@@ -10,7 +10,7 @@ GO
 SET DATEFIRST 1
 SET NOCOUNT ON
 --------------
-DECLARE @Offset INT = 0
+DECLARE @Offset INT = 0 --For monthly refresh this should be set to 0 to define the latest month (the latest two months are run each month)
 -------------------------
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd AS DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -19,8 +19,8 @@ PRINT @PeriodStart
 ----------------------------------------------------------------------------------------------------------------------------------------
 ---- Base Table ------------------------------------------------------------------------------------------------------------------
 ----------------Social Personal Circumstance Ranked Table------------------------------------
-----There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate
-----so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce
+----There are instances of different social personal circumstances within the same TermGroup listed for the same Person_ID and RecordNumber so this table ranks each social personal circumstance code based on the SocPerCircumstanceRecDate
+----so that the latest record of a social personal circumstance within a TermGroup is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce
 ----[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base] table
 
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank]
@@ -257,7 +257,7 @@ FROM [mesh_IAPT].[IDS101referral] r
 
 
 WHERE	UsePathway_Flag = 'True'
-		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
+		AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refresh this should be set to -1 to define the second latest month (the latest two months are run each month)
 GO
 
 -- SocPerCircumstance Dashboard Output----------------------------------------------------------------------------------------------------------------------------------------
