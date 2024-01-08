@@ -97,8 +97,9 @@ SELECT
 FROM[MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AggregateAndRank]
 WHERE Rank<=20 --Only the top 20 preferred languages are shown in the dashboard
 
---Drop Temporary Table
+--Drop Temporary Tables
 DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_Base]
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_AggregateAndRank]
 ----------------------------------------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Top20]'
 GO
@@ -624,5 +625,7 @@ GROUP BY
 	Month
 	,Language_Treated
 
+--Drop Temporary table
+DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_PrefLang_OutcomesBase]
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ProtChar_PrefLang_Outcomes]'
 GO
