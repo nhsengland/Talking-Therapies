@@ -58,46 +58,6 @@ FROM	[MHDInternal].[TEMP_TTAD_PDT_InequalitiesADSMBase] pc
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON pc.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND pc.AuditId = l.AuditId
 			AND pc.Unique_MonthID = l.Unique_MonthID
 
-
---------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
---There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate 
---so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce 
---[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base] table
-
-IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]
-SELECT *
-	,ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] desc, SocPerCircumstanceRank asc) as SocPerCircumstanceLatest
-	--ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
-INTO [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank]
-FROM(
-SELECT DISTINCT
-	AuditID
-	,SocPerCircumstance
-	,SocPerCircumstanceRecDate
-	,Person_ID
-	,RecordNumber
-	,UniqueID_IDS011
-	,OrgID_Provider
-	,UniqueSubmissionID
-	,Unique_MonthID
-	,EFFECTIVE_FROM
-	--,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','38628009','42035005','765288000','766822004') THEN 1
-	--	WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 2
-	--ELSE NULL END AS SocPerCircumstanceRank1
-	,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
-	--Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual,Sexually attracted to neither male nor female sex, Confusion
-		WHEN SocPerCircumstance='38628009' THEN 2 
-		--Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record 
-		--so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
-		WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
-	ELSE NULL END AS SocPerCircumstanceRank
-	--Ranks the social personal circumstances by the amount of information they provide to help decide which one to use
-	--when a record has more than one social personal circumstance on the same day
-FROM [mesh_IAPT].[IDS011socpercircumstances]
---Filters for codes relevant to sexual orientation
-WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
-)_
-
 -----------------------------------Inequalities Base Table---------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
 
@@ -112,19 +72,6 @@ SELECT DISTINCT
 		,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'STP Name'
-
-		--Sexual Orientation
-		,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
-			WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
-			WHEN spc.SocPerCircumstance = '76102007' THEN 'Homosexual (Male)'
-			WHEN spc.SocPerCircumstance = '38628009' THEN 'Homosexual (Gender not specified)'
-			WHEN spc.SocPerCircumstance = '42035005' THEN 'Bisexual'
-			WHEN spc.SocPerCircumstance = '1064711000000100' THEN 'Person asked and does not know or IS not sure'
-			WHEN spc.SocPerCircumstance = '699042003' THEN 'Declined'
-			WHEN spc.SocPerCircumstance = '765288000' THEN 'Sexually attracted to neither male nor female sex'
-			WHEN spc.SocPerCircumstance = '440583007' THEN 'Unknown'
-			WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
-		END AS 'SexualOrientation'
 
 		--Ethnicity
 		,CASE WHEN mpi.Validated_EthnicCategory IN ('A','B','C') THEN 'White'
@@ -356,9 +303,6 @@ FROM [mesh_IAPT].[IDS101referral] r
 	INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 	INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 	---------------------------
-	LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
-		AND spc.SocPerCircumstanceLatest=1
-
 	LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 	---------------------------
 	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
@@ -473,100 +417,6 @@ GROUP BY
 	,[STP Code]
 	,[STP Name]
 GO
-
---Sexual Orientation
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
-SELECT 
-	Month
-	,'Refresh' AS DataSource
-	,[Region Code]
-	,[Region Name]
-	,[CCG Code]
-	,[CCG Name]
-	,[Provider Code]
-	,[Provider Name]
-	,[STP Code]
-	,[STP Name]
-	,'Sexual Orientation' AS 'Category'
-	,[SexualOrientation] AS 'Variable'
-	,SUM([OpenReferralLessThan61DaysNoContact]) AS [OpenReferralLessThan61DaysNoContact]
-	,SUM([OpenReferral61-90DaysNoContact]) AS [OpenReferral61-90DaysNoContact]
-	,SUM([OpenReferral91-120DaysNoContact]) AS [OpenReferral91-120DaysNoContact]
-	,SUM([OpenReferralOver120daysNoContact]) AS [OpenReferralOver120daysNoContact]
-	,SUM([OpenReferral]) AS [OpenReferral]
-	,SUM([ended Treatment]) AS [ended Treatment]
-	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
-	,SUM([Referrals]) AS [Referrals]
-	,SUM([EnteringTreatment]) AS [EnteringTreatment]
-	,SUM([Waiting for Assessment]) AS [Waiting for Assessment]
-	,SUM([WaitingForAssessmentOver90days]) AS [WaitingForAssessmentOver90days]
-	,SUM([FirstAssessment28days]) AS [FirstAssessment28days]
-	,SUM([FirstAssessment29to56days]) AS [FirstAssessment29to56days]
-	,SUM([FirstAssessment57to90days]) AS [FirstAssessment57to90days]
-	,SUM([FirstAssessmentOver90days]) AS [FirstAssessmentOver90days]
-	,SUM([FirstTreatment28days]) AS [FirstTreatment28days]
-	,SUM([FirstTreatment29to56days]) AS [FirstTreatment29to56days]
-	,SUM([FirstTreatment57to90days]) AS [FirstTreatment57to90days]
-	,SUM([FirstTreatmentOver90days]) AS [FirstTreatmentOver90days]
-	,SUM([ended Referral]) AS [ended Referral]
-	,SUM([ended Not Suitable]) AS [ended Not Suitable]
-	,SUM([ended Signposted]) AS [ended Signposted]
-	,SUM([ended Mutual Agreement]) AS [ended Mutual Agreement]
-	,SUM([ended Referred Elsewhere]) AS [ended Referred Elsewhere]
-	,SUM([ended Declined]) AS [ended Declined]
---These are End Codes included in Version 1.5 only and not Version 2
-	,NULL AS 'ended Deceased Assessed Only'
-	,NULL AS 'ended Unknown Assessed Only'
-	,NULL AS 'ended Stepped Up'
-	,NULL AS 'ended Stepped Down'
-	,NULL AS 'ended Completed'
-	,NULL AS 'ended Dropped Out'
-	,NULL AS 'ended Referred Non IAPT'
-	,NULL AS 'ended Deceased Treated'
-	,NULL AS 'ended Unknown Treated'
-	,SUM([ended Invalid]) AS [ended Invalid]
-	,SUM([ended No Reason Recorded]) AS [ended No Reason Recorded]
-	,SUM([ended Seen Not Treated]) AS [ended Seen Not Treated]
-	,SUM([ended Treated Once]) AS [ended Treated Once]
-	,SUM([ended Not Seen]) AS [ended Not Seen]
-	,SUM([Recovery]) AS [Recovery]
-	,SUM([Reliable Recovery]) AS [Reliable Recovery]
-	,SUM([No Change]) AS [No Change]
-	,SUM([Reliable Deterioration]) AS [Reliable Deterioration]
-	,SUM([Reliable Improvement]) AS [Reliable Improvement]
-	,SUM([NotCaseness]) AS [NotCaseness]
-	,SUM([ADSMFinishedTreatment]) AS [ADSMFinishedTreatment]
-	,SUM([CountAppropriatePairedADSM]) AS [CountAppropriatePairedADSM]
-	,SUM([SelfReferral]) AS [SelfReferral]
-	,SUM([GPReferral]) AS [GPReferral]
-	,SUM([OtherReferral]) AS [OtherReferral]
-	,SUM([FirstToSecond28Days]) AS [FirstToSecond28Days]
-	,SUM([FirstToSecond28To56Days]) AS [FirstToSecond28To56Days]
-	,SUM([FirstToSecond57To90Days]) AS [FirstToSecond57To90Days]
-	,SUM([FirstToSecondMoreThan90Days]) AS [FirstToSecondMoreThan90Days]
-	,SUM([ended Not Assessed]) AS [ended Not Assessed]
-	,SUM([ended Incomplete Assessment]) AS [ended Incomplete Assessment]
-	,SUM([ended Deceased (Seen but not taken on for a course of treatment)]) AS [ended Deceased (Seen but not taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen but not taken on for a course of treatment)]) AS [Ended Not Known (Seen but not taken on for a course of treatment)]
-	,SUM([ended Mutually agreed completion of treatment]) AS [ended Mutually agreed completion of treatment]
-	,SUM([ended Termination of treatment earlier than Care Professional planned]) AS [Ended Termination of treatment earlier than Care Professional planned]
-	,SUM([ended Termination of treatment earlier than patient requested]) AS [ended Termination of treatment earlier than patient requested]
-	,SUM([ended Deceased (Seen AND taken on for a course of treatment)]) AS [ended Deceased (Seen and taken on for a course of treatment)]
-	,SUM([ended Not Known (Seen AND taken on for a course of treatment)]) AS [ended Not Known (Seen and taken on for a course of treatment)]
-	,NULL AS RepeatReferrals2	--This is just a column place holder. Every refresh, this column is reset to null and then repeat referrals are added in from the Repeat Referrals script 
-FROM [MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base]
-
-GROUP BY
-	Month
-	,[Region Code]
-	,[Region Name]
-	,[CCG Code]
-	,[CCG Name]
-	,[Provider Code]
-	,[Provider Name]
-	,[STP Code]
-	,[STP Name]
-	,[SexualOrientation]
 
 --Ethnicity
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
