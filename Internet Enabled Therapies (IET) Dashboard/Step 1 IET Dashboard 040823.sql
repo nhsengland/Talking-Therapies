@@ -819,10 +819,16 @@ IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_IET_IETTherapistTimeRecord]') IS NO
 --National
 SELECT
 	Month
-	,CAST('National' AS VARCHAR(50)) AS OrgType
-	,CAST('All Regions' AS VARCHAR(255)) AS Region
-	,CAST('England' AS VARCHAR(255)) AS OrgName
-	,CAST('ENG' AS VARCHAR(50)) AS OrgCode
+	,RegionNameComm
+	,RegionCodeComm
+	,RegionNameProv
+	,RegionCodeProv
+	,ICBName
+	,ICBCode
+	,[Sub-ICBName]
+	,[Sub-ICBCode]
+	,ProviderName
+	,ProviderCode
 	,TherapistTimeRecorded
 	,IntEnabledTherProg
 	,COUNT(StartDateIntEnabledTherLog) AS NumberofAppointments
@@ -831,89 +837,16 @@ FROM [MHDInternal].[TEMP_TTAD_IET_BaseAppts]
 WHERE IntEnabledTherProg<>'No IET'
 GROUP BY
 	Month
+	,RegionNameComm
+	,RegionCodeComm
+	,RegionNameProv
+	,RegionCodeProv
+	,ICBName
+	,ICBCode
+	,[Sub-ICBName]
+	,[Sub-ICBCode]
+	,ProviderName
+	,ProviderCode
 	,IntEnabledTherProg
 	,TherapistTimeRecorded
 GO
-
---Region
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_IETTherapistTimeRecord]
-SELECT 
-	Month
-	,'Region' AS OrgType
-	,RegionNameComm AS Region
-	,RegionNameComm AS OrgName
-	,RegionCodeComm AS OrgCode
-	,TherapistTimeRecorded
-	,IntEnabledTherProg
-	,COUNT(StartDateIntEnabledTherLog) AS NumberofAppointments
-FROM [MHDInternal].[TEMP_TTAD_IET_BaseAppts]
-WHERE IntEnabledTherProg<>'No IET'
-GROUP BY 
-	Month
-	,RegionNameComm
-	,RegionCodeComm
-	,IntEnabledTherProg
-	,TherapistTimeRecorded
-
---ICB
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_IETTherapistTimeRecord]
-SELECT 
-	Month
-	,'ICB' AS OrgType
-	,RegionNameComm AS Region
-	,[ICBName] AS OrgName
-	,[ICBCode] AS OrgCode
-	,TherapistTimeRecorded
-	,IntEnabledTherProg
-	,COUNT(StartDateIntEnabledTherLog) AS NumberofAppointments
-FROM [MHDInternal].[TEMP_TTAD_IET_BaseAppts]
-WHERE IntEnabledTherProg<>'No IET'
-GROUP BY 
-	Month
-	,RegionNameComm
-	,[ICBName]
-	,[ICBCode]
-	,IntEnabledTherProg
-	,TherapistTimeRecorded
-
---Sub-ICB
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_IETTherapistTimeRecord]
-SELECT 
-	Month
-	,'Sub-ICB' AS OrgType
-	,RegionNameComm AS Region
-	,[Sub-ICBName] AS OrgName
-	,[Sub-ICBCode] AS OrgCode
-	,TherapistTimeRecorded
-	,IntEnabledTherProg
-	,COUNT(StartDateIntEnabledTherLog) AS NumberofAppointments
-FROM [MHDInternal].[TEMP_TTAD_IET_BaseAppts]
-WHERE IntEnabledTherProg<>'No IET'
-GROUP BY 
-	Month
-	,RegionNameComm
-	,[Sub-ICBName]
-	,[Sub-ICBCode]
-	,IntEnabledTherProg
-	,TherapistTimeRecorded
-
---Provider
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_IETTherapistTimeRecord]
-SELECT 
-	Month
-	,'Provider' AS OrgType
-	,RegionNameProv AS Region
-	,[ProviderName] AS OrgName
-	,[ProviderCode] AS OrgCode
-	,TherapistTimeRecorded
-	,IntEnabledTherProg
-	,COUNT(StartDateIntEnabledTherLog) AS NumberofAppointments
-FROM [MHDInternal].[TEMP_TTAD_IET_BaseAppts]
-WHERE IntEnabledTherProg<>'No IET'
-GROUP BY 
-	Month
-	,RegionNameProv
-	,[ProviderName]
-	,[ProviderCode]
-	,IntEnabledTherProg
-	,TherapistTimeRecorded
