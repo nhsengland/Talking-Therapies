@@ -1,9 +1,13 @@
-SET ANSI_WARNINGS OFF
-SET NOCOUNT ON
+
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop] 
+
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop])
 
 -- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop] -----------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -11,10 +15,12 @@ DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPAR
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
--------------------------------------------------------------------------------------------------------------------------
---Base Table
+-- Base Table -------------------------------------------------------------------------------------------------------------------------
+
 --This produces a table with one Unique_CareContactID per row so that this table can be aggregated below to produce [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
+
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_PrimaryLoopBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PrimaryLoopBase]
+
 SELECT DISTINCT
 	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS [Month]
 	,a.Unique_CareContactID
@@ -85,7 +91,9 @@ SELECT DISTINCT
 	END AS 'ESApts' 
 	,CASE WHEN a.CareContDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate AND c.CodeProcAndProcStatus = '975131000000104'  AND a.Unique_CareContactID IS NOT NULL THEN 1 ELSE 0
 	END AS 'Signposting'
+
 INTO [MHDInternal].[TEMP_TTAD_PDT_PrimaryLoopBase]
+
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
@@ -105,15 +113,16 @@ FROM	[mesh_IAPT].[IDS101referral] r
 
 WHERE	r.UsePathway_Flag = 'True'
 		AND l.IsLatest = 1
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, 0, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be 0 so only the latest month is added
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refresh the offset should be 0 so only the latest month is added
 		AND a.APPTYPE IN ('02', '2', '2 ', ' 2', '03', '3', '3 ', ' 3', '05', '5', '5 ', ' 5')
 
 
-----------------------------------------------------------------------------------------
---Final Aggregate Table
+-- Final Aggregate Table ----------------------------------------------------------------------------------------
+
 --This table aggregates the base table created above ([MHDInternal].[TEMP_TTAD_PDT_PrimaryLoopBase]) to produce the table used in the dashboard
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
+
 SELECT  
 	Month
 	,'England' AS 'GroupType'
@@ -153,8 +162,9 @@ SELECT
 	,SUM([IPTApts]) AS [IPTApts]
 	,SUM([ESApts]) AS [ESApts]
 	,SUM([Signposting]) AS [Signposting]
---INTO [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]
+
 FROM [MHDInternal].[TEMP_TTAD_PDT_PrimaryLoopBase]
+
 GROUP BY 
 	Month
 	,[Region Code]
@@ -166,9 +176,10 @@ GROUP BY
 	,[STP Code]
 	,[STP Name]
 	,[Attendence Type]
-------------------------------------------------------
---Drop Temporary Table
+
+-- Drop Temporary Table ---------------------------------
+
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_PrimaryLoopBase]
 
--------------------------------------------------------------------------------------------
+-------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PrimaryLoop]'

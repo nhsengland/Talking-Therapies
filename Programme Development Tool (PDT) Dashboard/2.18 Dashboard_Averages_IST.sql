@@ -1,54 +1,26 @@
+
+-- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] -----------------------------
+
+-- DELETE MAX(Month) -----------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_Averages]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_Averages])
+
+--------------------------------------------------------------------------------------
+
 SET ANSI_WARNINGS OFF
 SET NOCOUNT ON
 
 -- Refresh updates for: [MHDInternal].[DASHBOARD_TTAD_Averages] -----------------------------------------------
 
-DECLARE @Offset AS INT = -1
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPART(YYYY, @PeriodStart) AS VARCHAR))
 
 PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
-
---------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
---There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate 
---so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce 
---[MHDInternal].[TEMP_TTAD_PDT_Inequalities_Base] table
-
-IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank]
-SELECT *
-	,ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] desc, SocPerCircumstanceRank asc) as SocPerCircumstanceLatest
-	--ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
-INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank]
-FROM(
-SELECT DISTINCT
-	AuditID
-	,SocPerCircumstance
-	,SocPerCircumstanceRecDate
-	,Person_ID
-	,RecordNumber
-	,UniqueID_IDS011
-	,OrgID_Provider
-	,UniqueSubmissionID
-	,Unique_MonthID
-	,EFFECTIVE_FROM
-	--,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','38628009','42035005','765288000','766822004') THEN 1
-	--	WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 2
-	--ELSE NULL END AS SocPerCircumstanceRank1
-	,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
-	--Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual,Sexually attracted to neither male nor female sex, Confusion
-		WHEN SocPerCircumstance='38628009' THEN 2 
-		--Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record 
-		--so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
-		WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
-	ELSE NULL END AS SocPerCircumstanceRank
-	--Ranks the social personal circumstances by the amount of information they provide to help decide which one to use
-	--when a record has more than one social personal circumstance on the same day
-FROM [mesh_IAPT].[IDS011socpercircumstances]
---Filters for codes relevant to sexual orientation
-WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
-)_
 
 ----------------------------------------------------------------------------------------------------------
 -- Base table: Finished Treatment ------------------------------------------------------------------------
@@ -76,17 +48,6 @@ SELECT DISTINCT
 			WHEN mpi.Gender IN ('x','X') THEN 'Not Known'
 			WHEN mpi.Gender NOT IN ('1','01','2','02','9','09','x','X') OR mpi.Gender IS NULL THEN 'Unspecified' 
 		END AS 'Gender'
-		,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
-			WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
-			WHEN spc.SocPerCircumstance = '76102007' THEN 'Homosexual (Male)'
-			WHEN spc.SocPerCircumstance = '38628009' THEN 'Homosexual (Gender not specified)'
-			WHEN spc.SocPerCircumstance = '42035005' THEN 'Bisexual'
-			WHEN spc.SocPerCircumstance = '1064711000000100' THEN 'Person asked and does not know or is not sure'
-			WHEN spc.SocPerCircumstance = '699042003' THEN 'Declined'
-			WHEN spc.SocPerCircumstance = '765288000' THEN 'Sexually attracted to neither male nor female sex'
-			WHEN spc.SocPerCircumstance = '440583007' THEN 'Unknown'
-			WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
-		END AS 'SexualOrientation'
 		,CASE WHEN r.PresentingComplaintHigherCategory = 'Depression' OR r.[PrimaryPresentingComplaint] = 'Depression' THEN 'F32 or F33 - Depression'
 			WHEN r.PresentingComplaintHigherCategory = 'Unspecified' OR r.[PrimaryPresentingComplaint] = 'Unspecified' THEN 'Unspecified'
 			WHEN r.PresentingComplaintHigherCategory = 'Other recorded problems' OR r.[PrimaryPresentingComplaint] = 'Other recorded problems' THEN 'Other recorded problems'
@@ -137,15 +98,12 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
 		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
 			AND ph.Effective_To IS NULL
-		--------------------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID
-			AND spc.SocPerCircumstanceLatest=1
 		-----------------------------------------
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] AND [Effective_Snapshot_Date] = '2015-12-31' -- to match reference table used in NCDR
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = '1'
 		AND r.TreatmentCareContact_Count > 1 
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND r.[ServDischDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
 
 ----------------------------------------------------------------------------------------------------------
@@ -182,7 +140,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 			AND ph.Effective_To IS NULL
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = '1'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -34, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
+		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart --For monthly refreshes this should be 0 so just the latest month is run
 		AND r.[TherapySession_FirstDate] BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate]
 GO
 
@@ -373,33 +331,6 @@ FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
 	Month
 	,CAST([IMD_Decile] AS Varchar)
-
---National, Sexual Orientation
-INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanApps]
-	SELECT DISTINCT 
-	Month
-	,'National' AS 'Level'
-	,'Refresh' AS DataSource
-	,'All' AS 'Region Code'
-	,'All' AS 'Region Name'
-	,'All' AS 'CCG Code'
-	,'All' AS 'CCG Name'
-	,'All' AS 'Provider Code'
-	,'All' AS 'Provider Name'
-	,'All' AS 'STP Code'
-	,'All' AS 'STP Name'
-	,'Sexual Orientation' AS Category
-	,[SexualOrientation] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
-	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
-FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
-GROUP BY 
-	Month
-	,SexualOrientation
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- National Wait Times ------------------------------------------------------------------------------------------------------------------------------------------
@@ -648,35 +579,6 @@ GROUP BY
 	,[Region Code]
 	,[Region Name]
 
---Region, Sexual Orientation
-INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMeanApps]
-SELECT DISTINCT 
-	Month
-	,'Region' AS 'Level'
-	,'Refresh' AS DataSource
-	,[Region Code] AS 'Region Code'
-	,[Region Name] AS 'Region Name'
-	,'All' AS 'CCG Code'
-	,'All' AS 'CCG Name'
-	,'All' AS 'Provider Code'
-	,'All' AS 'Provider Name'
-	,'All' AS 'STP Code'
-	,'All' AS 'STP Name'
-	,'Sexual Orientation' AS Category
-	,[SexualOrientation] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
-	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
-FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
-GROUP BY 
-	Month
-	,SexualOrientation
-	,[Region Code]
-	,[Region Name]
-
 -- Region Median Wait ------------------------------------------------------------------------------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMedianWait]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMedianWait]
 SELECT DISTINCT 
@@ -726,6 +628,7 @@ GROUP BY
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- ICB -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- ICB Median Apps ----------------------------------------------------------------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianApps]
 SELECT DISTINCT 
@@ -921,37 +824,11 @@ GROUP BY Month
 		,[STP Code]
 		,[STP Name]
 
---ICB, Sexual Orientation
-INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanApps]
-SELECT DISTINCT 
-	Month
-	,'STP' AS 'Level'
-	,'Refresh' AS DataSource
-	,'All' AS 'Region Code'
-	,'All' AS 'Region Name'
-	,'All' AS 'CCG Code'
-	,'All' AS 'CCG Name'
-	,'All' AS 'Provider Code'
-	,'All' AS 'Provider Name'
-	,[STP Code] AS 'STP Code'
-	,[STP Name] AS 'STP Name'
-	,'Sexual Orientation' AS Category
-	,[SexualOrientation] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
-	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
-FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
-GROUP BY 
-	Month
-	,[SexualOrientation]
-	,[STP Code]
-	,[STP Name]
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- ICB Median Wait ---------------------------------------------------------------------
+-- ICB Median Wait -------------------------------------------------------------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianWait]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMedianWait]
+
 SELECT DISTINCT 
 	Month
 	,'STP' AS 'Level'
@@ -998,8 +875,11 @@ GROUP BY
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Sub-ICB -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- Sub-ICB Median Appointments ---------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianApps]
+
 SELECT DISTINCT 
 	Month
 	,'CCG' AS 'Level'
@@ -1020,6 +900,7 @@ FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GO
 -- Sub-ICB Mean Appointments ------------------------------------------------------------------------------
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps]
+
 --Sub-ICB, Total
 SELECT DISTINCT 
 	Month
@@ -1194,38 +1075,11 @@ GROUP BY
 	,[CCG Code]
 	,[CCG Name]
 
---Sub-ICB, Sexual Orientation
-INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps]
-SELECT DISTINCT 
-	Month
-	,'CCG' AS 'Level'
-	,'Refresh' AS DataSource
-	,'All' AS 'Region Code'
-	,'All' AS 'Region Name'
-	,[CCG Code] AS 'CCG Code'
-	,[CCG Name] AS 'CCG Name'
-	,'All' AS 'Provider Code'
-	,'All' AS 'Provider Name'
-	,'All' AS 'STP Code'
-	,'All' AS 'STP Name'
-	,'Sexual Orientation' AS Category
-	,[SexualOrientation] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
-	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
-FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
-GROUP BY 
-	Month
-	,[SexualOrientation]
-	,[CCG Code]
-	,[CCG Name]
-
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Sub-ICB Median Wait -----------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianWait]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMedianWait]
+
 SELECT DISTINCT 
 	Month
 	,'CCG' AS 'Level'
@@ -1274,8 +1128,11 @@ GROUP BY
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Provider --------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 -- Provider Median Apps --------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps]
+
 SELECT DISTINCT 
 	Month
 	,'Provider' AS 'Level'
@@ -1470,38 +1327,11 @@ GROUP BY
 	,[Provider Code]
 	,[Provider Name] 
 
---Provider, Sexual Orientation
-INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanApps]
-SELECT DISTINCT 
-	Month
-	,'Provider' AS 'Level'
-	,'Refresh' AS DataSource
-	,'All' AS 'Region Code'
-	,'All' AS 'Region Name'
-	,'All' AS 'CCG Code'
-	,'All' AS 'CCG Name'
-	,[Provider Code] AS 'Provider Code'
-	,[Provider Name] AS 'Provider Name'
-	,'All' AS 'STP Code'
-	,'All' AS 'STP Name'
-	,'Sexual Orientation' AS Category
-	,[SexualOrientation] AS 'Variable'
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
-	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
-FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
-GROUP BY
-	Month
-	,[SexualOrientation]
-	,[Provider Code]
-	,[Provider Name]
-
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Provider Median Wait --------------------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait]
+
 SELECT DISTINCT 
 	Month
 	,'Provider' AS 'Level'
@@ -1548,7 +1378,9 @@ GROUP BY
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Unsuppressed Final Table -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
+
 --National
 SELECT DISTINCT	
 		a.[Month]
@@ -1581,6 +1413,7 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanWait] b ON a.[Level]
 LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianWait] c ON a.[Level] = c.[Level] AND a.[Month] = c.[Month] AND a.[CCG Code] = c.[CCG Code] AND a.[Provider Code] = c.[Provider Code] AND a.[Region Code] = c.[Region Code] AND a.[STP Code] = c.[STP Code] AND a.[Category] = c.[Category] AND a.[Variable] = c.[Variable]
 LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMedianApps] d ON a.[Level] = d.[Level] AND a.[Month] = d.[Month] AND a.[CCG Code] = d.[CCG Code] AND a.[Provider Code] = d.[Provider Code] AND a.[Region Code] = d.[Region Code] AND a.[STP Code] = d.[STP Code] AND a.[Category] = d.[Category] AND a.[Variable] = d.[Variable]
 GO
+
 --Region
 INSERT INTO [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 SELECT DISTINCT	
@@ -1711,8 +1544,9 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps] d ON a.[Leve
 
 -------------------------------------------------------------------------------------------------
 -- Rounding & Supression ------------------------------------------------------------------------
---IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_Averages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_Averages]
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
+
 SELECT 
 	[Month]
 	,[Level]
@@ -1772,9 +1606,8 @@ SELECT
 FROM [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 WHERE Level<>'National'
 
--------------------------------------------------
---Drop Temporary Tables
-DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_SocPerCircRank]
+--Drop Temporary Tables -------------------------------------------------
+
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
 
@@ -1805,4 +1638,5 @@ DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanWait]
 
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 -------------------------------------------------------------------------------------
+
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_Averages]'

@@ -5,7 +5,15 @@ SET NOCOUNT ON
 -- This script MUST be run AFTER script 2.11 which feeds [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities] ------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
 
-DECLARE @Offset AS INT = -1
+-- DELETE MAX(Month) -----------------------------------------------------------------------
+ 
+DELETE FROM [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]
+ 
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics])
+
+--------------------------------------------------------------------------------------------
+	
+DECLARE @Offset AS INT = 0
 
 DECLARE @PeriodStart DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 DECLARE @PeriodEnd DATE = (SELECT EOMONTH(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -15,37 +23,36 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Refresh updates for: [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics] ------------------------------------------------------
 
---IF OBJECT_ID('[MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]') IS NOT NULL DROP TABLE [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]
 INSERT INTO [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]
-SELECT *
---INTO [MHDInternal].[STAGING_TTAD_PDT_Over65Metrics]
-FROM(
-	--National
-	SELECT
-		[Month] 
-		,'Refresh' AS 'DataSource'
-		,'England' AS 'GroupType'
-		,'All' AS 'Region Code'
-		,'All' AS 'Region Name'
-		,'All' AS 'CCG Code'
-		,'All' AS 'CCG Name'
-		,'All' AS 'Provider Code'
-		,'All' AS 'Provider Name'
-		,'All' AS 'STP Code'
-		,'All' AS 'STP Name'
-		,[Category]
-		,[Variable]
-		,SUM([Finished Treatment - 2 or more Apps]) AS 'Finished Treatment - 2 or more Apps'
-		,SUM([Referrals]) AS 'Referrals'
-		,SUM([EnteringTreatment]) AS 'EnteringTreatment'
-		,'National' AS 'Level'
+
+SELECT * FROM (
+
+--National
+SELECT
+	[Month] 
+	,'Refresh' AS 'DataSource'
+	,'England' AS 'GroupType'
+	,'All' AS 'Region Code'
+	,'All' AS 'Region Name'
+	,'All' AS 'CCG Code'
+	,'All' AS 'CCG Name'
+	,'All' AS 'Provider Code'
+	,'All' AS 'Provider Name'
+	,'All' AS 'STP Code'
+	,'All' AS 'STP Name'
+	,[Category]
+	,[Variable]
+	,SUM([Finished Treatment - 2 or more Apps]) AS 'Finished Treatment - 2 or more Apps'
+	,SUM([Referrals]) AS 'Referrals'
+	,SUM([EnteringTreatment]) AS 'EnteringTreatment'
+	,'National' AS 'Level'
 
 	FROM [MHDInternal].[DASHBOARD_TTAD_PDT_Inequalities]
 
 	WHERE 
 		Category = 'Age'
 		AND Variable = '65+' 
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
@@ -81,7 +88,7 @@ FROM(
 	WHERE 
 		Category = 'Age'
 		AND Variable = '65+'
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
@@ -119,7 +126,7 @@ FROM(
 	WHERE 
 		Category = 'Age' 
 		AND Variable = '65+' 
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
@@ -158,7 +165,7 @@ FROM(
 	WHERE 
 		Category = 'Age'
 		AND Variable = '65+'
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY 
 		[Month]
@@ -197,7 +204,7 @@ FROM(
 	WHERE 
 		Category = 'Age' 
 		AND Variable = '65+' 
-		AND [Month] = @MonthYear
+		AND ([Month] = @MonthYear OR [Month] = DATEADD(MONTH, -1, @MonthYear))
 
 	GROUP BY
 		[Month]
