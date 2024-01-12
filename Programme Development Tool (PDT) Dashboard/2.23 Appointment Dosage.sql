@@ -15,6 +15,8 @@ DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@Offset,MAX([ReportingP
 SET DATEFIRST 1			
 -------------------------------------------------------------------------
 
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_AppointmentDosage]
+	
 SELECT 
     DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS varchar) AS Month		
     ,'England' AS 'GroupType'
@@ -55,8 +57,6 @@ SELECT
     ,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND  ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Deterioration'			
     ,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND  ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Improvement'			
     ,COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'NotCaseness'			
-
-INTO [MHDInternal].[DASHBOARD_TTAD_PDT_AppointmentDosage]
 
 FROM [mesh_IAPT].[IDS101referral] r			
 	---------------------------------		
