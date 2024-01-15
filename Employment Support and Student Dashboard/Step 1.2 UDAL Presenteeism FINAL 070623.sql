@@ -1,5 +1,3 @@
-﻿--Please note this information is experimental and it is only intended for use for management purposes.
-
 /****** Script for Employment Support Dashboard to produce the Presenteeism Table******/
 
 --Base Table
