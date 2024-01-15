@@ -12,47 +12,6 @@ WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupp_
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
 WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes])
 
-------------------------------------------------------------------------------------------------------------------------
---------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
---There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate 
---so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce 
---[MHDInternal].[TEMP_TTAD_EmpSupp_Base] and [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base] tables
-
-IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
-SELECT *
-	,ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] desc, SocPerCircumstanceRank asc) as SocPerCircumstanceLatest
-	--ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
-INTO [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
-FROM(
-SELECT DISTINCT
-	AuditID
-	,SocPerCircumstance
-	,SocPerCircumstanceRecDate
-	,Person_ID
-	,RecordNumber
-	,UniqueID_IDS011
-	,OrgID_Provider
-	,UniqueSubmissionID
-	,Unique_MonthID
-	,EFFECTIVE_FROM
-	--,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','38628009','42035005','765288000','766822004') THEN 1
-	--	WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 2
-	--ELSE NULL END AS SocPerCircumstanceRank1
-	,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
-	--Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual,Sexually attracted to neither male nor female sex, Confusion
-		WHEN SocPerCircumstance='38628009' THEN 2 
-		--Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record 
-		--so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
-		WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
-	ELSE NULL END AS SocPerCircumstanceRank
-	--Ranks the social personal circumstances by the amount of information they provide to help decide which one to use
-	--when a record has more than one social personal circumstance on the same day
-FROM [mesh_IAPT].[IDS011socpercircumstances]
---Filters for codes relevant to sexual orientation
-WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
-)_
-GO
-
 ---Employment Support Appointment Count
 --There is currently an issue with EmploymentSupport_Count field in IDS101referral table so we are calculating the number of employment support appointments in this table
 --This is based on the criteria specified for this field in the Technical Output Specification
@@ -257,20 +216,6 @@ DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.ReportingP
 			ELSE 'Other' 
 		END AS 'ProblemDescriptor'
 
------------------Sexual Orientation
-		,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
-				WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
-				WHEN spc.SocPerCircumstance = '76102007' THEN 'Homosexual (Male)'
-				WHEN spc.SocPerCircumstance = '38628009' THEN 'Homosexual (Gender not specified)'
-				WHEN spc.SocPerCircumstance = '42035005' THEN 'Bisexual'
-				WHEN spc.SocPerCircumstance = '1064711000000100' THEN 'Person asked and does not know or IS not sure'
-				WHEN spc.SocPerCircumstance = '699042003' THEN 'Declined'
-				WHEN spc.SocPerCircumstance = '765288000' THEN 'Sexually attracted to neither male nor female sex'
-				WHEN spc.SocPerCircumstance = '440583007' THEN 'Unknown'
-				WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
-				ELSE 'Unspecified'
-		END AS 'SexualOrientationDesc'
-
 		--Geography
 		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
 		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
@@ -294,8 +239,6 @@ FROM [mesh_IAPT].[IDS101referral] r
 		--Allows filtering for the latest data
 		LEFT JOIN [mesh_IAPT].[IDS004empstatus] emp ON r.recordnumber = emp.recordnumber AND emp.AuditId = l.AuditId
 		--Provides data for employment status and other indicators		
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest=1
-		--Provides data for sexual orientation
 		LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] and IMD.Effective_Snapshot_Date='2019-12-31'
 		--Provides data for IMD
 
@@ -331,7 +274,6 @@ SELECT DISTINCT
 		,emp1.[IMD_Decile]
 		,emp1.[AgeGroups]
 		,emp1.[ProblemDescriptor]
-		,emp1.[SexualOrientationDesc]
 		,emp1.[Sub-ICBName]
 		,emp1.[Sub-ICBCode]
 		,emp1.[ICBName]
@@ -713,20 +655,6 @@ SELECT DISTINCT
 		ELSE 'Other'
 	END AS 'ProblemDescriptor'
 
-	--Sexual Orientation
-	,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
-		WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
-		WHEN spc.SocPerCircumstance = '76102007' THEN 'Homosexual (Male)'
-		WHEN spc.SocPerCircumstance = '38628009' THEN 'Homosexual (Gender not specified)'
-		WHEN spc.SocPerCircumstance = '42035005' THEN 'Bisexual'
-		WHEN spc.SocPerCircumstance = '1064711000000100' THEN 'Person asked and does not know or IS not sure'
-		WHEN spc.SocPerCircumstance = '699042003' THEN 'Declined'
-		WHEN spc.SocPerCircumstance = '765288000' THEN 'Sexually attracted to neither male nor female sex'
-		WHEN spc.SocPerCircumstance = '440583007' THEN 'Unknown'
-		WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
-		ELSE 'Unspecified'
-	END AS 'SexualOrientationDesc'
-
 INTO [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
 FROM [mesh_IAPT].[IDS101referral] r
 	INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
@@ -735,8 +663,6 @@ FROM [mesh_IAPT].[IDS101referral] r
 	--Allows filtering for the latest data
 	LEFT JOIN [mesh_IAPT].[IDS004empstatus] emp ON r.recordnumber = emp.recordnumber
 	--Provides data for employment support referrals/appointments/discharges
-	LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest=1
-	--Provides data for sexual orientation
 	LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] and IMD.Effective_Snapshot_Date='2019-12-31'
 	--Provides data for IMD
 
@@ -838,7 +764,7 @@ GROUP BY
 
 --Aggregated Output Clinical Outcomes Table
 --This table sums the flags produced in the base table above to produce the aggregate values at provider/Sub-ICB/ICB/National levels, for the protected characteristics of Gender, Ethnicity, 
---Gender Identity, Deprivation, Age, Problem Descriptor and Sexual Orientation, and for either any appointment types, any appointment type except employment support, or employment support appointments.
+--Gender Identity, Deprivation, Age and Problem Descriptor, and for either any appointment types, any appointment type except employment support, or employment support appointments.
 --This table is used in the dashboard.
 
 --IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1187,64 +1113,6 @@ GROUP BY
 	,AllEmploymentSupport_Count
 	,EmpSupportDischargeDatePresent
 
-					------------------Sexual Orientation, Employment
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,RegionNameComm
-	,RegionCodeComm
-	,RegionCodeProv
-	,RegionNameProv
-	,ICBCode
-	,ICBName
-	,[Sub-ICBCode]
-	,[Sub-ICBName]
-	,ProviderCode
-	,ProviderName
-	,'Sexual Orientation' as Category
-	,SexualOrientationDesc as Variable
-	,'Employment Support' as AppointmentType
-	,AllEmploymentSupport_Count as Dosage
-	,EmpSupportDischargeDatePresent
-	
---Referrals
-	,SUM(EmpReferrals) AS Referrals
-
-	,SUM(EmpOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
-	,SUM([EmpOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
-	,SUM([EmpOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
-	,SUM(EmpOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
---Access
-	,SUM(EmpAccess) as Access
-
---Finished Treatment
-	,SUM(AllFinishedTreatment) as FinishedTreatment
-
---For Clinical Outcomes Calcs
-	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(AllNotCaseness) as NotCasenessFlag
-	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-WHERE AllEmploymentSupport_Count>0
-GROUP BY 
-	Month
-	,RegionNameComm
-	,RegionCodeComm
-	,RegionCodeProv
-	,RegionNameProv
-	,ICBCode
-	,ICBName
-	,[Sub-ICBCode]
-	,[Sub-ICBName]
-	,ProviderCode
-	,ProviderName
-	,SexualOrientationDesc
-	,AllEmploymentSupport_Count
-	,EmpSupportDischargeDatePresent
-
-
 --------------------------All Appointments
 ------------------Gender, All
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
@@ -1589,64 +1457,6 @@ GROUP BY
 	,GenderIdentityDesc
 	,AllTreatmentCareContact_Count
 	,EmpSupportDischargeDatePresent
-
-------------------Sexual Orientation, All
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,RegionNameComm
-	,RegionCodeComm
-	,RegionCodeProv
-	,RegionNameProv
-	,ICBCode
-	,ICBName
-	,[Sub-ICBCode]
-	,[Sub-ICBName]
-	,ProviderCode
-	,ProviderName
-	,'Sexual Orientation' as Category
-	,SexualOrientationDesc as Variable
-	,'Any Appointment Type' as AppointmentType
-	,AllTreatmentCareContact_Count as Dosage
-	,'NA' AS EmpSupportDischargeDatePresent
-	
---Referrals
-	,SUM(AllReferrals) AS Referrals
-
-	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
-	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
-	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
-	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
-	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
---For Clinical Outcomes Calcs
-	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(AllNotCaseness) as NotCasenessFlag
-	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-GROUP BY
-	Month
-	,RegionNameComm
-	,RegionCodeComm
-	,RegionCodeProv
-	,RegionNameProv
-	,ICBCode
-	,ICBName
-	,[Sub-ICBCode]
-	,[Sub-ICBName]
-	,ProviderCode
-	,ProviderName
-	,SexualOrientationDesc
-	,AllTreatmentCareContact_Count
-	,EmpSupportDischargeDatePresent
-
 
 --------All Appointments except Employment Support
 
@@ -2000,65 +1810,6 @@ GROUP BY
 	,GenderIdentityDesc
 	,AllTreatmentCareContact_Count
 	,EmpSupportDischargeDatePresent
-
-------------------Sexual Orientation, All except Emp Supp
-	
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_EmpSupp_ClinOutcomes]
-SELECT
-	Month
-	,RegionNameComm
-	,RegionCodeComm
-	,RegionCodeProv
-	,RegionNameProv
-	,ICBCode
-	,ICBName
-	,[Sub-ICBCode]
-	,[Sub-ICBName]
-	,ProviderCode
-	,ProviderName
-	,'Sexual Orientation' as Category
-	,SexualOrientationDesc as Variable
-	,'Any Appointment Type except Employment Support' as AppointmentType
-	,AllTreatmentCareContact_Count as Dosage
-	,'NA' AS EmpSupportDischargeDatePresent
-	
---Referrals
-	,SUM(AllReferrals) AS Referrals
-
-	,SUM(AllOpenReferralLessThan61DaysTimeSinceLastContact) AS OpenReferralLessThan61DaysTimeSinceLastContact
-	,SUM([AllOpenReferral61-90DaysTimeSinceLastContact]) AS [OpenReferral61-90DaysTimeSinceLastContact]
-	,SUM([AllOpenReferral91-120DaysTimeSinceLastContact]) AS [OpenReferral91-120DaysTimeSinceLastContact]
-	,SUM(AllOpenReferralOver120daysTimeSinceLastContact) AS OpenReferralOver120daysTimeSinceLastContact
---Access
-	,SUM(AllAccess) as Access
-	
---Finished Treatment
-	,SUM(AllFinishedTreatment) as FinishedTreatment
-	
---For Clinical Outcomes Calcs
-	,SUM(AllCompTreatFlagRecFlag) as RecoveryFlag
-	,SUM(AllNotCaseness) as NotCasenessFlag
-	,SUM(AllCompTreatFlagRelImpFlag) as ReliableImprovementFlag
-	,SUM(AllCompTreatFlagRelDetFlag) as ReliableDeteriorationFlag
-	
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
-WHERE AllEmploymentSupport_Count=0
-GROUP BY
-	Month
-	,RegionNameComm
-	,RegionCodeComm
-	,RegionCodeProv
-	,RegionNameProv
-	,ICBCode
-	,ICBName
-	,[Sub-ICBCode]
-	,[Sub-ICBName]
-	,ProviderCode
-	,ProviderName
-	,SexualOrientationDesc
-	,AllTreatmentCareContact_Count
-	,EmpSupportDischargeDatePresent
-
 
 --Drop temporary tables created to produce the final output tables
 DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
