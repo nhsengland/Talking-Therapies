@@ -155,7 +155,7 @@ WHERE e.[Effective_Snapshot_Date] = '2021-03-21' and e.Geography_Code like 'E01%
 	,'Ethnic_group:_Other_ethnic_group','Ethnic_group:_White')
 
 --This table aggregates the populations to Sub-ICB, ICB and National levels based on the ethnicity base table above
---Ethnicity is grouped into Asian, Black, Mixed, White and Other as these are the ethnicity groups used in the Memory Assessment Services dashboard this table is used in
+--Ethnicity is grouped into Asian, Black, Mixed, White and Other as these are the ethnicity groups used in the dashboard this table is used in
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PopsData]
 SELECT

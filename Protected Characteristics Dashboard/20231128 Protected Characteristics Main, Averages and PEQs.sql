@@ -11,49 +11,6 @@ DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
 WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs])
 
 GO
---------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
-
-/* There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each 
-sexual orientation code based on the SocPerCircumstanceRecDate so that the latest record of a sexual orientation is labelled as 1. 
-Only records where SocPerCircumstanceLatest=1 are used in the queries. 
-*/
-
-IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
-
---ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
-
-SELECT 
-      *
-      ,ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] DESC, SocPerCircumstanceRank ASC) AS 'SocPerCircumstanceLatest'
-
-INTO [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank]
-
-FROM (
-
-      SELECT DISTINCT
-            AuditID
-            ,SocPerCircumstance
-            ,SocPerCircumstanceRecDate
-            ,Person_ID
-            ,RecordNumber
-            ,UniqueID_IDS011
-            ,OrgID_Provider
-            ,UniqueSubmissionID
-            ,Unique_MonthID
-            ,EFFECTIVE_FROM
-            ,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
-            --Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual, Sexually attracted to neither male nor female sex, Confusion
-                  WHEN SocPerCircumstance='38628009' THEN 2
-                  --Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record
-                  --so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
-                  WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
-            ELSE NULL END AS SocPerCircumstanceRank
-            --Ranks the social personal circumstances by the amount of information they provide, to help decide which one to use when a record has more than one social personal circumstance on the same day
-
-      FROM [mesh_IAPT].[IDS011socpercircumstances]
-
-      WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004') --Filters for codes relevant to sexual orientation
-)_
 
 DECLARE @Offset INT = 0
 --------------------
@@ -121,20 +78,6 @@ SELECT DISTINCT
             WHEN mpi.Validated_EthnicCategory = '99' THEN 'Not known'
             ELSE 'Other'
       END AS 'Ethnicity - Detailed'
-
-      -- Sexual Orientation
-      ,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
-            WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
-            WHEN spc.SocPerCircumstance = '76102007' THEN 'Homosexual (Male)'
-            WHEN spc.SocPerCircumstance = '38628009' THEN 'Homosexual (Gender not specified)'
-            WHEN spc.SocPerCircumstance = '42035005' THEN 'Bisexual'
-            WHEN spc.SocPerCircumstance = '1064711000000100' THEN 'Person asked and does not know or IS not sure'
-            WHEN spc.SocPerCircumstance = '699042003' THEN 'Declined'
-            WHEN spc.SocPerCircumstance = '765288000' THEN 'Sexually attracted to neither male nor female sex'
-            WHEN spc.SocPerCircumstance = '440583007' THEN 'Unknown'
-            WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
-            ELSE 'Unspecified'
-      END AS 'Sexual Orientation'
 
       -- Age
       ,CASE WHEN r.Age_ReferralRequest_ReceivedDate < 18 THEN 'Under 18' 
@@ -278,8 +221,6 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		-------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest=1
 		-------------------------
 		---- Tables for up-to-date Sub-ICB/ICB/Region/Provider names/codes --------------------------------------
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
@@ -425,49 +366,6 @@ GROUP BY
       ,[Ethnicity - Detailed]
 
 ------------------------------------------------------------------------------------
---Sexual Orientation
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
-SELECT 
-      Month
-      ,[Region Code]
-      ,[Region Name]
-      ,[Sub ICB Code]
-      ,[Sub ICB Name]
-      ,[Provider Code]
-      ,[Provider Name]
-      ,[ICB Code]
-      ,[ICB Name]
-      ,'Sexual Orientation' AS Category
-      ,[Sexual Orientation] AS Variable
-      ,SUM([Count_Referrals]) AS 'Count_Referrals'
-      ,SUM([Count_AccessedTreatment]) AS 'Count_AccessedTreatment'
-      ,SUM([Count_Recovery]) AS 'Count_Recovery'
-      ,SUM([Count_Improvement]) AS 'Count_Improvement'
-      ,SUM([Count_ReliableRecovery]) AS 'Count_ReliableRecovery'
-      ,SUM([Count_Finished]) AS 'Count_Finished'
-      ,SUM([Count_NotCaseness]) AS 'Count_NotCaseness'
-      ,SUM([Count_FinishedCourseTreatmentHILI]) AS 'Count_FinishedCourseTreatmentHILI'
-      ,SUM([Count_FinishedCourseTreatmentHI]) AS 'Count_FinishedCourseTreatmentHI'
-      ,SUM([Count_FinishedCourseTreatmentLI]) AS 'Count_FinishedCourseTreatmentLI'
-      ,SUM([Count_EndedNotSeen]) AS 'Count_EndedNotSeen'
-      ,SUM([Count_OneTreatment]) AS 'Count_OneTreatment'
-      ,SUM([Count_FirstTreatment_6Weeks]) AS 'Count_FirstTreatment_6Weeks'
-      ,SUM([Count_FirstTreatment_18Weeks]) AS 'Count_FirstTreatment_18Weeks'
-      ,SUM([Count_WaitFirstToSecond_Over90days]) AS 'Count_WaitFirstToSecond_Over90days'
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
-GROUP BY
-      [Month]
-      ,[Region Code]
-      ,[Region Name]
-      ,[Sub ICB Code]
-      ,[Sub ICB Name]
-      ,[Provider Code]
-      ,[Provider Name]
-      ,[ICB Code]
-      ,[ICB Name]
-      ,[Sexual Orientation]
-
----------------------------------------------------------------------
 --Age
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_MainTable]
 SELECT 
@@ -882,99 +780,6 @@ GROUP BY
       ,[Sub ICB Code]
       ,[Sub ICB Name]
       ,[Ethnicity - Detailed]
-------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------
---National, Sexual Orientation
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
-SELECT 
-      Month
-      ,'National' AS OrganisationType
-      ,'All Regions' AS Region
-      ,'ENG' AS OrganisationCode
-      ,'England' AS OrganisationName
-      ,'Sexual Orientation' AS Category
-      ,[Sexual Orientation] AS Variable
-      ,ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) AS MeanApps
-      ,ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) AS MeanFirstWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) AS MeanSecondWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) AS MeanFirstPHQ9Finished
-      ,ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) AS MeanFirstGAD7Finished
-      ,ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) AS Mean_FirstWSASW
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
-GROUP BY
-      [Month]
-      ,[Sexual Orientation]
-
---Region, Sexual Orientation
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
-SELECT 
-      Month
-      ,'Region' AS OrganisationType
-      ,[Region Name] AS Region
-      ,[Region Code] AS OrganisationCode
-      ,[Region Name] AS OrganisationName
-      ,'Sexual Orientation' AS Category
-      ,[Sexual Orientation] AS Variable
-      ,ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) AS MeanApps
-      ,ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) AS MeanFirstWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) AS MeanSecondWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) AS MeanFirstPHQ9Finished
-      ,ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) AS MeanFirstGAD7Finished
-      ,ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) AS Mean_FirstWSASW
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
-GROUP BY 
-      [Month]
-      ,[Region Code]
-      ,[Region Name]
-      ,[Sexual Orientation]
-
---ICB, Sexual Orientation
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
-SELECT 
-      Month
-      ,'ICB' AS OrganisationType
-      ,[Region Name] AS Region
-      ,[ICB Code] AS OrganisationCode
-      ,[ICB Name] AS OrganisationName
-      ,'Sexual Orientation' AS Category
-      ,[Sexual Orientation] AS Variable
-      ,ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) AS MeanApps
-      ,ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) AS MeanFirstWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) AS MeanSecondWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) AS MeanFirstPHQ9Finished
-      ,ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) AS MeanFirstGAD7Finished
-      ,ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) AS Mean_FirstWSASW
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
-GROUP BY 
-      [Month]
-      ,[Region Name]
-      ,[ICB Code]
-      ,[ICB Name]
-      ,[Sexual Orientation]
-
---Sub-ICB, Sexual Orientation
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages]
-SELECT 
-      Month
-      ,'Sub-ICB' AS OrganisationType
-      ,[Region Name] AS Region
-      ,[Sub ICB Code] AS OrganisationCode
-      ,[Sub ICB Name] AS OrganisationName
-      ,'Sexual Orientation' AS Category
-      ,[Sexual Orientation] AS Variable
-      ,ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) AS MeanApps
-      ,ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) AS MeanFirstWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) AS MeanSecondWaitFinished
-      ,ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) AS MeanFirstPHQ9Finished
-      ,ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) AS MeanFirstGAD7Finished
-      ,ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) AS Mean_FirstWSASW
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
-GROUP BY 
-      [Month]
-      ,[Region Name]
-      ,[Sub ICB Code]
-      ,[Sub ICB Name]
-      ,[Sexual Orientation]
 ---------------------------------------------------------------------
 ---------------------------------------------------------------------
 --National, Age
@@ -1311,20 +1116,6 @@ SELECT DISTINCT
 		ELSE 'Other'
 	END AS 'Ethnicity - Detailed'
 
-	-- Sexual Orientation
-	,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
-		WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
-		WHEN spc.SocPerCircumstance = '76102007' THEN 'Homosexual (Male)'
-		WHEN spc.SocPerCircumstance = '38628009' THEN 'Homosexual (Gender not specified)'
-		WHEN spc.SocPerCircumstance = '42035005' THEN 'Bisexual'
-		WHEN spc.SocPerCircumstance = '1064711000000100' THEN 'Person asked and does not know or IS not sure'
-		WHEN spc.SocPerCircumstance = '699042003' THEN 'Declined'
-		WHEN spc.SocPerCircumstance = '765288000' THEN 'Sexually attracted to neither male nor female sex'
-		WHEN spc.SocPerCircumstance = '440583007' THEN 'Unknown'
-		WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
-		ELSE 'Unspecified'
-	END AS 'Sexual Orientation'
-
 	-- Age
 	,CASE WHEN r.Age_ReferralRequest_ReceivedDate < 18 THEN 'Under 18' 
 		WHEN r.Age_ReferralRequest_ReceivedDate BETWEEN 18 AND 25 THEN '18-25'
@@ -1391,8 +1182,6 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		-------------------------
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		-------------------------
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId AND r.UniqueSubmissionID = spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest=1
 		-------------------------
 		LEFT JOIN [mesh_IAPT].[IDS607codedscoreassessmentact] csa ON r.PathwayID = csa.PathwayID AND l.AuditId = csa.AuditId
 		-------------------------
@@ -1504,22 +1293,6 @@ FROM [MHDInternal].[TEMP_TTAD_ProtChar_PEQBase]
 GROUP BY
       [Month]
       ,[Age]
-      ,Question
-      ,Answer
-
---Sexual Orientation
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_PEQs]
-SELECT
-      Month 
-      ,'Sexual Orientation' AS Category
-      ,[Sexual Orientation] AS Variable
-      ,Question
-      ,Answer
-      ,COUNT(PathwayID) AS Count
-FROM [MHDInternal].[TEMP_TTAD_ProtChar_PEQBase]
-GROUP BY
-      [Month]
-      ,[Sexual Orientation]
       ,Question
       ,Answer
 
