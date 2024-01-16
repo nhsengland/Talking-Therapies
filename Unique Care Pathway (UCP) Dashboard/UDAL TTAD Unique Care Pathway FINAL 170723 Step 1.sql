@@ -7,44 +7,7 @@
 
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_UCP_Base]
 WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_UCP_Base])
-------------------------------------------------------------------------------------------------------------------------
---------------Social Personal Circumstance Ranked Table for Sexual Orientation Codes------------------------------------
---There are instances of different sexual orientations listed for the same Person_ID and RecordNumber so this table ranks each sexual orientation code based on the SocPerCircumstanceRecDate 
---so that the latest record of a sexual orientation is labelled as 1. Only records with a SocPerCircumstanceLatest=1 are used in the queries to produce 
---[MHDInternal].[DASHBOARD_TTAD_UCP_Base] table
-IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_UCP_SocPerCircRank]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_UCP_SocPerCircRank]
-SELECT *
-	,ROW_NUMBER() OVER(PARTITION BY Person_ID, RecordNumber,AuditID,UniqueSubmissionID ORDER BY [SocPerCircumstanceRecDate] desc, SocPerCircumstanceRank asc) as SocPerCircumstanceLatest
-	--ranks each SocPerCircumstance with the same Person_ID, RecordNumber, AuditID and UniqueSubmissionID by the date so that the latest record is labelled as 1
-INTO [MHDInternal].[TEMP_TTAD_UCP_SocPerCircRank]
-FROM(
-SELECT DISTINCT
-	AuditID
-	,SocPerCircumstance
-	,SocPerCircumstanceRecDate
-	,Person_ID
-	,RecordNumber
-	,UniqueID_IDS011
-	,OrgID_Provider
-	,UniqueSubmissionID
-	,Unique_MonthID
-	,EFFECTIVE_FROM
-	--,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','38628009','42035005','765288000','766822004') THEN 1
-	--	WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 2
-	--ELSE NULL END AS SocPerCircumstanceRank1
-	,CASE WHEN SocPerCircumstance IN ('20430005','89217008','76102007','42035005','765288000','766822004') THEN 1
-	--Heterosexual, Homosexual (Female), Homosexual (Male), Bisexual,Sexually attracted to neither male nor female sex, Confusion
-		WHEN SocPerCircumstance='38628009' THEN 2 
-		--Homosexual (Gender not specified) (there are occurrences where this is listed alongside Homosexual (Male) or Homosexual (Female) for the same record 
-		--so has been ranked below these to prioritise a social personal circumstance with the max amount of information)
-		WHEN SocPerCircumstance IN ('1064711000000100','699042003','440583007') THEN 3 --Person asked and does not know or IS not sure, Declined, Unknown
-	ELSE NULL END AS SocPerCircumstanceRank
-	--Ranks the social personal circumstances by the amount of information they provide to help decide which one to use
-	--when a record has more than one social personal circumstance on the same day
-FROM [mesh_IAPT].[IDS011socpercircumstances]
---Filters for codes relevant to sexual orientation
-WHERE SocPerCircumstance IN('20430005','89217008','76102007','38628009','42035005','1064711000000100','699042003','765288000','440583007','766822004')
-)_
+
 -----------------------------------------------------------------
 -------------Base Table for Unique Care Pathways
 --This is a record-level base table with columns for the unique care pathway, outcome measures, protected characteristics and location.
@@ -168,20 +131,6 @@ SELECT DISTINCT
 		WHEN r.Age_ReferralRequest_ReceivedDate >= 65 THEN '65+'
 		ELSE 'Unspecified'
 		END AS [AgeDescriptor]
-
-	--Defines the sexual orientation variables based on spc.SocPerCircumstance
-	,CASE WHEN spc.SocPerCircumstance = '20430005' THEN 'Heterosexual'
-			WHEN spc.SocPerCircumstance = '89217008' THEN 'Homosexual (Female)'
-			WHEN spc.SocPerCircumstance = '76102007' THEN 'Homosexual (Male)'
-			WHEN spc.SocPerCircumstance = '38628009' THEN 'Homosexual (Gender not specified)'
-			WHEN spc.SocPerCircumstance = '42035005' THEN 'Bisexual'
-			WHEN spc.SocPerCircumstance = '1064711000000100' THEN 'Person asked and does not know or IS not sure'
-			WHEN spc.SocPerCircumstance = '699042003' THEN 'Declined'
-			WHEN spc.SocPerCircumstance = '765288000' THEN 'Sexually attracted to neither male nor female sex'
-			WHEN spc.SocPerCircumstance = '440583007' THEN 'Unknown'
-			WHEN spc.SocPerCircumstance = '766822004' THEN 'Confusion'
-			ELSE 'Unspecified'
-	END AS [SexualOrientationDescriptor]
 
 	--Defines the deprivation variables based on IMD.Decile
 	,CASE WHEN IMD.IMD_Decile IS NOT NULL THEN CAST(IMD.[IMD_Decile] AS VARCHAR) ELSE 'Unspecified' END AS [DeprivationDescriptor]
@@ -729,10 +678,6 @@ FROM [mesh_IAPT].[IDS101referral] r
 INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
 INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 
---Provides data for sexual orientation
-LEFT JOIN [MHDInternal].[TEMP_TTAD_UCP_SocPerCircRank] spc ON r.recordnumber = spc.recordnumber AND r.AuditID = spc.AuditId 
-AND r.UniqueSubmissionID = spc.UniqueSubmissionID AND spc.SocPerCircumstanceLatest=1
-
 LEFT JOIN [UKHF_Demography].[Domains_Of_Deprivation_By_LSOA1] IMD ON mpi.LSOA = IMD.[LSOA_Code] and IMD.Effective_Snapshot_Date='2019-12-31'
 LEFT JOIN [mesh_IAPT].[IDS201carecontact] a ON r.PathwayID = a.PathwayID AND a.AuditId = l.AuditId AND a.Unique_MonthID = l.Unique_MonthID
 LEFT JOIN [mesh_IAPT].[IDS202careactivity] c ON c.PathwayID = a.PathwayID AND c.AuditId = l.AuditId AND c.Unique_MonthID = l.Unique_MonthID AND a.[CareContactId] = c.[CareContactId] 
@@ -760,6 +705,3 @@ AND TreatmentCareContact_Count>0
 AND CompletedTreatment_Flag = 'TRUE'
 
 ORDER BY 2
-
--- Drop the temporary table [MHDInternal].[TEMP_TTAD_UCP_SocPerCircRank]
-DROP TABLE [MHDInternal].[TEMP_TTAD_UCP_SocPerCircRank]

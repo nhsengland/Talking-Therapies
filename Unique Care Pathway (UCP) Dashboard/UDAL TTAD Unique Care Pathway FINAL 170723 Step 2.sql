@@ -8,7 +8,7 @@
 --It counts the number of PathwayIDs for each of the flags (Completion, Recovery, Not Caseness, Reliable Improvement and Reliable Deterioration)
 -- used to calculate the outcome measures 
 --The counts are calculated for different geographies (Provider, Sub-ICB, ICB and National), 
---categories (Problem descriptor, gender, gender identity, ethnicity, age, sexual orientation, deprivation),
+--categories (Problem descriptor, gender, gender identity, ethnicity, age, deprivation),
 --and Unique Care Pathway
 
 IF OBJECT_ID ('[MHDInternal].[DASHBOARD_TTAD_UCP_Aggregated]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_UCP_Aggregated]
@@ -296,61 +296,7 @@ GROUP BY
 	,[Numeric treatment count]
 
 UNION 
--- Sexual Orientation
-	SELECT
-	Month
-	,[Region Name Comm]
-	,[Region Code Comm]
-	,[Region Code Prov]
-	,[Region Name Prov]
-	,[ICB Code]
-	,[ICB Name]
-	,[Sub-ICB Code]
-	,[Sub-ICB Name]
-	,[Provider Code]
-	,[Provider Name]
-	,[UniqueCarePathway]
-	,'Sexual Orientation' AS Category
-	,[SexualOrientationDescriptor] AS Variable
-	,TreatmentCareContact_Count
-	,[Numeric treatment count]
-	-- Classify [UniqueCarePathway] into 'Lower Intensity' and 'High Intensity' categories
-	,CASE WHEN [UniqueCarePathway] IN ('Guide Self-Help Book'
-										,'Non-Guided Self-Help Book'
-										,'Guided Self-Help Computer'
-										,'Non-Guided Self-Help Computer'
-										,'Structured Physical Activity'
-										,'Psychoeducational Peer Support'
-										,'Other Low Intensity'
-										,'Community Signposting'
-										,'Mindfulness') THEN 'Lower Intensity' ELSE 'High Intensity' END AS [Intensity level]
-
-	-- Aggregate results for various measures of treatment outcome
-	,SUM([CompTreatFlagRecFlag]) AS [Recovered]
-	,SUM([CompTreatFlag]) AS [Completed]
-	,SUM([NotCaseness]) AS [Not Caseness]
-	,SUM([CompTreatFlagRelImpFlag]) AS [Reliable Improvement]
-	,SUM([CompTreatFlagRelDetFlag]) AS [Reliable Deterioration] 
-FROM [MHDInternal].[DASHBOARD_TTAD_UCP_Base]
-WHERE UniqueCarePathway IS NOT NULL
-GROUP BY
-	Month
-	,[Region Name Comm]
-	,[Region Code Comm]
-	,[Region Code Prov]
-	,[Region Name Prov]
-	,[ICB Code]
-	,[ICB Name]
-	,[Sub-ICB Code]
-	,[Sub-ICB Name]
-	,[Provider Code]
-	,[Provider Name]
-	,[UniqueCarePathway]
-	,[SexualOrientationDescriptor]
-	,TreatmentCareContact_Count
-	,[Numeric treatment count]
-
-UNION 
+ 
 -- Deprivation
 	SELECT
 	Month
