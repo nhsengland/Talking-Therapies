@@ -150,15 +150,17 @@ SELECT
 --Organisation Level
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Org Recovery rate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Org Reliable rate'
+	,CAST(NULL AS INT) AS 'Org Recovery'
+	,CAST(NULL AS INT) AS 'Org Reliable'
 	,CAST(NULL AS INT) AS 'Org NotCaseness'
 	,CAST(NULL AS INT) AS 'Org FinishedTreatment'
 	,CAST(NULL AS INT) AS 'Org Referrals'
 	,CAST(NULL AS INT) AS 'Org Access'
 
---% of referrals in a provider that have no ethnicity stated
-	,CAST(NULL AS DECIMAL(10,2)) AS '% referrals no ethnicity'
---% of access in a provider that have no ethnicity stated
-	,CAST(NULL AS DECIMAL(10,2)) AS '% access no ethnicity'
+--Proportion of referrals in a provider that have no ethnicity stated
+	,CAST(NULL AS DECIMAL(10,2)) AS 'Proportion referrals no ethnicity'
+--Proportion of access in a provider that have no ethnicity stated
+	,CAST(NULL AS DECIMAL(10,2)) AS 'Proportion access no ethnicity'
 
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBRecoveryRate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBReliableRate'
@@ -212,15 +214,17 @@ SELECT
 --Organisation Level
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Org Recovery rate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Org Reliable rate'
+	,CAST(NULL AS INT) AS 'Org Recovery'
+	,CAST(NULL AS INT) AS 'Org Reliable'
 	,CAST(NULL AS INT) AS 'Org NotCaseness'
 	,CAST(NULL AS INT) AS 'Org FinishedTreatment'
 	,CAST(NULL AS INT) AS 'Org Referrals'
 	,CAST(NULL AS INT) AS 'Org Access'
 
---% of referrals in a provider that have no ethnicity stated
-	,CAST(NULL AS DECIMAL(10,2)) AS '% referrals no ethnicity'
---% of access in a provider that have no ethnicity stated
-	,CAST(NULL AS DECIMAL(10,2)) AS '% access no ethnicity'
+--Proportion of referrals in a provider that have no ethnicity stated
+	,CAST(NULL AS DECIMAL(10,2)) AS 'Proportion referrals no ethnicity'
+--Proportion of access in a provider that have no ethnicity stated
+	,CAST(NULL AS DECIMAL(10,2)) AS 'Proportion access no ethnicity'
 
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBRecoveryRate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBReliableRate'
@@ -273,15 +277,17 @@ SELECT
 --Organisation Level
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Org Recovery rate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'Org Reliable rate'
+	,CAST(NULL AS INT) AS 'Org Recovery'
+	,CAST(NULL AS INT) AS 'Org Reliable'
 	,CAST(NULL AS INT) AS 'Org NotCaseness'
 	,CAST(NULL AS INT) AS 'Org FinishedTreatment'
 	,CAST(NULL AS INT) AS 'Org Referrals'
 	,CAST(NULL AS INT) AS 'Org Access'
 
---% of referrals in a provider that have no ethnicity stated
-	,CAST(NULL AS DECIMAL(10,2)) AS '% referrals no ethnicity'
---% of access in a provider that have no ethnicity stated
-	,CAST(NULL AS DECIMAL(10,2)) AS '% access no ethnicity'
+--Proportion of referrals in a provider that have no ethnicity stated
+	,CAST(NULL AS DECIMAL(10,2)) AS 'Proportion referrals no ethnicity'
+--Proportion of access in a provider that have no ethnicity stated
+	,CAST(NULL AS DECIMAL(10,2)) AS 'Proportion access no ethnicity'
 
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBRecoveryRate'
 	,CAST(NULL AS DECIMAL(10,2)) AS 'WhiteBReliableRate'
@@ -308,6 +314,8 @@ SELECT
 	,SUM([Referrals]) AS 'Org Referrals'
 	,SUM([Access]) AS 'Org Access'
 
+	,SUM([Recovery]) AS 'Org Recovery'
+	,SUM([ReliableImprovement]) AS 'Org Reliable'
 	,SUM(NotCaseness) AS 'Org NotCaseness'
 	,SUM(FinishedTreatment) AS 'Org FinishedTreatment'
 	,CASE WHEN SUM([Recovery])>0 AND (SUM([FinishedTreatment])-SUM([NotCaseness]))>0 THEN CAST(CAST(SUM([Recovery]) AS FLOAT)/(SUM([FinishedTreatment])-SUM([NotCaseness])) AS DECIMAL(10,2)) ELSE NULL END
@@ -325,6 +333,8 @@ UPDATE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
 SET	
 	[Org Recovery rate]= b.[Org Recovery rate]
 	,[Org Reliable rate]= b.[Org Reliable rate]
+	,[Org Recovery] =b.[Org Recovery]
+	,[Org Reliable]=b.[Org Reliable]
 	,[Org NotCaseness]= b.[Org NotCaseness]
 	,[Org FinishedTreatment] = b.[Org FinishedTreatment]
 	,[Org Referrals]=b.[Org Referrals]
@@ -338,9 +348,11 @@ SELECT
 	ProviderCode
 	,Category
 	,Ethnicity
-	,CASE WHEN SUM(Referrals)>0 AND SUM([Org Referrals])>0 THEN CAST(CAST(SUM(Referrals) AS FLOAT)/SUM([Org Referrals]) AS DECIMAL(10,2)) ELSE NULL END
+	,CASE WHEN SUM(Referrals)<5 OR SUM([Org Referrals])<5 THEN NULL
+		WHEN SUM(Referrals)>0 AND SUM([Org Referrals])>0 THEN CAST(CAST(SUM(Referrals) AS FLOAT)/SUM([Org Referrals]) AS DECIMAL(10,2)) ELSE NULL END
 	AS 'Referral proportion'
-	,CASE WHEN SUM([Access])>0 AND SUM([Org Access]) >0 THEN CAST(CAST(SUM([Access]) AS FLOAT)/SUM([Org Access]) AS DECIMAL(10,2)) ELSE NULL END
+	,CASE WHEN SUM(Access)<5 OR SUM([Org Access])<5 THEN NULL
+		WHEN SUM([Access])>0 AND SUM([Org Access])>0 THEN CAST(CAST(SUM([Access]) AS FLOAT)/SUM([Org Access]) AS DECIMAL(10,2)) ELSE NULL END
 	AS 'Access proportion'
 
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Prop]
@@ -364,8 +376,8 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Prop] b ON a.[
 UPDATE [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate]
 
 SET	
-	[% referrals no ethnicity]= b.[Referral proportion]
-	,[% access no ethnicity]= b.[Access proportion]
+	[Proportion referrals no ethnicity]= b.[Referral proportion]
+	,[Proportion access no ethnicity]= b.[Access proportion]
 	
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate] a
 LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_Prop] b ON a.[ProviderCode]= b.[ProviderCode] AND a.Category=b.Category
@@ -376,9 +388,9 @@ IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_RecRel]') 
 SELECT DISTINCT
 	ProviderCode
 	,Category
-	,CASE WHEN (FinishedTreatment-NotCaseness)<5 THEN NULL ELSE [Recovery rate] END
+	,CASE WHEN [Recovery]<5 OR (FinishedTreatment-NotCaseness)<5 THEN NULL ELSE [Recovery rate] END
 	AS 'Recovery rate'
-	,CASE WHEN FinishedTreatment<5 THEN NULL ELSE [Reliable rate] END
+	,CASE WHEN [ReliableImprovement]<5 OR FinishedTreatment<5 THEN NULL ELSE [Reliable rate] END
 	AS 'Reliable rate'
 
 INTO [MHDInternal].[TEMP_TTAD_ProtChar_EthnicityMapAggregate_RecRel]
@@ -418,36 +430,32 @@ SELECT
 	,CASE WHEN [FinishedTreatment] < 5 THEN '*' ELSE ISNULL(CAST(CAST(ROUND(([FinishedTreatment]+2) /5,0)*5 AS INT) AS VARCHAR), '*') END
 	AS [Finished Treatment]
 
-	,CASE WHEN (FinishedTreatment-NotCaseness) < 5 THEN NULL ELSE [Recovery rate] END
+	,CASE WHEN [Recovery]<5 OR (FinishedTreatment-NotCaseness) < 5 THEN NULL ELSE [Recovery rate] END
 	AS [Recovery rate]
-	,CASE WHEN FinishedTreatment < 5 THEN NULL ELSE [Reliable rate] END
+	,CASE WHEN [ReliableImprovement]<5 OR FinishedTreatment < 5 THEN NULL ELSE [Reliable rate] END
 	AS [Reliable rate]
 
-	,CASE WHEN [Org Referrals] < 5 THEN NULL ELSE [Referral proportion] END
-	AS [Referral proportion]
-	,CASE WHEN [Org Access] < 5 THEN NULL ELSE [Access proportion] END
-	AS [Access proportion]
+	,[Referral proportion] --Already had suppression rules applied
+	,[Access proportion] --Already had suppression rules applied
 
-	,CASE WHEN ([Org FinishedTreatment]-[Org NotCaseness]) < 5 THEN NULL ELSE [Org Recovery rate] END
+	,CASE WHEN [Org Recovery]<5 OR ([Org FinishedTreatment]-[Org NotCaseness]) < 5 THEN NULL ELSE [Org Recovery rate] END
 	AS 'Org Recovery rate'
-	,CASE WHEN [Org FinishedTreatment] < 5 THEN NULL ELSE [Org Reliable rate] END
+	,CASE WHEN [Org Reliable]<5 OR [Org FinishedTreatment] < 5 THEN NULL ELSE [Org Reliable rate] END
 	AS 'Org Reliable rate'
-	,CASE WHEN [Org Referrals] < 5 THEN NULL ELSE [Org Referrals] END
+	,CASE WHEN [Org Referrals] < 5 THEN '*' ELSE ISNULL(CAST(CAST(ROUND(([Org Referrals]+2) /5,0)*5 AS INT) AS VARCHAR), '*') END
 	AS 'Org Referrals'
-	,CASE WHEN [Org Access] < 5 THEN NULL ELSE [Org Access] END
+	,CASE WHEN [Org Access] < 5 THEN '*' ELSE ISNULL(CAST(CAST(ROUND(([Org Access]+2) /5,0)*5 AS INT) AS VARCHAR), '*') END
 	AS 'Org Access'
 
-	,CASE WHEN [Org Referrals] < 5 THEN NULL ELSE [% referrals no ethnicity] END
-	AS '% referrals no ethnicity'
-	,CASE WHEN [Org Access] < 5 THEN NULL ELSE [% access no ethnicity] END
-	AS '% access no ethnicity'
+	,[Proportion referrals no ethnicity] --Already had suppression rules applied
+	,[Proportion access no ethnicity] --Already had suppression rules applied
 
 	,WhiteBRecoveryRate --Already had suppression rules applied
 	,WhiteBReliableRate --Already had suppression rules applied
 
-	,CASE WHEN (FinishedTreatment-NotCaseness) < 5 THEN NULL ELSE [WhiteBRecoveryRate]-[Recovery rate] END
+	,CASE WHEN [Recovery]<5 OR (FinishedTreatment-NotCaseness) < 5 THEN NULL ELSE [Recovery rate]-[WhiteBRecoveryRate] END	--Suppression applies to Recovery rate since WhiteBRecoveryRate already has suppression rules applied
 	AS [Recover diff]
-    ,CASE WHEN FinishedTreatment < 5 THEN NULL ELSE [WhiteBReliableRate]-[Reliable rate] END
+    ,CASE WHEN [ReliableImprovement]<5 OR FinishedTreatment < 5 THEN NULL ELSE [Reliable rate]-[WhiteBReliableRate] END	--Suppression applies to Reliable rate since WhiteBReliableRate already has suppression rules applied
 	AS [Reliable diff]
 
 INTO [MHDInternal].[DASHBOARD_TTAD_ProtChar_Ethnicity_Map_Rounded]
