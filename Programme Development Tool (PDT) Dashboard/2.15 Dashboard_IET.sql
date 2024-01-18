@@ -157,5 +157,9 @@ INSERT INTO [MHDInternal].[DASHBOARD_TTAD_PDT_IET]
 
 SELECT * FROM [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 
+--Drop Temporary Tables----
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IET]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IETBase]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_IETAggregate]
 --------------------------------------------------------------------
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET]' + CHAR(10)
