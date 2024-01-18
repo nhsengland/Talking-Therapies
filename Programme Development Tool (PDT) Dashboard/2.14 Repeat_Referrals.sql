@@ -302,10 +302,22 @@ SET @Offset = @Offset - 1
 END
 GO
 
-
 ---- Create [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert] -------------------------------------------------------------------------
-
-DELETE FROM [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]
+IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]
+CREATE TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert](
+	[Month] DATE
+	,[Region Code] VARCHAR(255)
+	,[Region Name] VARCHAR(255)
+	,[CCG Code] VARCHAR(255)
+	,[CCG Name] VARCHAR(255)
+	,[Provider Code] VARCHAR(255)
+	,[Provider Name] VARCHAR(255)
+	,[STP Code] VARCHAR(255)
+	,[STP Name] VARCHAR(255)
+	,Category VARCHAR(255)
+	,Variable VARCHAR(255)
+	,[Repeat Referrals] INT
+)
 
 DECLARE @Offset INT = 0
 
@@ -376,7 +388,7 @@ DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_ValidReferrals]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Base1]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Record2]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatRefs_Base2]
+DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert] 
 -------------------------
 PRINT CHAR(10)
 PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_RepeatReferrals]'
-PRINT 'Updated - [MHDInternal].[TEMP_TTAD_PDT_RepeatReferrals_Insert]'
