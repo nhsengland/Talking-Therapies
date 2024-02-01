@@ -1811,8 +1811,7 @@ GROUP BY
 	,AllTreatmentCareContact_Count
 	,EmpSupportDischargeDatePresent
 
---Drop temporary tables created to produce the final output tables
-DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_SocPerCircRank]
+-- Drop temporary tables
 DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base]
 DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Base2]
 DROP TABLE [MHDInternal].[TEMP_TTAD_EmpSupp_Clin_Base]
