@@ -1,327 +1,202 @@
---------Early stage metrics for selected Long Term Conditions split by Integrated Pathways to flow to the policy team-------------
-
 -- DELETE MAX(Month) -----------------------------------------------------------------------
- 
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages])
+GO ----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages])
-GO
-
---------Declare Offset----------------------------------------------------------------------
-
-DECLARE @Period_Start DATE
-DECLARE @Period_End DATE 
-
-SET @Period_Start = (SELECT DATEADD(MONTH,0,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-SET @Period_End = (SELECT eomonth(DATEADD(MONTH,0,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 SET DATEFIRST 1
 
-PRINT @Period_Start
-PRINT @Period_End
+-- Declare @Offset & @PeriodStart/End ----------------------------------------------------------------------
+DECLARE @Offset INT = 0
+DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
-----Main Dashboard Counts By Provider, Sub-ICB, ICB, Region and National Geographies
-	---All Terms for Long Term Conditions
-	---Split by Integrated and Non-Integrated Pathways
+/* -- Main Dashboard Counts By Provider, Sub-ICB, ICB, Region and National Geographies -- All Terms for Long Term Conditions split by Integrated and Non-Integrated Pathways */
 	
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]
+	
 SELECT 
-			CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS Month
-			,'Refresh' AS DataSource
-			,'England' AS 'GroupType'
-
-		-- Geographies	
-			,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
-			,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
-			,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICB Code'
-			,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'Sub-ICB Name' 
-			,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
-			,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
-			,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICB Code'
-			,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICB Name'
-			,'Total' AS Category
-			,'Total' as 'Variable'
-
-		-- Integrated Pathways
-			,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END
-			AS 'Integrated LTC'
-
-		-- LongTerm Conditions
-			,CASE WHEN s2.term IS NOT NULL THEN s2.term ELSE 'Not Stated' END
-			AS Term
-
-		-- Referrals/Access/Completion
-			,COUNT( DISTINCT CASE WHEN  r.CompletedTreatment_Flag = 'True' AND  r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END)
-			AS 'Finished Treatment - 2 or more Apps'
-			,COUNT( DISTINCT CASE WHEN  r.ReferralRequestReceivedDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END)
-			AS 'Referrals'
-			,COUNT( DISTINCT CASE WHEN  r.TherapySession_FirstDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END)
-			AS EnteringTreatment
-
-		-- Outcome Measures
-			,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.Recovery_Flag = 'True' THEN r.PathwayID ELSE NULL END)
-			AS 'Recovery'
-			,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.ReliableImprovement_Flag = 'True' AND r.Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END)
-			AS 'Reliable Recovery'
-			,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.NoChange_Flag = 'True' THEN r.PathwayID ELSE NULL END)
-			AS 'No Change'
-			,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.ReliableDeterioration_Flag = 'True' THEN r.PathwayID ELSE NULL END)
-			AS 'Reliable Deterioration'
-			,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.ReliableImprovement_Flag = 'True' THEN r.PathwayID ELSE NULL END)
-			AS 'Reliable Improvement'
-			,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END)
-			AS 'NotCaseness'
-		
-		-- Referral Types
-			,CASE WHEN (r.SourceOfReferralMH = 'A1' OR r.SourceOfReferralIAPT = 'A1') 
-			THEN	'Primary Health Care: General Medical Practitioner Practice'
-			WHEN (r.SourceOfReferralMH = 'A2' OR r.SourceOfReferralIAPT = 'A2') 
-			THEN	'Primary Health Care: Health Visitor'
-			WHEN (r.SourceOfReferralMH = 'A3' OR r.SourceOfReferralIAPT = 'A3') 
-			THEN	'Other Primary Health Care'
-			WHEN (r.SourceOfReferralMH = 'A4' OR r.SourceOfReferralIAPT = 'A4') 
-			THEN	'Primary Health Care: Maternity Service'
-			WHEN (r.SourceOfReferralMH = 'B1' OR r.SourceOfReferralIAPT = 'B1') 
-			THEN	'Self Referral: Self'
-			WHEN (r.SourceOfReferralMH = 'B2' OR r.SourceOfReferralIAPT = 'B2') 
-			THEN	'Self Referral: Carer/Relative'
-			WHEN (r.SourceOfReferralMH = 'C1' OR r.SourceOfReferralIAPT = 'C1') 
-			THEN	'Local Authority and Other Public Services: Social Services'
-			WHEN (r.SourceOfReferralMH = 'C2' OR r.SourceOfReferralIAPT = 'C2') 
-			THEN	'Local Authority and Other Public Services: Education Service / Educational Establishment'
-			WHEN (r.SourceOfReferralMH = 'C3' OR r.SourceOfReferralIAPT = 'C3') 
-			THEN	'Local Authority and Other Public Services: Housing Service'
-			WHEN (r.SourceOfReferralMH = 'D1' OR r.SourceOfReferralIAPT = 'D1') 
-			THEN	'Employer'
-			WHEN (r.SourceOfReferralMH = 'D2' OR r.SourceOfReferralIAPT = 'D2') 
-			THEN	'Employer: Occupational Health'
-			WHEN (r.SourceOfReferralMH = 'E1' OR r.SourceOfReferralIAPT = 'E1') 
-			THEN	'Justice System: Police'
-			WHEN (r.SourceOfReferralMH = 'E2' OR r.SourceOfReferralIAPT = 'E2') 
-			THEN	'Justice System: Courts'
-			WHEN (r.SourceOfReferralMH = 'E3' OR r.SourceOfReferralIAPT = 'E3') 
-			THEN	'Justice System: Probation Service'
-			WHEN (r.SourceOfReferralMH = 'E4' OR r.SourceOfReferralIAPT = 'E4') 
-			THEN	'Justice System: Prison'
-			WHEN (r.SourceOfReferralMH = 'E5' OR r.SourceOfReferralIAPT = 'E5') 
-			THEN	'Justice System: Court Liaison and Diversion Service'
-			WHEN (r.SourceOfReferralMH = 'E6' OR r.SourceOfReferralIAPT = 'E6') 
-			THEN	'Justice System: Youth Offending Team'
-			WHEN (r.SourceOfReferralMH = 'F1' OR r.SourceOfReferralIAPT = 'F1') 
-			THEN	'Child Health: School Nurse'
-			WHEN (r.SourceOfReferralMH = 'F2' OR r.SourceOfReferralIAPT = 'F2') 
-			THEN	'Child Health: Hospital-based Paediatrics'
-			WHEN (r.SourceOfReferralMH = 'F3' OR r.SourceOfReferralIAPT = 'F3') 
-			THEN	'Child Health: Community-based Paediatrics'
-			WHEN (r.SourceOfReferralMH = 'G1' OR r.SourceOfReferralIAPT = 'G1') 
-			THEN	'Independent sector - Medium Secure Inpatients'
-			WHEN (r.SourceOfReferralMH = 'G2' OR r.SourceOfReferralIAPT = 'G2') 
-			THEN	'Independent Sector - Low Secure Inpatients'
-			WHEN (r.SourceOfReferralMH = 'G3' OR r.SourceOfReferralIAPT = 'G3') 
-			THEN	'Other Independent Sector Mental Health Services'
-			WHEN (r.SourceOfReferralMH = 'G4' OR r.SourceOfReferralIAPT = 'G4') 
-			THEN	'Voluntary Sector'
-			WHEN (r.SourceOfReferralMH = 'H1' OR r.SourceOfReferralIAPT = 'H1') 
-			THEN	'Acute Secondary Care: Emergency Care Department'
-			WHEN (r.SourceOfReferralMH = 'H2' OR r.SourceOfReferralIAPT = 'H2') 
-			THEN	'Other secondary care specialty'
-			WHEN (r.SourceOfReferralMH = 'I1' OR r.SourceOfReferralIAPT = 'I1') 
-			THEN	'Temporary transfer from another Mental Health NHS Trust'
-			WHEN (r.SourceOfReferralMH = 'I2' OR r.SourceOfReferralIAPT = 'I2') 
-			THEN	'Permanent transfer from another Mental Health NHS Trust'
-			WHEN (r.SourceOfReferralMH = 'M1' OR r.SourceOfReferralIAPT = 'M1') 
-			THEN	'Other: Asylum Services'
-			WHEN (r.SourceOfReferralMH = 'M2' OR r.SourceOfReferralIAPT = 'M2') 
-			THEN	'Other: Telephone or Electronic Access Service'
-			WHEN (r.SourceOfReferralMH = 'M3' OR r.SourceOfReferralIAPT = 'M3') 
-			THEN	'Other: Out of Area Agency'
-			WHEN (r.SourceOfReferralMH = 'M4' OR r.SourceOfReferralIAPT = 'M4') 
-			THEN	'Other: Drug Action Team / Drug Misuse Agency'
-			WHEN (r.SourceOfReferralMH = 'M5' OR r.SourceOfReferralIAPT = 'M5') 
-			THEN	'Other: Jobcentre Plus'
-			WHEN (r.SourceOfReferralMH = 'M6' OR r.SourceOfReferralIAPT = 'M6') 
-			THEN	'Other SERVICE or agency'
-			WHEN (r.SourceOfReferralMH = 'M7' OR r.SourceOfReferralIAPT = 'M7') 
-			THEN	'Other: Single Point of Access Service'
-			WHEN (r.SourceOfReferralMH = 'M8' OR r.SourceOfReferralIAPT = 'M8') 
-			THEN	'Debt agency'
-			WHEN (r.SourceOfReferralMH = 'N1' OR r.SourceOfReferralIAPT = 'N1') 
-			THEN	'Stepped up from low intensity Improving Access to Psychological Therapies Service'
-			WHEN (r.SourceOfReferralMH = 'N2' OR r.SourceOfReferralIAPT = 'N2') 
-			THEN	'Stepped down from high intensity Improving Access to Psychological Therapies Service'
-			WHEN (r.SourceOfReferralMH = 'N4' OR r.SourceOfReferralIAPT = 'N4') 
-			THEN	'Other Improving Access to Psychological Therapies Service'
-			WHEN (r.SourceOfReferralMH = 'P1' OR r.SourceOfReferralIAPT = 'P1') 
-			THEN	'Internal Referral'
-			WHEN (r.SourceOfReferralMH = 'Q1' OR r.SourceOfReferralIAPT = 'Q1') 
-			THEN	'Mental Health Drop In Service'
-            END
-        AS ReferralSource
-		-- Waits
-			,COUNT( DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) <=28
-				THEN r.PathwayID ELSE NULL END)
-			AS FirstToSecond28Days
-			,COUNT( DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) BETWEEN 29 AND 56
-				THEN r.PathwayID ELSE NULL END)
-			AS FirstToSecond28To56Days
-			,COUNT( DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) BETWEEN 57 AND 90
-				THEN r.PathwayID ELSE NULL END)
-			AS FirstToSecond57To90Days
-			,COUNT( DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) > 90
-				THEN r.PathwayID ELSE NULL END)
-			AS FirstToSecondMoreThan90Days
-			,COUNT( DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END)
-			AS FirstToSecond
-
-		-- Appointment Types		
-			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '5' THEN cc.CareContactId ELSE NULL END)
-			AS 'Attended on time or, if late, before the relevant professional was ready to see the patient'
-			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '6' THEN cc.CareContactId ELSE NULL END)
-			AS 'Arrived late, after the relevant professional was ready to see the patient, but was seen'
-			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '7' THEN cc.CareContactId ELSE NULL END)
-			AS 'Patient arrived late and could not be seen'
-			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '2' THEN cc.CareContactId ELSE NULL END)
-			AS 'Appointment cancelled by, or on behalf of the patient'
-			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '3' THEN cc.CareContactId ELSE NULL END)
-			AS 'Did not attend, no advance warning given'
-			,COUNT( DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '4' THEN cc.CareContactId ELSE NULL END)
-			AS 'Appointment cancelled or postponed by the health care provider'
+	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
+	,'Refresh' AS 'DataSource'
+	,'England' AS 'GroupType'
+-- Geographies	
+	,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
+	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
+	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICB Code'
+	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'Sub-ICB Name' 
+	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
+	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
+	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICB Code'
+	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICB Name'
+	,'Total' AS Category
+	,'Total' as 'Variable'
+-- Integrated Pathways
+	,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END AS 'Integrated LTC'
+-- LongTerm Conditions
+	,CASE WHEN s2.term IS NOT NULL THEN s2.term ELSE 'Not Stated' END AS 'Term'
+-- Referrals/Access/Completion
+	,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND  r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) AS 'Finished Treatment - 2 or more Apps'
+	,COUNT(DISTINCT CASE WHEN r.ReferralRequestReceivedDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) AS 'Referrals'
+	,COUNT(DISTINCT CASE WHEN r.TherapySession_FirstDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) AS 'EnteringTreatment'
+-- Outcome Measures
+	,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.Recovery_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'Recovery'
+	,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.ReliableImprovement_Flag = 'True' AND r.Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS 'Reliable Recovery'
+	,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.NoChange_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'No Change'
+	,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.ReliableDeterioration_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'Reliable Deterioration'
+	,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.ReliableImprovement_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'Reliable Improvement'
+	,COUNT(DISTINCT CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.NotCaseness_Flag = 'True' THEN r.PathwayID ELSE NULL END) AS 'NotCaseness'
+-- Referral Types
+	,CASE WHEN (r.SourceOfReferralMH = 'A1' OR r.SourceOfReferralIAPT = 'A1') THEN		'Primary Health Care: General Medical Practitioner Practice'
+		WHEN (r.SourceOfReferralMH = 'A2' OR r.SourceOfReferralIAPT = 'A2') THEN	'Primary Health Care: Health Visitor'
+		WHEN (r.SourceOfReferralMH = 'A3' OR r.SourceOfReferralIAPT = 'A3') THEN	'Other Primary Health Care'
+		WHEN (r.SourceOfReferralMH = 'A4' OR r.SourceOfReferralIAPT = 'A4') THEN	'Primary Health Care: Maternity Service'
+		WHEN (r.SourceOfReferralMH = 'B1' OR r.SourceOfReferralIAPT = 'B1') THEN	'Self Referral: Self'
+		WHEN (r.SourceOfReferralMH = 'B2' OR r.SourceOfReferralIAPT = 'B2') THEN	'Self Referral: Carer/Relative'
+		WHEN (r.SourceOfReferralMH = 'C1' OR r.SourceOfReferralIAPT = 'C1') THEN	'Local Authority and Other Public Services: Social Services'
+		WHEN (r.SourceOfReferralMH = 'C2' OR r.SourceOfReferralIAPT = 'C2') THEN	'Local Authority and Other Public Services: Education Service / Educational Establishment'
+		WHEN (r.SourceOfReferralMH = 'C3' OR r.SourceOfReferralIAPT = 'C3') THEN	'Local Authority and Other Public Services: Housing Service'
+		WHEN (r.SourceOfReferralMH = 'D1' OR r.SourceOfReferralIAPT = 'D1') THEN	'Employer'
+		WHEN (r.SourceOfReferralMH = 'D2' OR r.SourceOfReferralIAPT = 'D2') THEN	'Employer: Occupational Health'
+		WHEN (r.SourceOfReferralMH = 'E1' OR r.SourceOfReferralIAPT = 'E1') THEN	'Justice System: Police'
+		WHEN (r.SourceOfReferralMH = 'E2' OR r.SourceOfReferralIAPT = 'E2') THEN	'Justice System: Courts'
+		WHEN (r.SourceOfReferralMH = 'E3' OR r.SourceOfReferralIAPT = 'E3') THEN	'Justice System: Probation Service'
+		WHEN (r.SourceOfReferralMH = 'E4' OR r.SourceOfReferralIAPT = 'E4') THEN	'Justice System: Prison'
+		WHEN (r.SourceOfReferralMH = 'E5' OR r.SourceOfReferralIAPT = 'E5') THEN	'Justice System: Court Liaison and Diversion Service'
+		WHEN (r.SourceOfReferralMH = 'E6' OR r.SourceOfReferralIAPT = 'E6') THEN	'Justice System: Youth Offending Team'
+		WHEN (r.SourceOfReferralMH = 'F1' OR r.SourceOfReferralIAPT = 'F1') THEN	'Child Health: School Nurse'
+		WHEN (r.SourceOfReferralMH = 'F2' OR r.SourceOfReferralIAPT = 'F2') THEN	'Child Health: Hospital-based Paediatrics'
+		WHEN (r.SourceOfReferralMH = 'F3' OR r.SourceOfReferralIAPT = 'F3') THEN	'Child Health: Community-based Paediatrics'
+		WHEN (r.SourceOfReferralMH = 'G1' OR r.SourceOfReferralIAPT = 'G1') THEN	'Independent sector - Medium Secure Inpatients'
+		WHEN (r.SourceOfReferralMH = 'G2' OR r.SourceOfReferralIAPT = 'G2') THEN	'Independent Sector - Low Secure Inpatients'
+		WHEN (r.SourceOfReferralMH = 'G3' OR r.SourceOfReferralIAPT = 'G3') THEN	'Other Independent Sector Mental Health Services'
+		WHEN (r.SourceOfReferralMH = 'G4' OR r.SourceOfReferralIAPT = 'G4') THEN	'Voluntary Sector'
+		WHEN (r.SourceOfReferralMH = 'H1' OR r.SourceOfReferralIAPT = 'H1') THEN	'Acute Secondary Care: Emergency Care Department'
+		WHEN (r.SourceOfReferralMH = 'H2' OR r.SourceOfReferralIAPT = 'H2') THEN	'Other secondary care specialty'
+		WHEN (r.SourceOfReferralMH = 'I1' OR r.SourceOfReferralIAPT = 'I1') THEN	'Temporary transfer from another Mental Health NHS Trust'
+		WHEN (r.SourceOfReferralMH = 'I2' OR r.SourceOfReferralIAPT = 'I2') THEN	'Permanent transfer from another Mental Health NHS Trust'
+		WHEN (r.SourceOfReferralMH = 'M1' OR r.SourceOfReferralIAPT = 'M1') THEN	'Other: Asylum Services'
+		WHEN (r.SourceOfReferralMH = 'M2' OR r.SourceOfReferralIAPT = 'M2') THEN	'Other: Telephone or Electronic Access Service'
+		WHEN (r.SourceOfReferralMH = 'M3' OR r.SourceOfReferralIAPT = 'M3') THEN	'Other: Out of Area Agency'
+		WHEN (r.SourceOfReferralMH = 'M4' OR r.SourceOfReferralIAPT = 'M4') THEN	'Other: Drug Action Team / Drug Misuse Agency'
+		WHEN (r.SourceOfReferralMH = 'M5' OR r.SourceOfReferralIAPT = 'M5') THEN	'Other: Jobcentre Plus'
+		WHEN (r.SourceOfReferralMH = 'M6' OR r.SourceOfReferralIAPT = 'M6') THEN	'Other SERVICE or agency'
+		WHEN (r.SourceOfReferralMH = 'M7' OR r.SourceOfReferralIAPT = 'M7') THEN	'Other: Single Point of Access Service'
+		WHEN (r.SourceOfReferralMH = 'M8' OR r.SourceOfReferralIAPT = 'M8') THEN	'Debt agency'
+		WHEN (r.SourceOfReferralMH = 'N1' OR r.SourceOfReferralIAPT = 'N1') THEN	'Stepped up from low intensity Improving Access to Psychological Therapies Service'
+		WHEN (r.SourceOfReferralMH = 'N2' OR r.SourceOfReferralIAPT = 'N2') THEN	'Stepped down from high intensity Improving Access to Psychological Therapies Service'
+		WHEN (r.SourceOfReferralMH = 'N4' OR r.SourceOfReferralIAPT = 'N4') THEN	'Other Improving Access to Psychological Therapies Service'
+		WHEN (r.SourceOfReferralMH = 'P1' OR r.SourceOfReferralIAPT = 'P1') THEN	'Internal Referral'
+		WHEN (r.SourceOfReferralMH = 'Q1' OR r.SourceOfReferralIAPT = 'Q1') THEN	'Mental Health Drop In Service'
+	END AS ReferralSource
+-- Waits
+	,COUNT(DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) <=28 THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond28Days'
+	,COUNT(DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) BETWEEN 29 AND 56 THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond28To56Days'
+	,COUNT(DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) BETWEEN 57 AND 90 THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond57To90Days'
+	,COUNT(DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) > 90 THEN r.PathwayID ELSE NULL END) AS 'FirstToSecondMoreThan90Days'
+	,COUNT(DISTINCT CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) AS 'FirstToSecond'
+-- Appointment Types		
+	,COUNT(DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '5' THEN cc.CareContactId ELSE NULL END) AS 'Attended on time or, if late, before the relevant professional was ready to see the patient'
+	,COUNT(DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '6' THEN cc.CareContactId ELSE NULL END) AS 'Arrived late, after the relevant professional was ready to see the patient, but was seen'
+	,COUNT(DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '7' THEN cc.CareContactId ELSE NULL END) AS 'Patient arrived late and could not be seen'
+	,COUNT(DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '2' THEN cc.CareContactId ELSE NULL END) AS 'Appointment cancelled by, or on behalf of the patient'
+	,COUNT(DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '3' THEN cc.CareContactId ELSE NULL END) AS 'Did not attend, no advance warning given'
+	,COUNT(DISTINCT CASE WHEN cc.CareContDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND cc.AttendOrDNACode = '4' THEN cc.CareContactId ELSE NULL END) AS 'Appointment cancelled or postponed by the health care provider'
 
 FROM	[mesh_IAPT].[IDS101referral] r
-		---------------------------	
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		INNER JOIN [mesh_IAPT].[IDS602longtermcondition] ltc ON r.recordnumber = ltc.recordnumber AND r.AuditID = ltc.AuditId AND r.UniqueSubmissionID = ltc.UniqueSubmissionID
-		---------------------------
-		LEFT JOIN [Internal_Reference].[ComCodeChanges] cd ON r.OrgIDComm = cd.Org_Code COLLATE database_default
+	---------------------------	
+	INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+	---------------------------
+	INNER JOIN [mesh_IAPT].[IDS602longtermcondition] ltc ON r.recordnumber = ltc.recordnumber AND r.AuditID = ltc.AuditId AND r.UniqueSubmissionID = ltc.UniqueSubmissionID
+	---------------------------
+	LEFT JOIN [Internal_Reference].[ComCodeChanges] cd ON r.OrgIDComm = cd.Org_Code COLLATE database_default
         LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+	---------------------------
+	LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD_1] s2 ON ltc.[Validated_LongTermConditionCode] = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+	---------------------------
+	LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId 
 
-		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
+	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start -- Set to -1 for monthly refresh
 
-		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD_1] s2 ON ltc.[Validated_LongTermConditionCode] = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
-
-		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId 
-
-WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be -1
-		AND l.IsLatest = 1
 GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE)
-		,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END
-		,CASE WHEN s2.term IS NOT NULL THEN s2.term ELSE 'Not Stated' END
-		,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END
-			,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END
-			,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
-			,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END
-			,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
-			,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
-			,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END
-			,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
-        			,CASE WHEN (r.SourceOfReferralMH = 'A1' OR r.SourceOfReferralIAPT = 'A1') 
-			THEN	'Primary Health Care: General Medical Practitioner Practice'
-			WHEN (r.SourceOfReferralMH = 'A2' OR r.SourceOfReferralIAPT = 'A2') 
-			THEN	'Primary Health Care: Health Visitor'
-			WHEN (r.SourceOfReferralMH = 'A3' OR r.SourceOfReferralIAPT = 'A3') 
-			THEN	'Other Primary Health Care'
-			WHEN (r.SourceOfReferralMH = 'A4' OR r.SourceOfReferralIAPT = 'A4') 
-			THEN	'Primary Health Care: Maternity Service'
-			WHEN (r.SourceOfReferralMH = 'B1' OR r.SourceOfReferralIAPT = 'B1') 
-			THEN	'Self Referral: Self'
-			WHEN (r.SourceOfReferralMH = 'B2' OR r.SourceOfReferralIAPT = 'B2') 
-			THEN	'Self Referral: Carer/Relative'
-			WHEN (r.SourceOfReferralMH = 'C1' OR r.SourceOfReferralIAPT = 'C1') 
-			THEN	'Local Authority and Other Public Services: Social Services'
-			WHEN (r.SourceOfReferralMH = 'C2' OR r.SourceOfReferralIAPT = 'C2') 
-			THEN	'Local Authority and Other Public Services: Education Service / Educational Establishment'
-			WHEN (r.SourceOfReferralMH = 'C3' OR r.SourceOfReferralIAPT = 'C3') 
-			THEN	'Local Authority and Other Public Services: Housing Service'
-			WHEN (r.SourceOfReferralMH = 'D1' OR r.SourceOfReferralIAPT = 'D1') 
-			THEN	'Employer'
-			WHEN (r.SourceOfReferralMH = 'D2' OR r.SourceOfReferralIAPT = 'D2') 
-			THEN	'Employer: Occupational Health'
-			WHEN (r.SourceOfReferralMH = 'E1' OR r.SourceOfReferralIAPT = 'E1') 
-			THEN	'Justice System: Police'
-			WHEN (r.SourceOfReferralMH = 'E2' OR r.SourceOfReferralIAPT = 'E2') 
-			THEN	'Justice System: Courts'
-			WHEN (r.SourceOfReferralMH = 'E3' OR r.SourceOfReferralIAPT = 'E3') 
-			THEN	'Justice System: Probation Service'
-			WHEN (r.SourceOfReferralMH = 'E4' OR r.SourceOfReferralIAPT = 'E4') 
-			THEN	'Justice System: Prison'
-			WHEN (r.SourceOfReferralMH = 'E5' OR r.SourceOfReferralIAPT = 'E5') 
-			THEN	'Justice System: Court Liaison and Diversion Service'
-			WHEN (r.SourceOfReferralMH = 'E6' OR r.SourceOfReferralIAPT = 'E6') 
-			THEN	'Justice System: Youth Offending Team'
-			WHEN (r.SourceOfReferralMH = 'F1' OR r.SourceOfReferralIAPT = 'F1') 
-			THEN	'Child Health: School Nurse'
-			WHEN (r.SourceOfReferralMH = 'F2' OR r.SourceOfReferralIAPT = 'F2') 
-			THEN	'Child Health: Hospital-based Paediatrics'
-			WHEN (r.SourceOfReferralMH = 'F3' OR r.SourceOfReferralIAPT = 'F3') 
-			THEN	'Child Health: Community-based Paediatrics'
-			WHEN (r.SourceOfReferralMH = 'G1' OR r.SourceOfReferralIAPT = 'G1') 
-			THEN	'Independent sector - Medium Secure Inpatients'
-			WHEN (r.SourceOfReferralMH = 'G2' OR r.SourceOfReferralIAPT = 'G2') 
-			THEN	'Independent Sector - Low Secure Inpatients'
-			WHEN (r.SourceOfReferralMH = 'G3' OR r.SourceOfReferralIAPT = 'G3') 
-			THEN	'Other Independent Sector Mental Health Services'
-			WHEN (r.SourceOfReferralMH = 'G4' OR r.SourceOfReferralIAPT = 'G4') 
-			THEN	'Voluntary Sector'
-			WHEN (r.SourceOfReferralMH = 'H1' OR r.SourceOfReferralIAPT = 'H1') 
-			THEN	'Acute Secondary Care: Emergency Care Department'
-			WHEN (r.SourceOfReferralMH = 'H2' OR r.SourceOfReferralIAPT = 'H2') 
-			THEN	'Other secondary care specialty'
-			WHEN (r.SourceOfReferralMH = 'I1' OR r.SourceOfReferralIAPT = 'I1') 
-			THEN	'Temporary transfer from another Mental Health NHS Trust'
-			WHEN (r.SourceOfReferralMH = 'I2' OR r.SourceOfReferralIAPT = 'I2') 
-			THEN	'Permanent transfer from another Mental Health NHS Trust'
-			WHEN (r.SourceOfReferralMH = 'M1' OR r.SourceOfReferralIAPT = 'M1') 
-			THEN	'Other: Asylum Services'
-			WHEN (r.SourceOfReferralMH = 'M2' OR r.SourceOfReferralIAPT = 'M2') 
-			THEN	'Other: Telephone or Electronic Access Service'
-			WHEN (r.SourceOfReferralMH = 'M3' OR r.SourceOfReferralIAPT = 'M3') 
-			THEN	'Other: Out of Area Agency'
-			WHEN (r.SourceOfReferralMH = 'M4' OR r.SourceOfReferralIAPT = 'M4') 
-			THEN	'Other: Drug Action Team / Drug Misuse Agency'
-			WHEN (r.SourceOfReferralMH = 'M5' OR r.SourceOfReferralIAPT = 'M5') 
-			THEN	'Other: Jobcentre Plus'
-			WHEN (r.SourceOfReferralMH = 'M6' OR r.SourceOfReferralIAPT = 'M6') 
-			THEN	'Other SERVICE or agency'
-			WHEN (r.SourceOfReferralMH = 'M7' OR r.SourceOfReferralIAPT = 'M7') 
-			THEN	'Other: Single Point of Access Service'
-			WHEN (r.SourceOfReferralMH = 'M8' OR r.SourceOfReferralIAPT = 'M8') 
-			THEN	'Debt agency'
-			WHEN (r.SourceOfReferralMH = 'N1' OR r.SourceOfReferralIAPT = 'N1') 
-			THEN	'Stepped up from low intensity Improving Access to Psychological Therapies Service'
-			WHEN (r.SourceOfReferralMH = 'N2' OR r.SourceOfReferralIAPT = 'N2') 
-			THEN	'Stepped down from high intensity Improving Access to Psychological Therapies Service'
-			WHEN (r.SourceOfReferralMH = 'N4' OR r.SourceOfReferralIAPT = 'N4') 
-			THEN	'Other Improving Access to Psychological Therapies Service'
-			WHEN (r.SourceOfReferralMH = 'P1' OR r.SourceOfReferralIAPT = 'P1') 
-			THEN	'Internal Referral'
-			WHEN (r.SourceOfReferralMH = 'Q1' OR r.SourceOfReferralIAPT = 'Q1') 
-			THEN	'Mental Health Drop In Service'
+	,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END
+	,CASE WHEN s2.term IS NOT NULL THEN s2.term ELSE 'Not Stated' END
+	,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END
+	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END
+	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
+	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END
+	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
+	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
+	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END
+	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END
+        ,CASE WHEN (r.SourceOfReferralMH = 'A1' OR r.SourceOfReferralIAPT = 'A1') THEN		'Primary Health Care: General Medical Practitioner Practice'
+		WHEN (r.SourceOfReferralMH = 'A2' OR r.SourceOfReferralIAPT = 'A2') THEN 	'Primary Health Care: Health Visitor'
+		WHEN (r.SourceOfReferralMH = 'A3' OR r.SourceOfReferralIAPT = 'A3') THEN	'Other Primary Health Care'
+		WHEN (r.SourceOfReferralMH = 'A4' OR r.SourceOfReferralIAPT = 'A4') THEN	'Primary Health Care: Maternity Service'
+		WHEN (r.SourceOfReferralMH = 'B1' OR r.SourceOfReferralIAPT = 'B1') THEN	'Self Referral: Self'
+		WHEN (r.SourceOfReferralMH = 'B2' OR r.SourceOfReferralIAPT = 'B2') THEN	'Self Referral: Carer/Relative'
+		WHEN (r.SourceOfReferralMH = 'C1' OR r.SourceOfReferralIAPT = 'C1') THEN	'Local Authority and Other Public Services: Social Services'
+		WHEN (r.SourceOfReferralMH = 'C2' OR r.SourceOfReferralIAPT = 'C2') THEN	'Local Authority and Other Public Services: Education Service / Educational Establishment'
+		WHEN (r.SourceOfReferralMH = 'C3' OR r.SourceOfReferralIAPT = 'C3') THEN	'Local Authority and Other Public Services: Housing Service'
+		WHEN (r.SourceOfReferralMH = 'D1' OR r.SourceOfReferralIAPT = 'D1') THEN	'Employer'
+		WHEN (r.SourceOfReferralMH = 'D2' OR r.SourceOfReferralIAPT = 'D2') THEN	'Employer: Occupational Health'
+		WHEN (r.SourceOfReferralMH = 'E1' OR r.SourceOfReferralIAPT = 'E1') THEN	'Justice System: Police'
+		WHEN (r.SourceOfReferralMH = 'E2' OR r.SourceOfReferralIAPT = 'E2') THEN	'Justice System: Courts'
+		WHEN (r.SourceOfReferralMH = 'E3' OR r.SourceOfReferralIAPT = 'E3') THEN	'Justice System: Probation Service'
+		WHEN (r.SourceOfReferralMH = 'E4' OR r.SourceOfReferralIAPT = 'E4') THEN	'Justice System: Prison'
+		WHEN (r.SourceOfReferralMH = 'E5' OR r.SourceOfReferralIAPT = 'E5') THEN	'Justice System: Court Liaison and Diversion Service'
+		WHEN (r.SourceOfReferralMH = 'E6' OR r.SourceOfReferralIAPT = 'E6') THEN	'Justice System: Youth Offending Team'
+		WHEN (r.SourceOfReferralMH = 'F1' OR r.SourceOfReferralIAPT = 'F1') THEN	'Child Health: School Nurse'
+		WHEN (r.SourceOfReferralMH = 'F2' OR r.SourceOfReferralIAPT = 'F2') THEN	'Child Health: Hospital-based Paediatrics'
+		WHEN (r.SourceOfReferralMH = 'F3' OR r.SourceOfReferralIAPT = 'F3') THEN	'Child Health: Community-based Paediatrics'
+		WHEN (r.SourceOfReferralMH = 'G1' OR r.SourceOfReferralIAPT = 'G1') THEN	'Independent sector - Medium Secure Inpatients'
+		WHEN (r.SourceOfReferralMH = 'G2' OR r.SourceOfReferralIAPT = 'G2') THEN	'Independent Sector - Low Secure Inpatients'
+		WHEN (r.SourceOfReferralMH = 'G3' OR r.SourceOfReferralIAPT = 'G3') THEN	'Other Independent Sector Mental Health Services'
+		WHEN (r.SourceOfReferralMH = 'G4' OR r.SourceOfReferralIAPT = 'G4') THEN	'Voluntary Sector'
+		WHEN (r.SourceOfReferralMH = 'H1' OR r.SourceOfReferralIAPT = 'H1') THEN	'Acute Secondary Care: Emergency Care Department'
+		WHEN (r.SourceOfReferralMH = 'H2' OR r.SourceOfReferralIAPT = 'H2') THEN	'Other secondary care specialty'
+		WHEN (r.SourceOfReferralMH = 'I1' OR r.SourceOfReferralIAPT = 'I1') THEN	'Temporary transfer from another Mental Health NHS Trust'
+		WHEN (r.SourceOfReferralMH = 'I2' OR r.SourceOfReferralIAPT = 'I2') THEN	'Permanent transfer from another Mental Health NHS Trust'
+		WHEN (r.SourceOfReferralMH = 'M1' OR r.SourceOfReferralIAPT = 'M1') THEN	'Other: Asylum Services'
+		WHEN (r.SourceOfReferralMH = 'M2' OR r.SourceOfReferralIAPT = 'M2') THEN	'Other: Telephone or Electronic Access Service'
+		WHEN (r.SourceOfReferralMH = 'M3' OR r.SourceOfReferralIAPT = 'M3') THEN	'Other: Out of Area Agency'
+		WHEN (r.SourceOfReferralMH = 'M4' OR r.SourceOfReferralIAPT = 'M4') THEN	'Other: Drug Action Team / Drug Misuse Agency'
+		WHEN (r.SourceOfReferralMH = 'M5' OR r.SourceOfReferralIAPT = 'M5') THEN	'Other: Jobcentre Plus'
+		WHEN (r.SourceOfReferralMH = 'M6' OR r.SourceOfReferralIAPT = 'M6') THEN	'Other SERVICE or agency'
+		WHEN (r.SourceOfReferralMH = 'M7' OR r.SourceOfReferralIAPT = 'M7') THEN	'Other: Single Point of Access Service'
+		WHEN (r.SourceOfReferralMH = 'M8' OR r.SourceOfReferralIAPT = 'M8') THEN	'Debt agency'
+		WHEN (r.SourceOfReferralMH = 'N1' OR r.SourceOfReferralIAPT = 'N1') THEN	'Stepped up from low intensity Improving Access to Psychological Therapies Service'
+		WHEN (r.SourceOfReferralMH = 'N2' OR r.SourceOfReferralIAPT = 'N2') THEN	'Stepped down from high intensity Improving Access to Psychological Therapies Service'
+		WHEN (r.SourceOfReferralMH = 'N4' OR r.SourceOfReferralIAPT = 'N4') THEN	'Other Improving Access to Psychological Therapies Service'
+		WHEN (r.SourceOfReferralMH = 'P1' OR r.SourceOfReferralIAPT = 'P1') THEN	'Internal Referral'
+		WHEN (r.SourceOfReferralMH = 'Q1' OR r.SourceOfReferralIAPT = 'Q1') THEN	'Mental Health Drop In Service'
             END
 
-------------------------------------------------
-------------------------------------------------
----Employment Support Appointment Count
---There is currently an issue with EmploymentSupport_Count field in IDS101referral table so we are calculating the number of employment support appointments in this table
---This is based on the criteria specified for this field in the Technical Output Specification
+/* -- Employment Support Appointment Count ---------------------------------------------------------------------------------------------------------------------------------
+-- There is currently an issue with EmploymentSupport_Count field in IDS101referral table so we are calculating the number of employment support appointments in this table,
+-- based on the criteria specified for this field in the Technical Output Specification 
+*/
+	
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]
+	
 SELECT  
-    r.PathwayID
+	r.PathwayID
 	,COUNT(DISTINCT CASE WHEN c.CareContDate BETWEEN l.ReportingPeriodStartDate and l.ReportingPeriodEndDate THEN c.CareContactID ELSE NULL END) AS Count_EmpSupp
-INTO [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]
-FROM [mesh_IAPT].IDS101referral r
-INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
-LEFT JOIN [mesh_IAPT].[IDS201carecontact] c ON c.RecordNumber=r.RecordNumber AND r.[UniqueSubmissionID] = c.[UniqueSubmissionID] AND r.[AuditId] = c.[AuditId]
-LEFT JOIN [mesh_IAPT].[IDS202careactivity] ca on c.PathwayID = ca.PathwayID and c.RecordNumber=ca.RecordNumber and c.CareContactID=ca.CareContactID and c.AuditId=ca.AuditId 
-LEFT JOIN [mesh_IAPT].[IDS004empstatus] e ON r.RecordNumber=e.RecordNumber AND r.AuditId=e.AuditId
 
-WHERE l.IsLatest = 1 
+INTO [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]
+
+FROM 	[mesh_IAPT].IDS101referral r
+	-----------------------------
+	INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.[AuditId] = l.[AuditId]
+	-----------------------------
+	LEFT JOIN [mesh_IAPT].[IDS201carecontact] c ON c.RecordNumber=r.RecordNumber AND r.[UniqueSubmissionID] = c.[UniqueSubmissionID] AND r.[AuditId] = c.[AuditId]
+	LEFT JOIN [mesh_IAPT].[IDS202careactivity] ca on c.PathwayID = ca.PathwayID and c.RecordNumber=ca.RecordNumber and c.CareContactID=ca.CareContactID and c.AuditId=ca.AuditId 
+	LEFT JOIN [mesh_IAPT].[IDS004empstatus] e ON r.RecordNumber=e.RecordNumber AND r.AuditId=e.AuditId
+
+WHERE l.IsLatest = 1
 AND (c.AttendOrDNACode IN (5,6) OR c.PlannedCareContIndicator='N') 
-AND 
-(
+AND (
 	(c.AppType<>06 AND r.ReferralRequestReceivedDate<= c.CareContDate 
 	AND (c.CareContDate<=r.ServDischDate OR (r.ServDischDate IS NULL AND c.CareContDate<=l.ReportingPeriodEndDate))
 	AND ca.CodeProcAndProcStatus='1098051000000103'
@@ -336,35 +211,35 @@ OR
 	AND (c.CareContDate<=e.EmpSupportDischargeDate OR (e.EmpSupportDischargeDate IS NULL AND c.CareContDate<=l.ReportingPeriodEndDate))
 	)
 )
+
 GROUP BY r.PathwayID
 
-----------------------------------------------Averages Base Table--------------------------------------------------------
-	--WSAS measures
-	--DDS, BPI and CAT inventory Scores
-	--Average appointment counts for Treatment Care Contacts and Employment Advisors
-	--Waiting times to Appointments
-	
+/* --------------- Averages Base Table -------------------------------------------
+-- WSAS measures
+-- DDS, BPI and CAT inventory Scores
+-- Average appointment counts for Treatment Care Contacts and Employment Advisors
+-- Waiting times to Appointments
+*/
 	
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+	
 SELECT DISTINCT
-	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS Month
-	,r.PathwayID
-    ,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
-    ,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
-    ,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
-    ,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
-    ,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
-    ,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'RegionCodeComm'
-    ,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
-    ,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
+	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
+	,r.[PathwayID]
+	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
+	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
+	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
+	,CASE WHEN ch.[Region_Code] IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'RegionCodeComm'
+	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
+	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
 
 	,CASE WHEN cc.[IAPTLTCServiceInd] = 'Y' THEN 'Integrated' ELSE 'Non-Integrated' END AS 'Integrated LTC'
-	,CASE WHEN s2.term IS NOT NULL THEN s2.term ELSE 'Not Stated' END AS Term
-			
+	,CASE WHEN s2.term IS NOT NULL THEN s2.term ELSE 'Not Stated' END AS Term	
 --Appointments
 	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN ec.Count_EmpSupp ELSE NULL END AS 'EA Apps'
 	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN r.TreatmentCareContact_Count ELSE NULL END AS 'Care Contacts Apps'
-			
 --WSAS Score
 	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.WASAS_Work_FirstScore IS NOT NULL THEN r.WASAS_Work_FirstScore ELSE NULL END
 	AS 'WSAS Work First Score'
@@ -386,8 +261,6 @@ SELECT DISTINCT
 	AS 'WSAS Social Leisure Activities First Score'
 	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.WASAS_SocialLeisureActivities_LastScore IS NOT NULL THEN r.WASAS_SocialLeisureActivities_LastScore ELSE NULL END
 	AS 'WSAS Social Leisure Activities Last Score'
-
-
 --Inventory Scores
 	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.DDS_FirstScore IS NOT NULL THEN r.DDS_FirstScore ELSE NULL END
 	AS 'Diabetes Distress Score Work First Score'
@@ -401,7 +274,6 @@ SELECT DISTINCT
 	AS 'COPD Assessment Test Work First Score'
 	,CASE WHEN r.CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.CAT_LastScore IS NOT NULL THEN r.CAT_LastScore ELSE NULL END
 	AS 'COPD Assessment Test Work Last Score'
-
 --Wait Times
 	,CASE WHEN r.TherapySession_SecondDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] THEN DATEDIFF(DD, r.TherapySession_FirstDate, r.TherapySession_SecondDate) ELSE NULL END
 	AS FirstSecond
@@ -409,41 +281,38 @@ SELECT DISTINCT
 	AS RefFirst
 
 INTO [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+	
 FROM	[mesh_IAPT].[IDS101Referral] r
-		---------------------------	
-		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
-		---------------------------
-		INNER JOIN [mesh_IAPT].[IDS602longtermcondition] ltc ON r.recordnumber = ltc.recordnumber AND r.AuditID = ltc.AuditId AND r.UniqueSubmissionID = ltc.UniqueSubmissionID
-		LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD_1] s2 ON ltc.[Validated_LongTermConditionCode] = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
-		---------------------------
-		LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId
+	---------------------------	
+	INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
+	INNER JOIN [mesh_IAPT].[IDS602longtermcondition] ltc ON r.recordnumber = ltc.recordnumber AND r.AuditID = ltc.AuditId AND r.UniqueSubmissionID = ltc.UniqueSubmissionID
+	---------------------------
+	LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD_1] s2 ON ltc.[Validated_LongTermConditionCode] = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
+	LEFT JOIN [mesh_IAPT].[IDS201carecontact] cc ON r.PathwayID = cc.PathwayID AND cc.AuditId = l.AuditId
+	LEFT JOIN [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
+	---------------------------
+	LEFT JOIN [Internal_Reference].[ComCodeChanges] cd ON r.OrgIDComm = cd.Org_Code COLLATE database_default
+	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
+	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
-		LEFT JOIN [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
-		---------------------------
-		LEFT JOIN [Internal_Reference].[ComCodeChanges] cd ON r.OrgIDComm = cd.Org_Code COLLATE database_default
-        LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
+	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start -- Set to -1 for monthly refresh
+	
+/* -- Averages Final Table ------------------------------------------------------------------------------------------------------------*/
 
-		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+-- National (split by LTC Integrated and Non-Integrated, split by Term)
 
-WHERE r.UsePathway_Flag = 'True'
-		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start --For monthly refresh the offset should be -1
-		AND l.IsLatest = 1
-
-----------------------
---Averages Final Table
-
---National, split by LTC Integrated and Non-Integrated, split by Term
---IF OBJECT_ID('[MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]') IS NOT NULL DROP TABLE [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,CAST('England' AS VARCHAR(255)) AS GroupType
-	,CAST('England' AS VARCHAR(255)) AS Code
+	,'Refresh' AS 'DataSource'
+	,CAST('England' AS VARCHAR(255)) AS 'GroupType'
+	,CAST('England' AS VARCHAR(255)) AS 'Code'
 	,CAST('England' AS VARCHAR(255)) AS 'Name'
-	,CAST('All Regions' AS VARCHAR(255)) AS Region
-	,CAST('All ICBs' AS VARCHAR(255)) AS ICB
+	,CAST('All Regions' AS VARCHAR(255)) AS 'Region'
+	,CAST('All ICBs' AS VARCHAR(255)) AS 'ICB'
 	,[Integrated LTC]
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -466,23 +335,26 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
---INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,[Integrated LTC]
 	,Term
 
---Region, split by LTC Integrated and Non-Integrated, split by Term
+-- Region (split by LTC Integrated and Non-Integrated, split by Term)
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Region' AS GroupType
-	,RegionCodeComm AS Code
-	,RegionNameComm AS 'Name'
-	,RegionNameComm AS Region
-	,'All ICBs'	AS ICB
+	,'Refresh' AS 'DataSource'
+	,'Region' AS 'GroupType'
+	,[RegionCodeComm] AS 'Code'
+	,[RegionNameComm] AS 'Name'
+	,[RegionNameComm] AS 'Region'
+	,'All ICBs' AS 'ICB'
 	,[Integrated LTC]
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -505,7 +377,9 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,RegionCodeComm
@@ -513,16 +387,18 @@ GROUP BY
 	,[Integrated LTC]
 	,Term
 
---ICB, split by LTC Integrated and Non-Integrated, split by Term
+-- ICB (split by LTC Integrated and Non-Integrated, split by Term)
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'ICB' AS GroupType
-	,ICBCode AS Code
-	,ICBName AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,'Refresh' AS 'DataSource'
+	,'ICB' AS 'GroupType'
+	,[ICBCode] AS 'Code'
+	,[ICBName] AS 'Name'
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,[Integrated LTC]
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -545,7 +421,9 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,ICBCode
@@ -554,16 +432,18 @@ GROUP BY
 	,[Integrated LTC]
 	,Term
 
---Sub-ICB, split by LTC Integrated and Non-Integrated, split by Term
+-- Sub-ICB (split by LTC Integrated and Non-Integrated, split by Term)
+
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Sub-ICB' AS GroupType
-	,[Sub-ICBCode] AS Code
+	,'Refresh' AS 'DataSource'
+	,'Sub-ICB' AS 'GroupType'
+	,[Sub-ICBCode] AS 'Code'
 	,[Sub-ICBName] AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,[Integrated LTC]
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -586,27 +466,30 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,[Sub-ICBCode]
 	,[Sub-ICBName]
-	,ICBName
-	,RegionNameComm
+	,[ICBName]
+	,[RegionNameComm]
 	,[Integrated LTC]
-	,Term
+	,[Term]
 
---Provider, split by LTC Integrated and Non-Integrated, split by Term
+-- Provider (split by LTC Integrated and Non-Integrated, split by Term)
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Provider' AS GroupType
-	,[ProviderCode] AS Code
+	,'Refresh' AS 'DataSource'
+	,'Provider' AS 'GroupType'
+	,[ProviderCode] AS 'Code'
 	,[ProviderName] AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,[Integrated LTC]
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -629,28 +512,31 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,[ProviderCode]
 	,[ProviderName]
-	,ICBName
-	,RegionNameComm
+	,[ICBName]
+	,[RegionNameComm]
 	,[Integrated LTC]
-	,Term
+	,[Term]
+	
+/* ------------------------------------------------------------------------------------------------------------------------------------------------------ */
 
----------------------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------------------
---National, All Pathways, split by Term
+-- National (All Pathways, split by Term) ----------------------------------------------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'England' AS GroupType
-	,'England' AS Code
+	,'Refresh' AS 'DataSource'
+	,'England' AS 'GroupType'
+	,'England' AS 'Code'
 	,'England' AS 'Name'
-	,'All Regions' AS Region
-	,'All ICBs' AS ICB
+	,'All Regions' AS 'Region'
+	,'All ICBs' AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -673,21 +559,24 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,Term
 
---Region, All Pathways, split by Term
+-- Region (All Pathways, split by Term) ------------------------------------------------------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Region' AS GroupType
-	,RegionCodeComm AS Code
-	,RegionNameComm AS 'Name'
-	,RegionNameComm AS Region
-	,'All ICBs'	AS ICB
+	,'Refresh' AS 'DataSource'
+	,'Region' AS 'GroupType'
+	,[RegionCodeComm] AS 'Code'
+	,[RegionNameComm] AS 'Name'
+	,[RegionNameComm] AS 'Region'
+	,'All ICBs' AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -710,23 +599,26 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,RegionCodeComm
 	,RegionNameComm
 	,Term
 
---ICB, All Pathways, split by Term
+-- ICB (All Pathways, split by Term) -------------------------------------------------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'ICB' AS GroupType
-	,ICBCode AS Code
-	,ICBName AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,'Refresh' AS 'DataSource'
+	,'ICB' AS 'GroupType'
+	,[ICBCode] AS 'Code'
+	,[ICBName] AS 'Name'
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -749,24 +641,27 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
-	,ICBCode
-	,ICBName
-	,RegionNameComm
-	,Term
+	,[ICBCode]
+	,[ICBName]
+	,[RegionNameComm]
+	,[Term]
 
---Sub-ICB, All Pathways, split by Term
+-- Sub-ICB (All Pathways, split by Term) ------------------------------------------------------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+	
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Sub-ICB' AS GroupType
-	,[Sub-ICBCode] AS Code
+	,'Refresh' AS 'DataSource'
+	,'Sub-ICB' AS 'GroupType'
+	,[Sub-ICBCode] AS 'Code'
 	,[Sub-ICBName] AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -789,25 +684,28 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,[Sub-ICBCode]
 	,[Sub-ICBName]
-	,ICBName
-	,RegionNameComm
-	,Term
+	,[ICBName]
+	,[RegionNameComm]
+	,[Term]
 
---Provider, All Pathways, split by Term
+-- Provider (All Pathways, split by Term) -----------------------------------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Provider' AS GroupType
-	,[ProviderCode] AS Code
+	,'Refresh' AS 'DataSource'
+	,'Provider' AS 'GroupType'
+	,[ProviderCode] AS 'Code'
 	,[ProviderName] AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
 	,[Term]
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
@@ -830,29 +728,32 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,[ProviderCode]
 	,[ProviderName]
-	,ICBName
-	,RegionNameComm
-	,Term
+	,[ICBName]
+	,[RegionNameComm]
+	,[Term]
 
--------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------
---National, All Pathways, All Terms
+/* ------------------------------------------------------------------------------------------------------------------------------------------------------ */
+	
+-- National (All Pathways, All Terms) -----------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+	
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'England' AS GroupType
-	,'England' AS Code
+	,'Refresh' AS 'DataSource'
+	,'England' AS 'GroupType'
+	,'England' AS 'Code'
 	,'England' AS 'Name'
-	,'All Regions' AS Region
-	,'All ICBs' AS ICB
+	,'All Regions' AS 'Region'
+	,'All ICBs' AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
-	,'All Terms' AS Term
+	,'All Terms' AS 'Term'
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
 	,ROUND(AVG(CAST([Care Contacts Apps] AS FLOAT)),1) AS 'Average Care Contacts Apps'
 	,ROUND(AVG(CAST([WSAS Work First Score] AS FLOAT)),1) AS 'Average WSAS Work First Score'
@@ -873,22 +774,24 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
-FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
-GROUP BY
-	[Month]
 
---Region, All Pathways, All Terms
+FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
+GROUP BY [Month]
+
+-- Region (All Pathways, All Terms) ----------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Region' AS GroupType
-	,RegionCodeComm AS Code
-	,RegionNameComm AS 'Name'
-	,RegionNameComm AS Region
-	,'All ICBs'	AS ICB
+	,'Refresh' AS 'DataSource'
+	,'Region' AS 'GroupType'
+	,[RegionCodeComm] AS 'Code'
+	,[RegionNameComm] AS 'Name'
+	,[RegionNameComm] AS 'Region'
+	,'All ICBs' AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
-	,'All Terms' AS Term
+	,'All Terms' AS 'Term'
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
 	,ROUND(AVG(CAST([Care Contacts Apps] AS FLOAT)),1) AS 'Average Care Contacts Apps'
 	,ROUND(AVG(CAST([WSAS Work First Score] AS FLOAT)),1) AS 'Average WSAS Work First Score'
@@ -909,24 +812,27 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
-	,RegionCodeComm
-	,RegionNameComm
+	,[RegionCodeComm]
+	,[RegionNameComm]
 
---ICB, All Pathways, All Terms
+-- ICB (All Pathways, All Terms) ------------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'ICB' AS GroupType
-	,ICBCode AS Code
-	,ICBName AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,'Refresh' AS 'DataSource'
+	,'ICB' AS 'GroupType'
+	,[ICBCode] AS 'Code'
+	,[ICBName] AS 'Name'
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
-	,'All Terms' AS Term
+	,'All Terms' AS 'Term'
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
 	,ROUND(AVG(CAST([Care Contacts Apps] AS FLOAT)),1) AS 'Average Care Contacts Apps'
 	,ROUND(AVG(CAST([WSAS Work First Score] AS FLOAT)),1) AS 'Average WSAS Work First Score'
@@ -947,25 +853,28 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
-	,ICBCode
-	,ICBName
-	,RegionNameComm
+	,[ICBCode]
+	,[ICBName]
+	,[RegionNameComm]
 
---Sub-ICB, All Pathways, All Terms
+-- Sub-ICB (All Pathways, All Terms) --------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Sub-ICB' AS GroupType
-	,[Sub-ICBCode] AS Code
+	,'Refresh' AS 'DataSource'
+	,'Sub-ICB' AS 'GroupType'
+	,[Sub-ICBCode] AS 'Code'
 	,[Sub-ICBName] AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
-	,'All Terms' AS Term
+	,'All Terms' AS 'Term'
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
 	,ROUND(AVG(CAST([Care Contacts Apps] AS FLOAT)),1) AS 'Average Care Contacts Apps'
 	,ROUND(AVG(CAST([WSAS Work First Score] AS FLOAT)),1) AS 'Average WSAS Work First Score'
@@ -986,26 +895,29 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,[Sub-ICBCode]
 	,[Sub-ICBName]
-	,ICBName
-	,RegionNameComm
+	,[ICBName]
+	,[RegionNameComm]
 
---Provider, All Pathways, All Terms
+-- Provider (All Pathways, All Terms) -------------------------
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]
+
 SELECT
 	[Month]
-	,'Refresh' AS DataSource
-	,'Provider' AS GroupType
-	,[ProviderCode] AS Code
+	,'Refresh' AS 'DataSource'
+	,'Provider' AS 'GroupType'
+	,[ProviderCode] AS 'Code'
 	,[ProviderName] AS 'Name'
-	,RegionNameComm AS Region
-	,ICBName AS ICB
+	,[RegionNameComm] AS 'Region'
+	,[ICBName] AS 'ICB'
 	,'All Pathways' AS 'Integrated LTC'
-	,'All Terms' AS Term
+	,'All Terms' AS 'Term'
 	,ROUND(AVG(CAST([EA Apps] AS FLOAT)),1) AS 'Average EA Apps'
 	,ROUND(AVG(CAST([Care Contacts Apps] AS FLOAT)),1) AS 'Average Care Contacts Apps'
 	,ROUND(AVG(CAST([WSAS Work First Score] AS FLOAT)),1) AS 'Average WSAS Work First Score'
@@ -1026,14 +938,19 @@ SELECT
 	,ROUND(AVG(CAST([COPD Assessment Test Work Last Score] AS FLOAT)),1) AS 'Average COPD Assessment Test Work Last Score'
 	,ROUND(AVG(CAST([FirstSecond] AS FLOAT)),1) AS 'AvgFirstSecond'
 	,ROUND(AVG(CAST([RefFirst] AS FLOAT)),1) AS 'AvgRefFirst'
+
 FROM [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
+
 GROUP BY
 	[Month]
 	,[ProviderCode]
 	,[ProviderName]
-	,ICBName
-	,RegionNameComm
+	,[ICBName]
+	,[RegionNameComm]
 
---Drop Temporary Table
+-- Drop Temporary Tables -----------------------------
 DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]
 DROP TABLE [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount]
+------------------------------------------------------------
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_LTC_Monthly]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_LTC_MonthlyAverages]'
