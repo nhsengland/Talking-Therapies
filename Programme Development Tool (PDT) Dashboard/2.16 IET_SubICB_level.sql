@@ -378,7 +378,7 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 			when ([Face to face communication] = 0 OR [Face to face communication] IS NULL)  then 'Non-F2F' END
 )_
 
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_Dashboard_IETF2FSplit]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit]'
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -427,7 +427,7 @@ GROUP BY DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.R
 			when (r.[InternetEnabledTherapy_Count] = 0 OR r.[InternetEnabledTherapy_Count] IS NULL) then 'Non-IET' END
 
 -----------------------------------------------------------------------------
-PRINT 'Updated - [NHSE_Sandbox_MentalHealth].[dbo].[IAPT_IETAcuteReferrals]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages]'
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
