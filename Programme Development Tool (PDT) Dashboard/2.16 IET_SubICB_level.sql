@@ -13,21 +13,13 @@ DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals] WHERE [Month] =
 
 ----------------------------------------------------------------------------------------------------------------------------
 
-DECLARE @@Offset INT = 0
+DECLARE @Offset INT = 0
 
-DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_Start DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
+DECLARE @Period_End DATE = (SELECT eomonth(DATEADD(MONTH,@Offset,MAX([ReportingPeriodEndDate]))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 PRINT @Period_Start
 PRINT @Period_End
-
-DECLARE  @Period_Start2 DATE = (SELECT DATEADD(MONTH,(@@Offset +1),MAX(@Period_Start)) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-DECLARE  @Period_End2 DATE = (SELECT eomonth(DATEADD(MONTH,(@@Offset +1),MAX(@Period_End))) FROM [mesh_IAPT].[IsLatest_SubmissionID])
-
-PRINT @Period_Start2
-PRINT @Period_End2
-
----------------------------------------------------------------------------------------------------------------------
 
 ---- CREATE BASE CARE CONTACT COUNTS TABLE ----------------------------------------------------------------------------------------
 
