@@ -105,7 +105,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 
 WHERE	UsePathway_Flag = 'True' AND IsLatest = 1
 		AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
-		AND ServDischDate BETWEEN @PeriodStart AND @PeriodEnd
+		AND ServDischDate BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart
 		AND CompletedTreatment_Flag = 'True'
 
 -- Base Table ----------------------------------------------------------------------------------------------------------------------
