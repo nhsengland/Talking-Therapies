@@ -1,12 +1,10 @@
-/* ------------------------ SOCIAL PERSONAL CIRCUMSTANCE DASHBOARD ------------------------------------------------ */
-
 SET DATEFIRST 1
 SET NOCOUNT ON
 
--- DELETE MAX(Month) -----------------------------------------------------------------------
+-- DELETE MAX(Month) ----------------------------------------------------------------------------------------------------------------------------------------
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_SocPersCircumstance])
-GO
-----------------------------------------------------------------------------------------------------------------------------------------
+GO ----------------------------------------------------------------------------------------------------------------------------------------------------------
+
 DECLARE @Offset INT = 0 --  set to 0 for monthly refresh 
 ----------------------------------------------------------------------------------------------------------------------------------------
 DECLARE @PeriodStart AS DATE = (SELECT DATEADD(MONTH,@Offset,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
@@ -77,7 +75,7 @@ FROM 	[mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD] s2 ON SocPerCircumstance = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 )_
 
----- Base Table ------------------------------------------------------------------------------------------------------------------
+---- Base Table -----------------------------------------------------------------------------------------------------------
 IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_SocPerCirc_Base]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_SocPerCirc_Base]
 
 SELECT DISTINCT
@@ -161,10 +159,10 @@ FROM 	[mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank] spc ON spc.PathwayID = r.PathwayID AND spc.SocPerCircumstanceLatest = 1
 	--------------------------
 	LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+	LEFT JOIN [Reporting_UKHD_ODS].[Commissioner_Hierarchies] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
 	--------------------------
 	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+	LEFT JOIN [Reporting_UKHD_ODS].[Provider_Hierarchies] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
 
 WHERE	UsePathway_Flag = 'True'
 	AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart -- set to -1 for monthly refresh
