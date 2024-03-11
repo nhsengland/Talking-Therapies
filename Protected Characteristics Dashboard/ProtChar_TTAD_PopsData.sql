@@ -1,12 +1,14 @@
-/****** Script to produce populations by different protected characteristics (age, gender and ethnicity) and geographies (National, ICB and Sub-ICB) using the 2021 census data.
-		This is used in the TTAD Protected Characteristics dashboard to produce the rates of open referrals per 100,000 population values. ******/
+/* -- Script to produce populations by different protected characteristics (age, gender and ethnicity) and geographies (National, ICB and Sub-ICB) using the 2021 census data.
+----- This is used in the TTAD Protected Characteristics dashboard to produce the rates of open referrals per 100,000 population values. ---------------------------------- */
 
-------------------------Age Group-------------------------------
+/* This script does not need to be run as part of the monthly updates */
 
 --This produces a base table with the population for each age grouping for each MSOA and it is matched to the Sub-ICB, ICB and Region that MSOA belongs to.
 --Age data wasn't available at LSOA level so MSOA was used instead
+
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_ProtChar_Population_Age_Base_Table]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_ProtChar_Population_Age_Base_Table]
 
+------------------------Age Group-------------------------------
 SELECT DISTINCT
 	l.MSOA21
 	,l.ODS_SubICB_Code22 AS SubICBCode
