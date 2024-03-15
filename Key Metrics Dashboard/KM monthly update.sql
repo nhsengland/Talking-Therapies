@@ -782,9 +782,7 @@ GROUP BY CAST(i.[ReportingPeriodStartDate] AS DATE)
 )_
 GO
 
--- Adding Average Waits and Appointments data tables (for past 12 months for ICBs)
-
-DROP TABLE [MHDInternal].[Temp_TTAD_KeyMetrics]
+-- Adding Average Waits and Appointments data tables (for past 12 months for ICBs) --------------------------------------------------------------------
 
 IF OBJECT_ID('[MHDInternal].[Temp_TTAD_MaxMonth]') IS NOT NULL DROP TABLE [MHDInternal].[Temp_TTAD_MaxMonth]
 
