@@ -66,7 +66,7 @@ SELECT DISTINCT
 		'205061000000101','429171004','298030007','64988008','429543004','428407001','428496003','368411000000105','429708003','368401000000108','429511004','368011000000104','298034003',
 		'428408006','368021000000105','427981006','429790000') THEN 'Religion' 
 		ELSE 'Unknown/Not Stated' 
-	END AS TermGroup
+	END AS 
 
 FROM 	[mesh_IAPT].[IDS101referral] r
 	-------------------------------
@@ -91,7 +91,7 @@ SELECT DISTINCT
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'RegionNameComm'
 	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
 	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
-	,[TermGroup]
+	,[]
 	,[Term]
 	,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  <61 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'OpenReferralLessThan61DaysNoContact'
 	,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  BETWEEN 61 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'OpenReferral61-90DaysNoContact'
@@ -189,7 +189,7 @@ SELECT
 	,[ProviderName]
 
 	,'Social Personal Circumstance' AS 'Category'
-	,'TermGroup' AS 'Grouping'
+	,[TermGroup] AS 'Grouping'
 	,'Term' AS 'Variable'
 
 	,SUM(OpenReferralLessThan61DaysNoContact) AS 'OpenReferralLessThan61DaysNoContact'
