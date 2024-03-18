@@ -190,7 +190,7 @@ SELECT
 
 	,'Social Personal Circumstance' AS 'Category'
 	,[TermGroup] AS 'Grouping'
-	,'Term' AS 'Variable'
+	,[Term] AS 'Variable'
 
 	,SUM(OpenReferralLessThan61DaysNoContact) AS 'OpenReferralLessThan61DaysNoContact'
 	,SUM([OpenReferral61-90DaysNoContact]) AS 'OpenReferral61-90DaysNoContact'
