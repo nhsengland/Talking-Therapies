@@ -91,7 +91,7 @@ SELECT DISTINCT
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'RegionNameComm'
 	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'ProviderCode'
 	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'ProviderName'
-	,[]
+	,[TermGroup]
 	,[Term]
 	,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  <61 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'OpenReferralLessThan61DaysNoContact'
 	,CASE WHEN r.ServDischDate IS NULL AND DATEDIFF(DD ,TherapySession_LastDate, i.[ReportingPeriodEndDate])  BETWEEN 61 AND 90 AND r.PathwayID IS NOT NULL THEN 1 ELSE 0 END AS 'OpenReferral61-90DaysNoContact'
