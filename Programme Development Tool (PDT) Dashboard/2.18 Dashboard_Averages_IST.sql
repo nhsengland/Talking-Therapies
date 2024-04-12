@@ -1,5 +1,5 @@
 
--- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] -----------------------------
+-- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_Averages] -----------------------------
 
 -- DELETE MAX(Month) -----------------------------------------------------------------
  
