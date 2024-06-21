@@ -185,11 +185,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,CAST('Total' AS VARCHAR(100)) AS Category
 	,CAST('Total' AS VARCHAR(255)) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,AVG(CAST(TreatmentCareContact_Count AS DECIMAL)) AS MeanApps
+	,AVG(CAST(RefFirstWait AS DECIMAL)) AS MeanFirstWaitFinished
+	,AVG(CAST(FirstSecondWait AS DECIMAL)) AS MeanSecondWaitFinished
+	,AVG(CAST(PHQ9_FirstScore AS DECIMAL)) AS MeanFirstPHQ9Finished
+	,AVG(CAST(GAD_FirstScore AS DECIMAL)) AS MeanFirstGAD7Finished
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanApps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
@@ -212,11 +212,11 @@ SELECT DISTINCT Month
 	,'All' AS 'STP Name'
 	,'Ethnicity' AS Category
 	,[Ethnicity] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,AVG(CAST(TreatmentCareContact_Count AS DECIMAL)) AS MeanApps
+	,AVG(CAST(RefFirstWait AS DECIMAL)) AS MeanFirstWaitFinished
+	,AVG(CAST(FirstSecondWait AS DECIMAL)) AS MeanSecondWaitFinished
+	,AVG(CAST(PHQ9_FirstScore AS DECIMAL)) AS MeanFirstPHQ9Finished
+	,AVG(CAST(GAD_FirstScore AS DECIMAL)) AS MeanFirstGAD7Finished
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -239,11 +239,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Age' AS Category
 	,[Age] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,AVG(CAST(TreatmentCareContact_Count AS DECIMAL)) AS MeanApps
+	,AVG(CAST(RefFirstWait AS DECIMAL)) AS MeanFirstWaitFinished
+	,AVG(CAST(FirstSecondWait AS DECIMAL)) AS MeanSecondWaitFinished
+	,AVG(CAST(PHQ9_FirstScore AS DECIMAL)) AS MeanFirstPHQ9Finished
+	,AVG(CAST(GAD_FirstScore AS DECIMAL)) AS MeanFirstGAD7Finished
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -266,11 +266,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Gender' AS Category
 	,[Gender] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,AVG(CAST(TreatmentCareContact_Count AS DECIMAL)) AS MeanApps
+	,AVG(CAST(RefFirstWait AS DECIMAL)) AS MeanFirstWaitFinished
+	,AVG(CAST(FirstSecondWait AS DECIMAL)) AS MeanSecondWaitFinished
+	,AVG(CAST(PHQ9_FirstScore AS DECIMAL)) AS MeanFirstPHQ9Finished
+	,AVG(CAST(GAD_FirstScore AS DECIMAL)) AS MeanFirstGAD7Finished
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -293,11 +293,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Problem Descriptor' AS Category
 	,[ProblemDescriptor] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,AVG(CAST(TreatmentCareContact_Count AS DECIMAL)) AS MeanApps
+	,AVG(CAST(RefFirstWait AS DECIMAL)) AS MeanFirstWaitFinished
+	,AVG(CAST(FirstSecondWait AS DECIMAL)) AS MeanSecondWaitFinished
+	,AVG(CAST(PHQ9_FirstScore AS DECIMAL)) AS MeanFirstPHQ9Finished
+	,AVG(CAST(GAD_FirstScore AS DECIMAL)) AS MeanFirstGAD7Finished
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -321,11 +321,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Deprivation' AS Category
 	,CAST([IMD_Decile] AS Varchar) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,AVG(CAST(TreatmentCareContact_Count AS DECIMAL)) AS MeanApps
+	,AVG(CAST(RefFirstWait AS DECIMAL)) AS MeanFirstWaitFinished
+	,AVG(CAST(FirstSecondWait AS DECIMAL)) AS MeanSecondWaitFinished
+	,AVG(CAST(PHQ9_FirstScore AS DECIMAL)) AS MeanFirstPHQ9Finished
+	,AVG(CAST(GAD_FirstScore AS DECIMAL)) AS MeanFirstGAD7Finished
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -372,7 +372,7 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Total' AS 'Category'
 	,'Total' AS 'Variable'
-	,ROUND(AVG(CAST(Reftofirst AS DECIMAL)),1) AS MeanWait
+	,AVG(CAST(Reftofirst AS DECIMAL)) AS MeanWait
 	,SUM(EnteringTreatment) AS EnteringTreatment
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_NationalMeanWait]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
@@ -420,11 +420,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,CAST('Total' AS VARCHAR(100)) AS Category
 	,CAST('Total'AS VARCHAR(255)) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMeanApps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
@@ -450,11 +450,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Ethnicity' AS Category
 	,[Ethnicity] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -479,11 +479,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Age' AS Category
 	,[Age] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -508,11 +508,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Gender' AS Category
 	,[Gender] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -537,11 +537,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Problem Descriptor' AS Category
 	,[ProblemDescriptor] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -566,11 +566,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Deprivation' AS Category
 	,CAST([IMD_Decile] AS Varchar) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -616,7 +616,7 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Total' AS 'Category'
 	,'Total' AS 'Variable'
-	,ROUND(AVG(CAST(Reftofirst AS DECIMAL)),1) AS MeanWait
+	,AVG(CAST(Reftofirst AS DECIMAL)) AS MeanWait
 	,SUM(EnteringTreatment) AS EnteringTreatment
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_RegionMeanWait]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
@@ -667,11 +667,11 @@ SELECT DISTINCT
 	,[STP Name] AS 'STP Name'
 	,CAST('Total' AS VARCHAR(100)) AS Category
 	,CAST('Total' AS VARCHAR(255)) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanApps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
@@ -696,11 +696,11 @@ SELECT DISTINCT
 	,[STP Name] AS 'STP Name'
 	,'Ethnicity' AS Category
 	,[Ethnicity] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -725,11 +725,11 @@ SELECT DISTINCT
 	,[STP Name] AS 'STP Name'
 	,'Age' AS Category
 	,[Age] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -754,11 +754,11 @@ SELECT DISTINCT
 	,[STP Name] AS 'STP Name'
 	,'Gender' AS Category
 	,[Gender] AS 'Variable'
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -783,11 +783,11 @@ SELECT DISTINCT
 	,[STP Name] AS 'STP Name'
 	,'Problem Descriptor' AS Category
 	,[ProblemDescriptor] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -812,11 +812,11 @@ SELECT DISTINCT
 	,[STP Name] AS 'STP Name'
 	,'Deprivation' AS Category
 	,CAST([IMD_Decile] AS Varchar) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY Month
@@ -863,7 +863,7 @@ SELECT DISTINCT
 	,[STP Name] AS 'STP Name'
 	,'Total' AS 'Category'
 	,'Total' AS 'Variable'
-	,ROUND(AVG(CAST(Reftofirst AS DECIMAL)),1) AS MeanWait
+	,AVG(CAST(Reftofirst AS DECIMAL)) AS MeanWait
 	,SUM(EnteringTreatment) AS EnteringTreatment
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_ICBMeanWait]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
@@ -916,11 +916,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,CAST('Total' AS VARCHAR(100)) AS Category
 	,CAST('Total' AS VARCHAR(255)) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanApps] 
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
@@ -946,11 +946,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Ethnicity' AS Category
 	,[Ethnicity] AS 'Variable'
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -975,11 +975,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Age' AS Category
 	,[Age] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1004,11 +1004,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Gender' AS Category
 	,[Gender] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1033,11 +1033,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Problem Descriptor' AS Category
 	,[ProblemDescriptor] AS 'Variable'
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1062,11 +1062,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Deprivation' AS Category
 	,CAST([IMD_Decile] AS Varchar) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1114,7 +1114,7 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Total' AS 'Category'
 	,'Total' AS 'Variable'
-	,ROUND(AVG(CAST(Reftofirst AS DECIMAL)),1) AS MeanWait
+	,AVG(CAST(Reftofirst AS DECIMAL)) AS MeanWait
 	,SUM(EnteringTreatment) AS EnteringTreatment
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_SubICBMeanWait]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
@@ -1122,9 +1122,6 @@ GROUP BY
 	Month
 	,[CCG Code]
 	,[CCG Name]
-
-
-
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Provider --------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1169,11 +1166,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,CAST('Total' AS VARCHAR(100)) AS Category
 	,CAST('Total' AS VARCHAR(255)) AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanApps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
@@ -1198,11 +1195,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Ethnicity' AS Category
 	,[Ethnicity] AS 'Variable'
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1227,11 +1224,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Age' AS Category
 	,[Age] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY
@@ -1256,11 +1253,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Gender' AS Category
 	,[Gender] AS 'Variable'
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1285,11 +1282,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Problem Descriptor' AS Category
 	,[ProblemDescriptor] AS Variable
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1314,11 +1311,11 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Deprivation' AS Category
 	,CAST([IMD_Decile] AS Varchar) AS 'Variable'
-	,ROUND(AVG(CAST(TreatmentCareContact_Count AS DECIMAL)),1) AS MeanApps
-	,ROUND(AVG(CAST(RefFirstWait AS DECIMAL)),1) AS MeanFirstWaitFinished
-	,ROUND(AVG(CAST(FirstSecondWait AS DECIMAL)),1) AS MeanSecondWaitFinished
-	,ROUND(AVG(CAST(PHQ9_FirstScore AS DECIMAL)),1) AS MeanFirstPHQ9Finished
-	,ROUND(AVG(CAST(GAD_FirstScore AS DECIMAL)),1) AS MeanFirstGAD7Finished
+	,CASE WHEN COUNT(TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(TreatmentCareContact_Count AS FLOAT)),0) ELSE NULL END AS 'MeanApps'
+	,CASE WHEN COUNT(RefFirstWait) >= 5 THEN ROUND(AVG(CAST(RefFirstWait AS FLOAT)),0) ELSE NULL END AS 'MeanFirstWaitFinished'
+	,CASE WHEN COUNT(FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FirstSecondWait AS FLOAT)),0) ELSE NULL END AS 'MeanSecondWaitFinished'
+	,CASE WHEN COUNT(PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(PHQ9_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	,CASE WHEN COUNT(GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(GAD_FirstScore AS FLOAT)),0) ELSE NULL END AS 'MeanFirstGAD7Finished'
 	,SUM([Finished Treatment - 2 or more Apps]) AS [Finished Treatment - 2 or more Apps]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FinishedTreatment]
 GROUP BY 
@@ -1366,7 +1363,7 @@ SELECT DISTINCT
 	,'All' AS 'STP Name'
 	,'Total' AS 'Category'
 	,'Total' AS 'Variable'
-	,ROUND(AVG(CAST(Reftofirst AS DECIMAL)),1) AS MeanWait
+	,AVG(CAST(Reftofirst AS DECIMAL)) AS MeanWait
 	,SUM(EnteringTreatment) AS EnteringTreatment
 INTO [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanWait]
 FROM [MHDInternal].[TEMP_TTAD_PDT_Averages_FirstTreatment]
@@ -1543,7 +1540,7 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait] c ON a.[Leve
 LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps] d ON a.[Level] = d.[Level] AND a.[Month] = d.[Month] AND a.[CCG Code] = d.[CCG Code] AND a.[Provider Code] = d.[Provider Code] AND a.[Region Code] = d.[Region Code] AND a.[STP Code] = d.[STP Code] AND a.[Category] = d.[Category] AND a.[Variable] = d.[Variable]
 
 -------------------------------------------------------------------------------------------------
--- Rounding & Supression ------------------------------------------------------------------------
+-- Rounding -------------------------------------------------------------------------------------
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
 
@@ -1572,39 +1569,12 @@ SELECT
 	,ROUND([MeanSecondWaitFinished],1) AS [MeanSecondWaitFinished]
 	,ROUND([MeanFirstPHQ9Finished],1) AS [MeanFirstPHQ9Finished]
 	,ROUND([MeanFirstGAD7Finished],1) AS [MeanFirstGAD7Finished]
+
 --INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
 FROM [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
-WHERE Level='National'
+
 GO
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
-SELECT
-	[Month]
-	,[Level]
-	,[DataSource]
-	,[Region Code]
-	,[Region Name]
-	,[CCG Code]
-	,[CCG Name]
-	,[Provider Code]
-	,[Provider Name]
-	,[STP Code]
-	,[STP Name]
-	,[Category]
-	,[Variable]
-
-	,CASE WHEN EnteringTreatment<5 THEN NULL ELSE ROUND([MedianWait],1) END AS [MedianWait]
-	,CASE WHEN EnteringTreatment<5 THEN NULL ELSE ROUND(MeanWait,1) END AS [MeanWait]
-
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MedianApps],1) END AS [MedianApps] 
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanApps],1) END AS [MeanApps]
-	
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanFirstWaitFinished],1) END AS [MeanFirstWaitFinished]
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanSecondWaitFinished],1) END AS [MeanSecondWaitFinished]
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanFirstPHQ9Finished],1) END AS [MeanFirstPHQ9Finished]
-	,CASE WHEN [Finished Treatment - 2 or more Apps]<5 THEN NULL ELSE ROUND([MeanFirstGAD7Finished],1) END AS [MeanFirstGAD7Finished]
-FROM [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
-WHERE Level<>'National'
 
 --Drop Temporary Tables -------------------------------------------------
 
@@ -1639,4 +1609,4 @@ DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMeanWait]
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_AveragesUnsuppressed]
 -------------------------------------------------------------------------------------
 
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_Averages]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_Averages_v3]'
