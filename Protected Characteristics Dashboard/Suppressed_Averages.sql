@@ -270,12 +270,12 @@ SELECT
       ,[Region Name] AS OrganisationName
       ,'Ethnicity - Broad' AS Category
       ,[Ethnicity - Broad] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
@@ -298,12 +298,12 @@ SELECT
       ,[ICB Name] AS OrganisationName
       ,'Ethnicity - Broad' AS Category
       ,[Ethnicity - Broad] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -326,12 +326,12 @@ SELECT
       ,[Sub ICB Name] AS OrganisationName
       ,'Ethnicity - Broad' AS Category
       ,[Ethnicity - Broad] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -379,12 +379,12 @@ SELECT
       ,[Region Name] AS OrganisationName
       ,'Ethnicity - High-Level' AS Category
       ,[Ethnicity - High-Level] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -406,12 +406,12 @@ SELECT
       ,[ICB Name] AS OrganisationName
       ,'Ethnicity - High-Level' AS Category
       ,[Ethnicity - High-Level] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -434,12 +434,12 @@ SELECT
       ,[Sub ICB Name] AS OrganisationName
       ,'Ethnicity - High-Level' AS Category
       ,[Ethnicity - High-Level] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -487,12 +487,12 @@ SELECT
       ,[Region Name] AS OrganisationName
       ,'Ethnicity - Detailed' AS Category
       ,[Ethnicity - Detailed] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -514,12 +514,12 @@ SELECT
       ,[ICB Name] AS OrganisationName
       ,'Ethnicity - Detailed' AS Category
       ,[Ethnicity - Detailed] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -542,12 +542,12 @@ SELECT
       ,[Sub ICB Name] AS OrganisationName
       ,'Ethnicity - Detailed' AS Category
       ,[Ethnicity - Detailed] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -595,12 +595,12 @@ SELECT
       ,[Region Name] AS OrganisationName
       ,'Age' AS Category
       ,[Age] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -622,12 +622,12 @@ SELECT
       ,[ICB Name] AS OrganisationName
       ,'Age' AS Category
       ,[Age] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -650,12 +650,12 @@ SELECT
       ,[Sub ICB Name] AS OrganisationName
       ,'Age' AS Category
       ,[Age] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -703,12 +703,12 @@ SELECT
       ,[Region Name] AS OrganisationName
       ,'Gender' AS Category
       ,[Gender] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -730,12 +730,12 @@ SELECT
       ,[ICB Name] AS OrganisationName
       ,'Gender' AS Category
       ,[Gender] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -758,12 +758,12 @@ SELECT
       ,[Sub ICB Name] AS OrganisationName
       ,'Gender' AS Category
 	  ,[Gender] AS Variable
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -811,12 +811,12 @@ SELECT
       ,[Region Name] AS OrganisationName
       ,'Gender Identity' AS [Category]
       ,[GenderIdentity] AS 'Variable'
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -838,12 +838,12 @@ SELECT
       ,[ICB Name] AS OrganisationName
       ,'Gender Identity' AS [Category]
       ,[GenderIdentity] AS 'Variable'
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
@@ -866,12 +866,12 @@ SELECT
       ,[Sub ICB Name] AS OrganisationName
       ,'Gender Identity' AS [Category]
       ,[GenderIdentity] AS 'Variable'
-	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) > 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
-	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) > 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
-	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
-	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) > 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
+	  ,CASE WHEN COUNT(FinishedTreat_TreatmentCareContact_Count) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_TreatmentCareContact_Count AS FLOAT)),1) ELSE NULL END AS 'MeanApps'
+	  ,CASE WHEN COUNT(FinishedTreat_RefFirstWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_RefFirstWait AS FLOAT)),1) ELSE NULL END AS 'MeanFirstWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_FirstSecondWait) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_FirstSecondWait AS FLOAT)),1) ELSE NULL END AS 'MeanSecondWaitFinished'
+	  ,CASE WHEN COUNT(FinishedTreat_PHQ9_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_PHQ9_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstPHQ9Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_GAD_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_GAD_FirstScore AS FLOAT)),1) ELSE NULL END AS 'MeanFirstGAD7Finished'
+	  ,CASE WHEN COUNT(FinishedTreat_WASAS_Work_FirstScore) >= 5 THEN ROUND(AVG(CAST(FinishedTreat_WASAS_Work_FirstScore AS FLOAT)),1) ELSE NULL END AS 'Mean_FirstWSASW'
 
 FROM [MHDInternal].[TEMP_TTAD_ProtChar_Base]
 
