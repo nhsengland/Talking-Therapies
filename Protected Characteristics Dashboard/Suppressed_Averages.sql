@@ -3,7 +3,7 @@ SET ANSI_WARNINGS OFF
 
 ----------------------------------------------------------------------------------------------------------
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages_Suppressed]
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[[DASHBOARD_TTAD_ProtChar_Averages_Suppressed])
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ProtChar_Averages_Suppressed])
 ----------------------------------------------------------------------------------------------------------
 
 ----------------------------
