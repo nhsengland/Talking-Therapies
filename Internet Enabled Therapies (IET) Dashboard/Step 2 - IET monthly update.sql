@@ -1,5 +1,3 @@
---Please note this information is experimental and it is only intended for use for management purposes.
-
 /****** Script for Internet Enabled Therapies Dashboard to produce tables for Appointments, Therapist Time and Wait Times ******/
 
 -----------------------------Aggregated Average Wait Times-------------------------------------------
@@ -23,6 +21,7 @@ SELECT
 	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
 	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
 	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
+
 INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
@@ -43,6 +42,7 @@ SELECT
 	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
 	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
 	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -61,11 +61,13 @@ SELECT
 	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
 	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
 	,CAST(SUM(CompTreatFlag) AS VARCHAR) AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
 	Quarter
 
+-- Regional --------------------------------------------------------------------------------------------------------------------------
 	
 --Region, 1+ IET
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_IET_AverageWaits]
@@ -76,12 +78,11 @@ SELECT
 	,RegionNameComm AS OrgName
 	,RegionCodeComm AS OrgCode
 	,'1+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -98,12 +99,11 @@ SELECT
 	,RegionNameComm  AS OrgName
 	,RegionCodeComm  AS OrgCode
 	,'No IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -120,12 +120,11 @@ SELECT
 	,RegionNameComm  AS OrgName
 	,RegionCodeComm  AS OrgCode
 	,'2+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -142,12 +141,11 @@ SELECT
 	,[ICBName] AS OrgName
 	,[ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -165,12 +163,11 @@ SELECT
 	,[ICBName] AS OrgName
 	,[ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -188,12 +185,11 @@ SELECT
 	,[ICBName] AS OrgName
 	,[ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -211,12 +207,11 @@ SELECT
 	,[Sub-ICBName] AS OrgName
 	,[Sub-ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -234,12 +229,11 @@ SELECT
 	,[Sub-ICBName] AS OrgName
 	,[Sub-ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -257,12 +251,11 @@ SELECT
 	,[Sub-ICBName] AS OrgName
 	,[Sub-ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -280,12 +273,11 @@ SELECT
 	,[ProviderName] AS OrgName
 	,[ProviderCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -303,12 +295,11 @@ SELECT
 	,[ProviderName] AS OrgName
 	,[ProviderCode] AS OrgCode
 	,'No IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -326,12 +317,11 @@ SELECT
 	,[ProviderName] AS OrgName
 	,[ProviderCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
-	,AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstAssessment
-	,AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) AS AverageWaitFromReferralToFirstTherapy
-	,AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) AS AverageWaitFromFirstTherapyToSecondTherapy
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(WaitRefToFirstAssess) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstAssess AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstAssessment
+	,CASE WHEN COUNT(WaitRefToFirstTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitRefToFirstTherapy AS DECIMAL(7,2))) END AS AverageWaitFromReferralToFirstTherapy
+	,CASE WHEN COUNT(WaitFirstTherapyToSecondTherapy) < 5 THEN NULL ELSE AVG(CAST(WaitFirstTherapyToSecondTherapy AS DECIMAL(7,2))) END AS AverageWaitFromFirstTherapyToSecondTherapy
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -411,6 +401,8 @@ GROUP BY
 	Quarter
 	,IntEnabledTherProg
 
+-- Regional -------------------------------------------------------------------------------------------------------
+
 --Region, 1+ IET
 INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgApptsAndTimePerTreat]
 SELECT 
@@ -421,12 +413,11 @@ SELECT
 	,RegionCodeComm AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -445,12 +436,11 @@ SELECT
 	,RegionCodeComm  AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -469,12 +459,11 @@ SELECT
 	,RegionCodeComm  AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -493,12 +482,11 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -518,12 +506,11 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -543,12 +530,11 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -568,12 +554,11 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -593,12 +578,11 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -618,12 +602,11 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -643,12 +626,11 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=1 AND PathwayIDRank=1
 GROUP BY 
@@ -668,12 +650,11 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE (InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL) AND PathwayIDRank=1
 GROUP BY 
@@ -693,12 +674,11 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) AS AverageNumberofIETAppointmentsPerTreatment
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AverageIETTherapistTimePerTreatment
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AverageAnyTherapistTimePerTreatment
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(InternetEnabledTherapy_Count) < 5 THEN NULL ELSE AVG(CAST(InternetEnabledTherapy_Count AS DECIMAL(7,2))) END AS AverageNumberofIETAppointmentsPerTreatment
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AverageIETTherapistTimePerTreatment
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AverageAnyTherapistTimePerTreatment
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base]
 WHERE InternetEnabledTherapy_Count>=2 AND PathwayIDRank=1
 GROUP BY 
@@ -745,9 +725,13 @@ SELECT DISTINCT
 	,b.ProviderName
 	,b.RegionNameProv
 	,b.RegionCodeProv
+
 INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
+
 FROM [MHDInternal].[TEMP_TTAD_IET_Base] b
-LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_IETContacts] i ON i.PathwayID = b.PathwayID
+	 -------------------------------------
+	 LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_IETContacts] i ON i.PathwayID = b.PathwayID
+
 WHERE PathwayIDRank=1
 
 -----------------------------Aggregated Average IET Therapist Time per Contact-------------------------------------------
@@ -813,6 +797,8 @@ GROUP BY
 	Quarter
 	,IntEnabledTherProg
 
+-- Regional -------------------------------------------------------------------------------------
+
 --Region, 1+ IET
 INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgIETTherapistTime]
 SELECT 
@@ -823,10 +809,9 @@ SELECT
 	,RegionCodeComm AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -845,10 +830,9 @@ SELECT
 	,RegionCodeComm  AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -867,10 +851,9 @@ SELECT
 	,RegionCodeComm  AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -889,10 +872,9 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -912,10 +894,9 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -935,10 +916,9 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -958,10 +938,9 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -981,10 +960,9 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1004,10 +982,9 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1027,10 +1004,9 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1050,10 +1026,9 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1073,10 +1048,9 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) AS AvgIETTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(DurationIntEnabledTher) < 5 THEN NULL ELSE AVG(CAST(DurationIntEnabledTher AS DECIMAL(7,2))) END AS AvgIETTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgIETContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1211,6 +1185,8 @@ GROUP BY
 	Quarter
 	,IntEnabledTherProg
 
+-- Regional -----------------------------------------------------------------------------------------
+
 --Region, 1+ IET
 INSERT INTO [MHDInternal].[TEMP_TTAD_IET_AvgAnyTherapistTime]
 SELECT 
@@ -1221,10 +1197,9 @@ SELECT
 	,RegionCodeComm AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1243,10 +1218,9 @@ SELECT
 	,RegionCodeComm  AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1265,10 +1239,9 @@ SELECT
 	,RegionCodeComm  AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1287,10 +1260,9 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1310,10 +1282,9 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1333,10 +1304,9 @@ SELECT
 	,[ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1356,10 +1326,9 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1379,10 +1348,9 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1402,10 +1370,9 @@ SELECT
 	,[Sub-ICBCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
@@ -1425,10 +1392,9 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'1+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=1
 GROUP BY 
@@ -1448,10 +1414,9 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'No IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count=0 OR InternetEnabledTherapy_Count IS NULL
 GROUP BY 
@@ -1471,10 +1436,9 @@ SELECT
 	,[ProviderCode] AS OrgCode
 	,'2+ IET' AS AppointmentType
 	,IntEnabledTherProg
-	,AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) AS AvgAnyTherapistTime
-	,CASE WHEN SUM(CompTreatFlag)<5 THEN '*'
-		ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END
-	AS CompTreatFlag
+	,CASE WHEN COUNT(ClinContactDurOfCareAct) < 5 THEN NULL ELSE AVG(CAST(ClinContactDurOfCareAct AS DECIMAL(7,2))) END AS AvgAnyTherapistTime
+	,CASE WHEN SUM(CompTreatFlag) < 5 THEN '*' ELSE CAST(ROUND((SUM(CompTreatFlag)+2)/5,0)*5 AS VARCHAR) END AS CompTreatFlag
+
 FROM [MHDInternal].[TEMP_TTAD_IET_AvgAllContactBase]
 WHERE InternetEnabledTherapy_Count>=2
 GROUP BY 
