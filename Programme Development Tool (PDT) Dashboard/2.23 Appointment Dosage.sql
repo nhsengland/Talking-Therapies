@@ -3,7 +3,7 @@
  
 DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_AppointmentDosage]
  
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_AppointmentDosage])
+WHERE [Month] = (SELECT MAX(CAST([Month] AS DATE)) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_AppointmentDosage])
 
 ---------Outcome Measures For Appointment Dosage of those finishing a Course of Treatment Within the Period------------
 
