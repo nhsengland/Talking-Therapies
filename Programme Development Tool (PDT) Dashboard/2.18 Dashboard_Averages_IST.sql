@@ -1122,6 +1122,9 @@ GROUP BY
 	Month
 	,[CCG Code]
 	,[CCG Name]
+
+
+
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Provider --------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1540,7 +1543,7 @@ LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianWait] c ON a.[Leve
 LEFT JOIN [MHDInternal].[TEMP_TTAD_PDT_Averages_ProviderMedianApps] d ON a.[Level] = d.[Level] AND a.[Month] = d.[Month] AND a.[CCG Code] = d.[CCG Code] AND a.[Provider Code] = d.[Provider Code] AND a.[Region Code] = d.[Region Code] AND a.[STP Code] = d.[STP Code] AND a.[Category] = d.[Category] AND a.[Variable] = d.[Variable]
 
 -------------------------------------------------------------------------------------------------
--- Rounding -------------------------------------------------------------------------------------
+-- Rounding & Supression ------------------------------------------------------------------------
 
 INSERT INTO [MHDInternal].[DASHBOARD_TTAD_Averages]
 
