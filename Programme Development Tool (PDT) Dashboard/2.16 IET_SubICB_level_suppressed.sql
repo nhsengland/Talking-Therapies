@@ -7,9 +7,9 @@
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- DELETE MAX(Month)s -----------------------------------------------------------------------------------------------------------------------------------------
 
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit])
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages])
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals] WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit] WHERE [Month] = (SELECT MAX(CAST([Month] AS DATE)) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FSplit])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages] WHERE [Month] = (SELECT MAX(CAST([Month] AS DATE)) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IET_F2FAverages])
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals] WHERE [Month] = (SELECT MAX(CAST([Month] AS DATE)) FROM [MHDInternal].[DASHBOARD_TTAD_PDT_IETAcuteReferrals])
 
 ----------------------------------------------------------------------------------------------------------------------------
 
@@ -467,10 +467,10 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
 		,'Total' AS 'Category'
 		,'Total' AS 'Variable'
-		,AVG(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) AS AvgTherapistDurIncIET
-		,AVG(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) AS AvgTherapistDurNoIET
-		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurIncCareContact
-		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurNoCareContact
+		,CASE WHEN COUNT(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) END AS AvgTherapistDurIncIET
+		,CASE WHEN COUNT(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) END AS AvgTherapistDurNoIET
+		,CASE WHEN COUNT(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) END AS AvgIETTherapistDurIncCareContact
+		,CASE WHEN COUNT(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) END AS AvgIETTherapistDurNoCareContact
   
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
@@ -501,11 +501,11 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
 		,'Total' AS 'Category'
 		,'Total' AS 'Variable'
-		,AVG(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) AS AvgTherapistDurIncIET
-		,AVG(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) AS AvgTherapistDurNoIET
-		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurIncCareContact
-		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurNoCareContact
-
+		,CASE WHEN COUNT(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) END AS AvgTherapistDurIncIET
+		,CASE WHEN COUNT(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) END AS AvgTherapistDurNoIET
+		,CASE WHEN COUNT(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) END AS AvgIETTherapistDurIncCareContact
+		,CASE WHEN COUNT(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) END AS AvgIETTherapistDurNoCareContact
+  
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
@@ -536,11 +536,11 @@ SELECT	DATENAME(m, l.ReportingPeriodStartDate) + ' ' + CAST(DATEPART(yyyy, l.Rep
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
 		,'Total' AS 'Category'
 		,'Total' AS 'Variable'
-		,AVG(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) AS AvgTherapistDurIncIET
-		,AVG(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) AS AvgTherapistDurNoIET
-		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurIncCareContact
-		,AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) AS AvgIETTherapistDurNoCareContact
-
+		,CASE WHEN COUNT(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [DurationIntEnabledTher] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) END AS AvgTherapistDurIncIET
+		,CASE WHEN COUNT(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [DurationIntEnabledTher] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [ClinContDurOfCareCont] ELSE NULL END) END AS AvgTherapistDurNoIET
+		,CASE WHEN COUNT(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [ClinContDurOfCareCont] IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) END AS AvgIETTherapistDurIncCareContact
+		,CASE WHEN COUNT(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) < 5 THEN NULL ELSE AVG(CASE WHEN [ClinContDurOfCareCont] IS NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate  THEN [DurationIntEnabledTher] ELSE NULL END) END AS AvgIETTherapistDurNoCareContact
+  
 FROM	[mesh_IAPT].[IDS101referral] r
 		---------------------------	
 		INNER JOIN [mesh_IAPT].[IDS001mpi] mpi ON r.recordnumber = mpi.recordnumber
