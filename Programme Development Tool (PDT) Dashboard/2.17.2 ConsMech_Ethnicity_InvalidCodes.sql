@@ -1,11 +1,11 @@
 
--- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] -----------------------------
+-- Refresh updates for [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity_InvalidCodes] -----------------------------
 
 -- DELETE MAX(Month) -----------------------------------------------------------------
  
-DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]
+DELETE FROM [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity_InvalidCodes]
  
-WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity])
+WHERE [Month] = (SELECT MAX([Month]) FROM [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity_InvalidCodes])
 
 --------------------------------------------------------------------------------------
 
@@ -19,7 +19,7 @@ PRINT CHAR(10) + 'Month: ' + CAST(@MonthYear AS VARCHAR(50)) + CHAR(10)
 
 -- Base Table ----------------------------------------------------------------------------------------------------------------
 
---This table has one Unique_CareContactID per row and is used to produce [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity] 
+--This table has one Unique_CareContactID per row and is used to produce [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity_InvalidCodes] 
 
 IF OBJECT_ID ('[MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]') IS NOT NULL DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]
 
@@ -135,7 +135,7 @@ WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
 -- Final Aggregated Table --------------------------------------------------------------------------------------------------------------------------
 --This table aggregates the base table created above ([MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]) to produce the final table used in the dashboard
 
-INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]
+INSERT INTO [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity_InvalidCodes]
 
 SELECT  
 	Month
@@ -187,4 +187,4 @@ GROUP BY
 DROP TABLE [MHDInternal].[TEMP_TTAD_PDT_ConsMechBase]
 
 ---------------------------------------------------------------------
-PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity]'
+PRINT 'Updated - [MHDInternal].[DASHBOARD_TTAD_ConsMech_Ethnicity_InvalidCodes]'
