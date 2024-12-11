@@ -78,13 +78,13 @@ SELECT	DISTINCT CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATE
 			WHEN [IntEnabledTherProg] IS NULL THEN 'No IET'
 			ELSE [IntEnabledTherProg] END AS 'Internet Enabled Therapy'
 		,[IntEnabledTherProg]
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Finished Treatment - 2 or more Apps'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Recovery'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NoChange_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'No Change'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableDeterioration_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Deterioration'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
-		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' AND r.ServDischDate BETWEEN @PeriodStart AND @PeriodEnd AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'NotCaseness'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Finished Treatment - 2 or more Apps'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Recovery'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Recovery'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NoChange_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'No Change'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableDeterioration_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Deterioration'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND ReliableImprovement_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'Reliable Improvement'
+		,CASE WHEN ServDischDate IS NOT NULL AND CompletedTreatment_Flag = 'True' AND NotCaseness_Flag = 'True' AND r.ServDischDate BETWEEN l.[ReportingPeriodStartDate] AND l.[ReportingPeriodEndDate] AND r.[PathwayId] IS NOT NULL THEN 1 ELSE 0 END AS 'NotCaseness'
 
 INTO 	[MHDInternal].[TEMP_TTAD_PDT_IETBase]
 
