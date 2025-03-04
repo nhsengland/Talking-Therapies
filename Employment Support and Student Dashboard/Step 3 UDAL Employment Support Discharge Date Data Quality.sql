@@ -7,7 +7,7 @@ DECLARE @PeriodStart DATE
 SET @PeriodStart = (SELECT DATEADD(MONTH,0,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 DECLARE @PeriodStart2 DATE
-SET @PeriodStart2 = '2020-09-01' -- May want to start later if fields weren't introduced until later...
+SET @PeriodStart2 = '2021-04-01' -- May want to start later if fields weren't introduced until later...
 
 DECLARE @PeriodStart3 DATE
 SET @PeriodStart3 = EOMONTH(@PeriodStart,-5)
