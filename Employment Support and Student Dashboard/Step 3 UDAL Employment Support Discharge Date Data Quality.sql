@@ -7,7 +7,7 @@ DECLARE @PeriodStart DATE
 SET @PeriodStart = (SELECT DATEADD(MONTH,0,MAX([ReportingPeriodStartDate])) FROM [mesh_IAPT].[IsLatest_SubmissionID])
 
 DECLARE @PeriodStart2 DATE
-SET @PeriodStart2 = '2021-04-01' -- May want to start later if fields weren't introduced until later...
+SET @PeriodStart2 = '2021-04-01' 
 
 DECLARE @PeriodStart3 DATE
 SET @PeriodStart3 = EOMONTH(@PeriodStart,-5)
@@ -43,13 +43,12 @@ AND ch.Effective_To IS NULL
 LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
 LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
 AND ph.Effective_To IS NULL
-LEFT JOIN [mesh_IAPT].[IDS004empstatus] emp ON r.RecordNumber = emp.RecordNumber AND emp.AuditId = l.AuditId -- TRIED INNER JOIN TO SPEED PROCESS / CUT ROWS, BUT THEN YOU LOSE SOME EMP ACCESS DATES AS THAT'S IN THE REFERRAL TABLE...
+LEFT JOIN [mesh_IAPT].[IDS004empstatus] emp ON r.RecordNumber = emp.RecordNumber AND emp.AuditId = l.AuditId 
 
-WHERE r.UsePathway_Flag = 'True' -- Not sure what these flags do or if they are both needed
+WHERE r.UsePathway_Flag = 'True' 
 AND l.IsLatest = 1	
 AND l.[ReportingPeriodStartDate] BETWEEN @PeriodStart2 AND @PeriodStart
-AND (emp.EmpSupportDischargeDate IS NOT NULL OR r.EmpSupport_FirstDate IS NOT NULL) --... SO, INCLUDED THIS: Massively reduces run time as we are only keeping the relevant data (rows that have either of these values)
--- Could also filter off records for orgs that aren't England, if there is a standard process / code for this, although the rest of the dashboard doesn't, so I haven't for now
+AND (emp.EmpSupportDischargeDate IS NOT NULL OR r.EmpSupport_FirstDate IS NOT NULL) 
 
 ----- Get employment support start date, access date, and discharge date, at some point, using Max
 
@@ -75,21 +74,15 @@ r.*,
 p.Max_EmpSupport_FirstDate,
 p.Max_EmpSupportDischargeDate,
 CASE WHEN p.Max_EmpSupportDischargeDate IS NOT NULL THEN 1 ELSE 0 END AS DischargeDatePresent,
-EOMONTH(p.Max_EmpSupport_FirstDate) AS FirstContactMonth -- We will use this as the reporting month
+EOMONTH(p.Max_EmpSupport_FirstDate) AS FirstContactMonth 
 INTO [MHDInternal].[TEMP_TTAD_EmpSupp_Discharge_Completion_EAOnly]
 
 FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Discharge_Completion] r
 INNER JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_Discharge_Completion_PerReferral] p ON r.Person_ID = p.Person_ID AND r.PathwayID = p.PathwayID
-AND p.Max_EmpSupport_FirstDate IS NOT NULL -- If you remove this, you get more rows, suggesting some have discharge dates but not access dates (could be that they accessed before the period)
+AND p.Max_EmpSupport_FirstDate IS NOT NULL 
 WHERE r.LatestRecord = 1
 
 ----- Comparing the max dates with the latest dates: some records have a null date in their latest record, despite having an earlier record with a date, so we NEED to use max date
-
-/*
-SELECT TOP 10000
-r.ReportingPeriodStartDate, r.Person_ID, r.PathwayID, r.RecordNumber, r.EmpSupport_FirstDate, r.EmpSupportDischargeDate, r.Max_EmpSupport_FirstDate, r.Max_EmpSupportDischargeDate
-FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Discharge_Completion_EAOnly] r
-*/
 
 ----- Create aggregate counts, in long format, for each geog/org type
 
@@ -159,12 +152,6 @@ FROM [MHDInternal].[TEMP_TTAD_EmpSupp_Discharge_Completion_EAOnly]
 WHERE FirstContactMonth >= @PeriodStart2 AND FirstContactMonth < @PeriodStart3
 GROUP BY FirstContactMonth, RegionNameComm, RegionNameComm
 ORDER BY OrgType, OrgName, FirstContactMonth DESC
-
-/*
-SELECT * 
-FROM [MHDInternal].[DASHBOARD_TTAD_EmpSupport_DischargeDateCompletion]
-ORDER BY OrgType, OrgName, FirstContactMonth DESC
-*/
 
 ----- Drop temporary tables
 
