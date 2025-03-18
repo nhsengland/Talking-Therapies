@@ -59,7 +59,7 @@ SELECT * FROM (
 		AS 'Percentage_ReliableRecovery'
     -------------
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL																		
 		
     ELSE 																			
 																					
@@ -68,7 +68,7 @@ SELECT * FROM (
 		AS 'Percentage_ReliableDeterioration'
     -------------
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL																			
 		
     ELSE 																			
 																					
@@ -244,7 +244,7 @@ SELECT
 		AS Percentage_ReliableRecovery	
   
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL																			
 		ELSE 																			
 																					
 		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)																			
@@ -252,7 +252,7 @@ SELECT
 		AS Percentage_ReliableDeterioration
 
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL																				
 		ELSE 																			
 																					
 		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)																			
@@ -434,7 +434,7 @@ SELECT
 		AS Percentage_ReliableRecovery	
 
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
 		ELSE 																			
 																					
 		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)																			
@@ -442,7 +442,7 @@ SELECT
 		AS Percentage_ReliableDeterioration
 
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																		
 		ELSE 																			
 																					
 		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)																			
@@ -627,7 +627,7 @@ SELECT
 
 
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL																	
 		ELSE 																			
 																					
 		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableDeterioration_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)																			
@@ -637,7 +637,7 @@ SELECT
 
 
 		,CASE WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] THEN r.PathwayID ELSE NULL END) = 0 THEN NULL																			
-		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' AND Recovery_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL 																			
+		WHEN COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) = 0 THEN NULL																				
 		ELSE 																			
 																					
 		(CAST(COUNT(DISTINCT CASE WHEN CompletedTreatment_Flag = 'True' AND r.ServDischDate BETWEEN i.[ReportingPeriodStartDate] AND i.[ReportingPeriodEndDate] AND ReliableImprovement_Flag = 'True' THEN  r.PathwayID ELSE NULL END) AS float)																			
