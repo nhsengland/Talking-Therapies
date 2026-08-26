@@ -100,7 +100,7 @@ FROM	[mesh_IAPT].[IDS101referral] r
 		INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[UniqueSubmissionID] AND r.AuditId = l.AuditId
 		-----------------------------------------------
 		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --AND ph.Effective_To IS NULL --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
 
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_ProtChar_Postcodes] pc ON r.OrgID_Provider = pc.[SiteCode] AND PostcodeRank=1
 
