@@ -101,8 +101,8 @@ FROM    [mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmployStatusRank] e ON r.[RecordNumber] = e.[RecordNumber]  AND e.AuditId = l.AuditId and EmployStatusRank=1
 		------------------------------
         LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-			AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
+			--AND ph.Effective_To IS NULL
 
         LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_Postcodes] pc ON ph.[Organisation_Code]= pc.[SiteCode] AND PostcodeRank=1
 
