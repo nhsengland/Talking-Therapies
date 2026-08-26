@@ -24,7 +24,7 @@ INTO [MHDInternal].[TEMP_TTAD_ProtChar_Population_Age_Base_Table]
 
 FROM [UKHF_Census].[Age_By_Single_Year_Of_Age_V21] a
 	INNER JOIN  [MHDInternal].[REFERENCE_Lookup_LSOA21_MSOA21_ICB] l ON l.MSOA21= a.Geography_Code COLLATE DATABASE_DEFAULT
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] r ON l.ODS_SubICB_Code22=r.Organisation_Code
+	LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] r ON l.ODS_SubICB_Code22=r.Organisation_Code --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
 	--Inner joins to a lookup table which matches LSOA 2021 codes with MSOA 2021 codes, Sub-ICB names, ICB names and Region names 
 	--so the census populations can be aggregated to Sub-ICB and ICB levels
 
@@ -92,7 +92,7 @@ INTO [MHDInternal].[TEMP_TTAD_ProtChar_Population_Gender_Base_Table]
 
 FROM [UKHF_Census].[Sex1] g
 	INNER JOIN [MHDInternal].[REFERENCE_Lookup_LSOA21_MSOA21_ICB] l ON l.LSOA21= g.Geography_Code COLLATE DATABASE_DEFAULT
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] r ON l.ODS_SubICB_Code22=r.Organisation_Code
+	LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] r ON l.ODS_SubICB_Code22=r.Organisation_Code --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
 	--Inner joins to a lookup table which matches LSOA 2021 codes with MSOA 2021 codes, Sub-ICB names, ICB names and Region names 
 	--so the census populations can be aggregated to Sub-ICB and ICB levels
 
@@ -148,7 +148,7 @@ INTO [MHDInternal].[TEMP_TTAD_ProtChar_Population_Ethnicity_Base_Table]
 
 FROM [UKHF_Census].[Ethnic_Group_V21] e
 	INNER JOIN [MHDInternal].[REFERENCE_Lookup_LSOA21_MSOA21_ICB] l ON l.LSOA21= e.Geography_Code COLLATE DATABASE_DEFAULT
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] r ON l.ODS_SubICB_Code22=r.Organisation_Code
+	LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] r ON l.ODS_SubICB_Code22=r.Organisation_Code --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
 	--Inner joins to a lookup table which matches LSOA 2021 codes with MSOA 2021 codes, Sub-ICB names, ICB names and Region names 
 	--so the census populations can be aggregated to Sub-ICB and ICB levels
 
