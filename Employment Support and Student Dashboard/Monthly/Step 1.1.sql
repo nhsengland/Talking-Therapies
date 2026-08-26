@@ -245,11 +245,11 @@ FROM [mesh_IAPT].[IDS101referral] r
 		LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
 
 		LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-		LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
-			AND ch.Effective_To IS NULL
+		LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default  --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
+			AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= l.[ReportingPeriodStartDate])
 		LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-		LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-			AND ph.Effective_To IS NULL
+		LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
+			--AND ph.Effective_To IS NULL
 		--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
 WHERE r.UsePathway_Flag = 'True' 
 		AND l.IsLatest = 1	--To get the latest data
@@ -669,11 +669,11 @@ FROM [mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
 
 	LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
-		AND ch.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default  --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
+		AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= l.[ReportingPeriodStartDate])
 	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-		AND ph.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
+		--AND ph.Effective_To IS NULL
 	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes
 WHERE UsePathway_Flag = 'True' 
 	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @PeriodStart) AND @PeriodStart	--for monthly refresh the offset should be -1 as we want the data for the latest 2 months month (i.e. to refresh the previous month's primary data)
