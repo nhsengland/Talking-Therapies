@@ -9,8 +9,8 @@ DECLARE @MonthYear VARCHAR(50) = (DATENAME(M, @PeriodStart) + ' ' + CAST(DATEPAR
 
 WITH 
 
-Commissioner_Hierarchies AS (SELECT * FROM [Reporting_UKHD_ODS].[Commissioner_Hierarchies] WHERE [Region_Name] != 'WALES REGION' AND  Effective_To IS NULL),
-Provider_Hierarchies AS (SELECT * FROM [Reporting_UKHD_ODS].[Provider_Hierarchies] WHERE [Region_Name] != 'WALES REGION' AND  Effective_To IS NULL),
+Commissioner_Hierarchies AS (SELECT * FROM [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] WHERE [Region_Name] != 'WALES REGION' AND  Effective_To IS NULL), --[Reporting_UKHD_ODS].[Commissioner_Hierarchies]
+Provider_Hierarchies AS (SELECT * FROM [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] WHERE [Region_Name] != 'WALES REGION' AND  Effective_To IS NULL), --[Reporting_UKHD_ODS].[Provider_Hierarchies]
 
 base_table AS (
 
