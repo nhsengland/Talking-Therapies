@@ -108,9 +108,11 @@ FROM	[mesh_IAPT].[IDS101referral] r
 	INNER JOIN [mesh_IAPT].[IDS602longtermcondition] ltc ON r.recordnumber = ltc.recordnumber AND r.AuditID = ltc.AuditId AND r.UniqueSubmissionID = ltc.UniqueSubmissionID
 	---------------------------
 	LEFT JOIN [Internal_Reference].[ComCodeChanges] cd ON r.OrgIDComm = cd.Org_Code COLLATE database_default
-        LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+        LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_E] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
+		AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= l.[ReportingPeriodStartDate]) --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
 	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_E] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default 
+	--AND ph.Effective_To IS NULL --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
 	---------------------------
 	LEFT JOIN [UKHD_SNOMED].[Descriptions_SCD_1] s2 ON ltc.[Validated_LongTermConditionCode] = CAST(s2.[Concept_ID] AS VARCHAR) AND s2.Type_ID = 900000000000003001 AND s2.Is_Latest = 1 AND s2.Active = 1
 	---------------------------
@@ -292,9 +294,10 @@ FROM	[mesh_IAPT].[IDS101Referral] r
 	LEFT JOIN [MHDInternal].[TEMP_TTAD_LTC_EmpSuppCount] ec ON ec.PathwayID=r.PathwayID
 	---------------------------
 	LEFT JOIN [Internal_Reference].[ComCodeChanges] cd ON r.OrgIDComm = cd.Org_Code COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_E] ch ON COALESCE(cd.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
+	 AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= l.[ReportingPeriodStartDate]) --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
 	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --AND ph.Effective_To IS NULL --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
 
 WHERE	r.UsePathway_Flag = 'True' AND l.IsLatest = 1
 	AND l.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -1, @Period_Start) AND @Period_Start -- Set to -1 for monthly refresh
