@@ -161,10 +161,11 @@ FROM 	[mesh_IAPT].[IDS101referral] r
 	LEFT JOIN [MHDInternal].[TEMP_TTAD_SocPerCircumstance_SocPerCircRank] spc ON spc.PathwayID = r.PathwayID AND spc.SocPerCircumstanceLatest = 1
 	--------------------------
 	LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default AND ch.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
+	AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= i.[ReportingPeriodStartDate]) --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
 	--------------------------
 	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default AND ph.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --AND ph.Effective_To IS NULL --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
 
 WHERE	UsePathway_Flag = 'True'
 	AND i.[ReportingPeriodStartDate] BETWEEN DATEADD(MONTH, -3, @PeriodStart) AND @PeriodStart -- set to -3 for quarterly refresh
