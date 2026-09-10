@@ -237,12 +237,12 @@ FROM(
 
 	--Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
 	LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
-		AND ch.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default  --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
+		AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= l.[ReportingPeriodStartDate])
 
 	LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-	LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-		AND ph.Effective_To IS NULL
+	LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
+		--AND ph.Effective_To IS NULL
 
 	LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration] i ON i.PathwayID = r.PathwayID
 	LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_NoIETDuration] ca ON ca.PathwayID=r.PathwayID
@@ -569,11 +569,11 @@ INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[
 
 --Three tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
 LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default
-	AND ch.Effective_To IS NULL
+LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
+	AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= l.[ReportingPeriodStartDate])
 LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-	AND ph.Effective_To IS NULL
+LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
+	--AND ph.Effective_To IS NULL
 --For IET Therapy Type:
 LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration] i ON i.PathwayID = r.PathwayID
 --PEQ Questions and latest answer:
@@ -798,12 +798,12 @@ INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[
 
 --Four tables for getting the up-to-date Sub-ICB/ICB/Region/Provider names/codes:
 LEFT JOIN [Internal_Reference].[ComCodeChanges] cc ON r.OrgIDComm = cc.Org_Code COLLATE database_default
-LEFT JOIN [Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default 
-	AND ch.Effective_To IS NULL
+LEFT JOIN [Internal_Hierarchies].[Commissioner_Hierarchies_TCUBE] ch ON COALESCE(cc.New_Code, r.OrgIDComm) = ch.Organisation_Code COLLATE database_default  --[Reporting].[Ref_ODS_Commissioner_Hierarchies_ICB]
+	AND ch.Region_Name <> 'Wales Region' AND (ch.Effective_To IS NULL OR ch.Effective_To >= l.[ReportingPeriodStartDate])
 
 LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-	AND ph.Effective_To IS NULL
+LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
+	--AND ph.Effective_To IS NULL
 
 LEFT JOIN [MHDInternal].[TEMP_TTAD_IET_IETContacts] ic ON ic.PathwayID = r.PathwayID and ic.Unique_MonthID=r.Unique_MonthID
 WHERE r.UsePathway_Flag = 'True' 
