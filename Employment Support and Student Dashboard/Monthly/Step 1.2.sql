@@ -686,8 +686,8 @@ INNER JOIN [mesh_IAPT].[IsLatest_SubmissionID] l ON r.[UniqueSubmissionID] = l.[
 
 LEFT JOIN [MHDInternal].[TEMP_TTAD_EmpSupp_PresenteeismCoverage] p ON r.PathwayID=p.PathwayID
 LEFT JOIN [Internal_Reference].[Provider_Successor] ps ON r.OrgID_Provider = ps.Prov_original COLLATE database_default
-LEFT JOIN [Reporting].[Ref_ODS_Provider_Hierarchies_ICB] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default
-	AND ph.Effective_To IS NULL
+LEFT JOIN [Internal_Hierarchies].[Provider_Hierarchies_TCUBE] ph ON COALESCE(ps.Prov_Successor, r.OrgID_Provider) = ph.Organisation_Code COLLATE database_default --[Reporting].[Ref_ODS_Provider_Hierarchies_ICB]
+	--AND ph.Effective_To IS NULL
 
 WHERE ((r.ServDischDate IS NULL AND r.ReferralRequestReceivedDate<=l.ReportingPeriodEndDate) --open referrals
 	OR (r.ServDischDate BETWEEN l.ReportingPeriodStartDate AND l.ReportingPeriodEndDate)) --discharges
