@@ -226,8 +226,10 @@ SELECT DISTINCT
 	rr.*
 	,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
-	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
-	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'CCG Name' 
+	--,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'CCG Code'
+	--,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'CCG Name'
+	,CASE WHEN ch.[Organisation_Code] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.[Organisation_Code] END AS 'CCG Code'
+	,CASE WHEN ch.[Organisation_Name] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.Organisation_Name END AS 'CCG Name' 
 	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
 	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
 	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'STP Code'
