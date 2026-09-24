@@ -21,8 +21,10 @@ SELECT
 -- Geographies	
 	,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END AS 'Region Code'
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS 'Region Name'
-	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICB Code'
-	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'Sub-ICB Name' 
+	--,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICB Code'
+	--,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END AS 'Sub-ICB Name'
+	,CASE WHEN ch.[Organisation_Code] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.[Organisation_Code] END AS 'Sub-ICB Code'
+	,CASE WHEN ch.[Organisation_Name] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.Organisation_Name END AS 'Sub-ICB Name' 
 	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END AS 'Provider Code'
 	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END AS 'Provider Name'
 	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICB Code'
@@ -127,8 +129,10 @@ GROUP BY CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yy
 	,CASE WHEN s2.term IS NOT NULL THEN s2.term ELSE 'Not Stated' END
 	,CASE WHEN ch.[Region_Code]  IS NOT NULL THEN ch.[Region_Code] ELSE 'Other' END
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END
-	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
-	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END
+	--,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END
+	--,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.Organisation_Name ELSE 'Other' END
+	,CASE WHEN ch.[Organisation_Code] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.[Organisation_Code] END
+	,CASE WHEN ch.[Organisation_Name] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.Organisation_Name END 
 	,CASE WHEN ph.[Organisation_Code] IS NOT NULL THEN ph.[Organisation_Code] ELSE 'Other' END
 	,CASE WHEN ph.[Organisation_Name] IS NOT NULL THEN ph.[Organisation_Name] ELSE 'Other' END
 	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END
@@ -229,8 +233,10 @@ IF OBJECT_ID('[MHDInternal].[TEMP_TTAD_LTC_MonthlyBase]') IS NOT NULL DROP TABLE
 SELECT DISTINCT
 	CAST(DATENAME(m, l.[ReportingPeriodStartDate]) + ' ' + CAST(DATEPART(yyyy, l.[ReportingPeriodStartDate]) AS VARCHAR) AS DATE) AS 'Month'
 	,r.[PathwayID]
-	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
-	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+	--,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+	--,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+	,CASE WHEN ch.[Organisation_Code] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.[Organisation_Code] END AS 'Sub-ICBCode'
+	,CASE WHEN ch.[Organisation_Name] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.Organisation_Name END AS 'Sub-ICBName'
 	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
 	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
