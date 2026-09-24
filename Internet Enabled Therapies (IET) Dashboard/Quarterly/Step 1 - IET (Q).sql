@@ -221,8 +221,10 @@ FROM(
 		END AS UniqueMixedPathway	--This has been updated to align with the IET appointment count we have done ourselves in [MHDInternal].[TEMP_TTAD_IET_TypeAndDuration]
 
 		--Geography
-		,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
-		,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+		--,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+		--,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+		,CASE WHEN ch.[Organisation_Code] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.[Organisation_Code] END AS 'Sub-ICBCode'
+		,CASE WHEN ch.[Organisation_Name] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.Organisation_Name END AS 'Sub-ICBName' 
 		,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
 		,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
 		,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
@@ -553,8 +555,10 @@ SELECT DISTINCT
 	END AS CompTreatFlag --Flag for completed treatment flag, where the discharge date is within the reporting period
     
 	--Geography
-	,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
-	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+	--,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+	--,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+	,CASE WHEN ch.[Organisation_Code] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.[Organisation_Code] END AS 'Sub-ICBCode'
+	,CASE WHEN ch.[Organisation_Name] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.Organisation_Name END AS 'Sub-ICBName' 
 	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
 	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
@@ -781,8 +785,10 @@ SELECT DISTINCT
 	,ic.StartDateIntEnabledTherLog
 	,ic.EndDateIntEnabledTherLog
     --Geography
-    ,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
-	,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+    --,CASE WHEN ch.[Organisation_Code] IS NOT NULL THEN ch.[Organisation_Code] ELSE 'Other' END AS 'Sub-ICBCode'
+	--,CASE WHEN ch.[Organisation_Name] IS NOT NULL THEN ch.[Organisation_Name] ELSE 'Other' END AS 'Sub-ICBName'
+	,CASE WHEN ch.[Organisation_Code] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.[Organisation_Code] END AS 'Sub-ICBCode'
+	,CASE WHEN ch.[Organisation_Name] IS NULL OR ch.[Organisation_Name] LIKE '%REPORTING ENTITY%' THEN 'Other' ELSE ch.Organisation_Name END AS 'Sub-ICBName' 
 	,CASE WHEN ch.[STP_Code] IS NOT NULL THEN ch.[STP_Code] ELSE 'Other' END AS 'ICBCode'
 	,CASE WHEN ch.[STP_Name] IS NOT NULL THEN ch.[STP_Name] ELSE 'Other' END AS 'ICBName'
 	,CASE WHEN ch.[Region_Name] IS NOT NULL THEN ch.[Region_Name] ELSE 'Other' END AS'RegionNameComm'
